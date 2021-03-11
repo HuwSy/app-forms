@@ -1,0 +1,387 @@
+.app .mce-tinymce button {
+	min-width: 0;
+}
+
+#Loading {
+	clear: both;
+	text-align: center;
+	padding: 15px;
+	font-size: 32px;
+	color: red;
+    border-top: 1px solid #ccc;
+}
+
+.app a,
+.app .a,
+.app ng-click {
+    cursor: pointer;
+}
+.app a.fa:hover {
+	text-decoration: none;
+}
+.app a:visited {
+    color: #c52d2c;
+}
+.app .inactive:active {
+	pointer-events: none;
+}
+.app .inactive {
+	cursor: default;
+}
+
+.app .table{
+	width: 100%;
+	border-spacing: 0px;
+    border-top: 1px solid #ccc;
+}
+.app .table thead tr > th{
+	text-align: center;
+}
+.app .table tbody:nth-child(odd) {
+	background: #EEE
+}
+.app .table tbody.rows tr:hover,
+.app .table tbody tr.rows:hover {
+	background: #DDD
+}
+.app .table.form {
+    border-bottom: 1px solid #ccc;
+}
+.app .table.form tr > td{
+	width: 100%;
+}
+.app .form textarea {
+    width: 398px;
+    box-sizing: border-box;
+    height: 100px;
+}
+.app .table tr.rows:nth-child(even) {
+	background: #EEE
+}
+.app .form.table tbody,
+.app .form.table tbody:hover {
+	background: #FFF !important;
+}
+.app .table tr.headings th {
+	background-color: rgb(192,0,0);
+	color: white;
+	text-align: center;
+} 
+.app .table tr.subheadings th {
+	background-color: rgb(150,0,0);
+	color: white;
+} 
+.app .table tr > th {
+	padding: 6px;
+	text-align: right;
+    position: relative;
+}
+.app .table tr > td {
+	padding: 6px;
+}
+.app tr .narrowcentre,
+.app .table thead tr th.narrowcentre,
+.app .table tbody tr td.narrowcentre {
+	width: 1px;
+	white-space: nowrap;
+	text-align: center;
+}
+.app table .fa-check,
+.app .table .fa-check {
+	color: green;
+}
+.app table .fa-minus,
+.app .table .fa-minus {
+	color: grey;
+}
+.app table .fa-times,
+.app .table .fa-times {
+	color: red;
+}
+
+.app table td .read-more,
+.app .table td .read-more {
+    max-height: 198px;
+	overflow: hidden;
+}
+.app table td .read-more:hover,
+.app .table td .read-more:hover {
+	overflow: visible;
+}
+.app table.cells th,
+.app table.cells td {
+	border: 1px solid #ccc;
+	padding:8px
+}
+.app table.borders {
+	border: 1px solid #ccc;
+}
+.app table.borders td,
+.app table.borders th {
+	border: 1px solid #ccc;
+	padding: 4px;
+}
+
+.app .required {
+	color: red;
+	font-weight: bold;
+}
+.app .form .admin input.sp-peoplepicker-editorInput[type=text],
+.app input.sp-peoplepicker-editorInput[type=text] {
+	height: 16px;
+	width: auto !important;
+}
+.app .sp-peoplepicker-topLevel {
+	border: none;
+	border-bottom: 1px solid rgba(0,0,0,0.12);
+	background: transparent;
+	box-sizing: border-box;
+	width: 100%;
+	padding-bottom: 0;
+}
+.app .sp-peoplepicker-autoFillContainer {
+  min-width: 250px;
+  max-width: 250px;
+}
+
+.app input[type="hidden"] {
+	height: auto;
+}
+.app input::-ms-clear {
+    display: none;
+}
+
+.app .submitted :invalid,
+.app .submitted .ng-invalid,
+.app .ng-touched:invalid,
+.app .ng-touched.ng-invalid,
+.app div.invalid,
+.app .ng-untouched.invalid,
+.app .submitted people.ng-invalid .sp-peoplepicker-topLevel ,
+.app people.ng-touched.ng-invalid .sp-peoplepicker-topLevel {
+	border-bottom: 1px solid red;
+}
+.app .submitted li.ng-invalid {
+	border-bottom: inherit;
+	color: red;
+}
+.app people.ng-touched.ng-invalid,
+.app .submitted people.ng-invalid {
+	border-bottom: none;
+}
+
+.app input[type="button"] {
+	float: right;
+	font-size: 14px;
+	font-weight: bold;
+}
+.app input[type="button"]:hover,
+.app input[type="button"].true {
+	border-color: #D11729;
+    background-color: #E90018;
+	color: white;
+}
+.app input[type=button].approve,
+.app input[type=button][value="Approve"] {
+    background-color: #17D129;
+	color: white;
+}
+.app input[type=button].approve:hover,
+.app input[type=button][value="Approve"]:hover {
+	border-color: #17D129;
+    background-color: #00E918;
+    color: white;
+}
+.app input[type=button].reject,
+.app input[type=button][value="Reject"] {
+    background-color: #D11729;
+	color: white;
+}
+.app input[type="button"]:disabled {
+    background-color: white !important;
+	color: silver !important;
+}
+.app input[type="button"].Delete,
+.app input[type="button"][value="Delete"],
+.app input[type="button"][value="Clear"] {
+	float: left;
+    background-color: #D11729;
+	color: white;
+}
+
+.app input,
+.app select {
+	border: none;
+	border-bottom: 1px solid rgb(219, 219, 219);
+	border-radius: 2px;
+	color: rgb(95, 95, 95);
+	display: inline-block;
+	font-size: 14px;
+	height: 32px !important;
+	box-sizing: border-box;
+	min-height: 32px !important;
+}
+.app div.disabled {
+	padding: 4px;
+	font-size: 14px;
+}
+.app input:disabled,
+.app select:disabled,
+.app div.disabled {
+	color: #b1b1b1;
+	border-color: transparent !important;
+}
+.app input[type="date"],
+.app input[type="text"],
+.app input[type="number"],
+.app textarea,
+.app select,
+.app .sp-peoplepicker-topLevel {
+	margin: 0;
+}
+.app input[type="checkbox"],
+.app .form input[type="checkbox"] {
+    padding-top: 0;
+    margin-top: 15px;
+    height: auto;
+    margin-bottom: 15px;
+	border: none;
+	width: auto;
+}
+.app .form select {
+	width: 100%;
+}
+.app select,
+.app input[type="text"],
+.app input[type="date"],
+.app input[type="datetime-local"],
+.app input[type="number"],
+.app textarea {
+	padding: 4px 4px 3px 4px;
+	background: transparent;
+	border-top: none;
+	border-left: none;
+	border-right: none;
+}
+.app textarea {
+    width: 95%;
+}
+.app input[maxlength="250"] {
+	width: 95%;
+}
+
+md-input-container {
+	margin: 12px 0 0 0;
+}
+.app md-content {
+	overflow: inherit;
+}
+
+/* print css */
+.app .print-show {
+	display: none;
+}
+@media print {
+    #s4-ribbonrow, .ms-dialogHidden, div[id$="_RichHtmlField"], .print-hide, #ToolTip {
+        display: none !important;
+    }
+	.app .print-show {
+		display: inherit;
+	}
+	.app .print-always {
+		display: block !important;
+	}
+	/* Needed when not printing background colours */
+    .app a, .app a:visited {
+        color: black !important;
+    }
+    div[id$="_RichHtmlField"] {
+        display: block !important;
+    }
+}
+
+
+/* modals */
+.modal-backdrop{position:fixed;top:0;right:0;bottom:0;left:0;z-index:1040;background-color:#000000;}
+.modal-backdrop.fade{opacity:0;}
+.modal-backdrop,.modal-backdrop.fade.in{opacity:0.8;filter:alpha(opacity=80);}
+.modal{position:fixed;top:10%;left:50%;z-index:1050;width:560px;margin-left:-280px;background-color:#ffffff;border:1px solid #999;border:1px solid rgba(0, 0, 0, 0.3);*border:1px solid #999;-webkit-border-radius:6px;-moz-border-radius:6px;border-radius:6px;-webkit-box-shadow:0 3px 7px rgba(0, 0, 0, 0.3);-moz-box-shadow:0 3px 7px rgba(0, 0, 0, 0.3);box-shadow:0 3px 7px rgba(0, 0, 0, 0.3);-webkit-background-clip:padding-box;-moz-background-clip:padding-box;background-clip:padding-box;outline:none;}
+.modal.fade{-webkit-transition:opacity .3s linear, top .3s ease-out;-moz-transition:opacity .3s linear, top .3s ease-out;-o-transition:opacity .3s linear, top .3s ease-out;transition:opacity .3s linear, top .3s ease-out;top:-25%;}
+.modal.fade.in{top:10%;}
+.modal-header{padding:9px 15px;border-bottom:1px solid #eee;}
+.modal-header .close{margin-top:2px;}
+.modal-header h3{margin:0;line-height:30px;}
+.modal-body{position:relative;overflow-y:auto;max-height:400px;padding:15px;}
+.modal-form{margin-bottom:0;}
+.modal-footer{padding:14px 15px 15px;margin-bottom:0;text-align:right;background-color:#f5f5f5;border-top:1px solid #ddd;-webkit-border-radius:0 0 6px 6px;-moz-border-radius:0 0 6px 6px;border-radius:0 0 6px 6px;-webkit-box-shadow:inset 0 1px 0 #ffffff;-moz-box-shadow:inset 0 1px 0 #ffffff;box-shadow:inset 0 1px 0 #ffffff;*zoom:1;}.modal-footer:before,.modal-footer:after{display:table;content:"";line-height:0;}
+.modal-footer:after{clear:both;}
+.modal-footer .btn+.btn{margin-left:5px;margin-bottom:0;}
+.modal-footer .btn-group .btn+.btn{margin-left:-1px;}
+.modal-footer .btn-block+.btn-block{margin-left:0;}
+.modal[size="lg"] {width: 900px;margin-left:-450px;}
+.modal-content .app {padding: 12px 32px;}
+.modal-content .app > div {margin-right: -20px; max-height: 70vh; overflow-y: auto; overflow-x: hidden; margin-top: -4px;}
+.md-select-menu-container {z-index: 1080;}
+
+/* Style the tabs */
+.app .tab {
+    border: 1px solid #ccc;
+    background-color: #f1f1f1;
+    padding: 14px 0;
+	display: inline-block;
+	border-bottom: none;
+}
+
+.app .tab a {
+    border-right: 1px solid #ccc;
+    cursor: pointer;
+    padding: 14px 16px;
+    transition: 0.3s;
+	color: black;
+	text-decoration: none;
+	font-weight: bold;
+}
+
+.app .tab a:last-child {
+    border-right: none;
+}
+
+.app .tab a.active {
+    background-color: #ccc;
+}
+
+.app .tab a:hover {
+    background-color: #ddd;
+}
+
+/* IE9+ hack */
+@media screen and (min-width:0\0) {
+	.flex-100, .layout-column > .flex-100, .layout-row > .flex-100 {
+		flex-basis: 62px;
+	}
+}
+
+@media screen and (max-width: 950px) {
+    #siteIcon, #sideNavBox {
+        display: none;
+    }
+
+    #contentBox {
+        margin-left: 20px;
+        min-width: 0;
+    }
+}
+
+@media screen and (max-width: 900px) {
+	.modal[size="lg"] {width: 100%;margin-left:0;}
+}
+
+@media screen and (max-width: 750px) {
+    .app .tiles a {
+        width: 100% !important;
+    }
+}
+
+@media screen and (max-width: 560px) {
+	.modal {width: 100%;margin-left:0;}
+}

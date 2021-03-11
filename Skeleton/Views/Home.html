@@ -1,0 +1,97 @@
+<!-- Header of dashboard, new button, filters, export (default to list view export) etc -->
+<div class="print-hide">
+	<div style="float: left">
+		<a href="#!/<something>/0/0/Overview" ng-if="permissions['Members']"><i class="fa fa-plus"></i> Add new</a>
+	</div>
+	<div style="float: right;">
+		<select ng-model="itemsPerPage" tooltip="Items per page" ng-change="saveFilter('itemsPerPage');">
+			<option value="25">25</option>
+			<option value="100">100</option>
+			<option value="5000">All</option>
+		</select>
+		<select ng-model="statusFilter" ng-change="saveFilter('statusFilter');loadData(true)" tooltip="Filter by status">
+			<option value="">Filter by status</option>
+			<option ng-repeat="i in Status" value="{{i}}">{{i}}</option>
+		</select>
+		<input type="text" ng-model="Search" placeholder="Search by name" style="width: 300px;" ng-change="currentPage = 1" ng-change="saveFilter('itemsPerPage');/>
+		<i class="fa fa-search" ng-click="loadData(true)"></i>
+		<i class="fa fa-print" onclick="print()"></i>
+		<i class="fa fa-file-excel-o" ng-click="Export()"></i>
+		&nbsp;
+	</div>
+</div>
+
+<!-- Top tabs, loading spinner -->
+<br style="clear: both;" class="print-hide" />
+<div class="tab">
+	<a class="tablinks active" href="#!/">Home</a>
+</div>
+<div ng-show="Loading" id="Loading" class="print-hide">
+    <i class="fa fa-spinner fa-spin"></i>
+</div>
+
+<!-- Results table, columns, display formats, edit and task links -->
+<table ng-hide="Loading" class="table">
+    <tbody ng-show="shown.length == 0">
+        <tr>
+            <td>No data, or you do not have permission to this data</td>
+        </tr>
+    </tbody>
+    <thead ng-show="shown.length > 0">
+        <tr class="headings">
+            <th ng-click="sort('Id')" style="min-width: 0;">
+				ID
+				<i class="fa fa-sort-up" ng-if="orderKey == 'Id' && !orderDir"></i>
+				<i class="fa fa-sort-down" ng-if="orderKey == 'Id' && orderDir"></i>
+			</th>
+            <th ng-click="sort('Title')">
+				Title
+				<i class="fa fa-sort-up" ng-if="orderKey == 'Title' && !orderDir"></i>
+				<i class="fa fa-sort-down" ng-if="orderKey == 'Title' && orderDir"></i>
+			</th>
+			<th ng-hide="orderKey == null">
+				Status
+			</th>
+			<th></th>
+        </tr>
+    </thead>
+    <tbody ng-show="shown.length > 0">
+        <tbody data-ng-repeat="d in (rows | filter:search | orderBy:orderKey:orderDir).slice((currentPage -1) * itemsPerPage, currentPage * itemsPerPage) as shown" class="rows">
+            <tr class="subheadings" ng-show="orderKey == null && ($index == 0 || shown[$index - 1].Status != d.Status)">
+                <th colspan="3">
+                    {{d.Status}}
+                </th>
+            </tr>
+            <tr>
+				<td style="text-align:center"><a href="#!/<something>/-1/{{d.Id}}/Overview">{{d.Id}}</a></td>
+				<!-- Override.Lasta(this) - will make the link click load the last available on the row so title click loads the action link if permissioned -->
+				<td style="text-align:center"><a href="#!/<something>/-1/{{d.Id}}/Overview" onclick='Override.Lasta(this)'>{{d.Title}}</a></td>
+				<td style="text-align:center" ng-hide="orderKey == null">{{d.Status}}</td>
+				<td style="text-align: center">
+					<!-- class inactive will make the link visable, tooltip function but cant be clicked -->
+					<a class="{{(!permissions['Members'] ? 'inactive' : '')}}" href="#!/<something>/0/{{d.Id}}/Overview" ng-if="permissions['Members'] && d.Status == 'Submitted'"><i class="fa fa-pencil-square-o" tooltip="Edit"></i></a>
+					<a class="{{(!permissions['Owners'] ? 'inactive' : '')}}" href="#!/<something>/Approval/{{d.Id}}/Overview" ng-if="permissions['Owners'] && d.Status == 'Submitted'"><i class="fa fa-pencil-square-o" tooltip="Approval"></i></a>
+					<a class="{{(!permissions['Members'] ? 'inactive' : '')}}" href="#!/<something>/Completion/{{d.Id}}/Overview" ng-if="permissions['Members'] && d.Status == 'Approved'"><i class="fa fa-pencil-square-o" tooltip="Completion"></i></a>
+				</td>
+            </tr>
+        </tbody>
+    </tbody>
+	<tfoot>
+		<tr>
+			<!-- Table footer for pagination -->
+			<th colspan="4" style="text-align: right;" class="print-hide">
+				<a ng-click="changePage(1)" ng-if="currentPage > 2"><i class="fa fa-fast-backward"></i></a>
+				<a ng-click="changePage(currentPage - 1)" ng-if="currentPage > 1"><i class="fa fa-backward"></i> {{currentPage - 1}}</a>
+				{{currentPage}}
+				<a ng-click="changePage(currentPage + 1)" ng-if="(rows | filter:search).length/itemsPerPage > currentPage">{{currentPage + 1}} <i class="fa fa-forward"></i></a>
+				<a ng-click="changePage((rows | filter:search).length/itemsPerPage)" ng-if="(rows | filter:search).length/itemsPerPage > currentPage + 1"><i class="fa fa-fast-forward"></i></a>
+			</th>
+		</tr>
+	</tfoot>
+</table>
+
+<!-- New buttons at bottom as well as top -->
+<br style="clear: both;" class="print-hide" />
+<div style="float: right" class="print-hide">
+	<a href="#!/<something>/0/0/Overview" ng-if="permissions['Members']"><i class="fa fa-plus"></i> Add new</a>
+</div>
