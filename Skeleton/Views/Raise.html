@@ -1,0 +1,71 @@
+<!-- Header of form -->
+<div class="print-hide">
+	<div style="float: left">
+		&nbsp;
+		<a href="#!/"><i class="fa fa-arrow-left"></i> Back</a>
+	</div>
+	<div style="float: right;">
+		<i class="fa fa-print" onclick="print()"></i>
+		&nbsp;
+	</div>
+</div>
+
+<!-- Form with tabs -->
+<br style="clear: both;" class="print-hide" />
+<div class="app">
+	<!-- All tabs at top not beside each tab content as this works with IE compatibility and print views -->
+	<div class="tab">
+		<a class="tablinks" ng-click="routeParams.Tab = 'Overview'" ng-class="{'active': routeParams.Tab == null || routeParams.Tab == 'Overview'}">Overview</a>
+	</div>
+	<br style="clear: both;" />
+	<div ng-form="forms" ng-class="{'submitted': submitted}">
+		<!-- Each tab content -->
+		<md-content style="overflow: inherit;" flex layout-padding layout="column" ng-show="routeParams.Tab == null || routeParams.Tab == 'Overview'">
+			<!-- Heading for print all view-->
+			<h2 class="print-show">Overview</h2>
+
+			<!-- Choice fields, any non attachment and non people fields can be done within choice directive, see directive for full options -->
+			<choice ng-disabled="routeParams.Stage != 0" flex="100" object="form" field="Title"></choice>
+			
+			<!-- User fields, might get combined into choice at some point but atm done like this. If it's multi user make sure the model has .results and array="true" -->
+			<md-input-container flex="100">
+				User(s)<br>
+				<people ng-disabled="routeParams.Stage != 0" ng-model="form.UserId.results" flex array="true"></people>
+			</md-input-container>
+	
+			<!-- Attachments to the list item of this form -->
+			<md-input-container flex="100">
+				Supporting document(s)<br>
+				<upload ng-hide="$close" ng-disabled="routeParams.Stage != 0" attachments="Files" mult="true" web="true" />
+				<span ng-show="$close">Attachments are not tracked under version history</span>
+			</md-input-container>
+		</md-content>
+		<!-- Display the list item version history, clicking will show that version -->
+		<div ng-if="history" style="float: left;">
+			<b>Audit log:</b><br>
+			<div ng-repeat="h in history">
+				<!-- History function needs 2nd parameter of this current file name exc extension -->
+				<span ng-click="History(h, 'Raise')" style="cursor: pointer;">
+					Version: {{h.OData__x005f_UIVersionString}}
+					On {{h.Modified | date:'dd/MMM/yyyy HH:mm'}} by {{h.Editor.LookupValue}}<br>
+					{{h.Status}}
+					-	
+					{{(h.History || ($index == history.length - 1 ? 'Created' : 'Updated'))}}
+				</span>
+			</div>
+		</div>
+		<!-- Footer containing submit buttons etc -->
+		<div align="right" style="margin-top: 10px;" class="print-hide">
+			<span style="display:none" >{{ form.valid = forms.$valid }}</span>
+
+			<input type="button" value="Submit" ng-click="form.Status = 'Submitted';save()" ng-disabled="processing" ng-show="routeParams.Stage == 0 && permissions['Members']"/>
+
+			<input type="button" value="Approve" ng-click="form.Status = 'Approved';save()" ng-disabled="processing" ng-show="routeParams.Stage == 'Approval' && permissions['Owners']"/>
+			<input type="button" value="Reject" ng-click="form.Status = 'Rejected';reject(true)" ng-disabled="processing" ng-show="routeParams.Stage == 'Approval' && permissions['Owners']"/>
+			
+			<input type="button" value="Complete" ng-click="form.Status = 'Completed';save()" ng-disabled="processing" ng-show="routeParams.Stage == 'Approved' && permissions['Members']"/>
+
+			<input type="button" value="Close" ng-click="close()" ng-disabled="processing"/>
+		</div>
+	</div>
+</div>

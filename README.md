@@ -1,0 +1,3 @@
+# app-forms
+
+A simple AngularJS framework and jQuery connector for rapid development and client based debug of SharePoint hosted and SharePoint data stored apps. This allows for list views, submission forms, task forms, emails, approvals, audit etc. A JavaScript coded simplified version of Nintex/PowerPlatform but based on deprecated AngularJS (due to when the work began), requiring a content web part or script editor web part or a modern equivelent of these. As there are so many deprecated requirements here then it is uploaded as is with unlikely further development but may be of use for rapid prototyping or fall back interfaces.
