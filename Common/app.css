@@ -225,10 +225,11 @@
 	padding: 4px;
 	font-size: 14px;
 }
+.app textarea:disabled,
 .app input:disabled,
 .app select:disabled,
 .app div.disabled {
-	color: #b1b1b1;
+	color: #777;
 	border-color: transparent !important;
 }
 .app input[type="date"],
@@ -272,6 +273,9 @@
 
 md-input-container {
 	margin: 12px 0 0 0;
+}
+md-input-container .md-input{
+	float: none;
 }
 .app md-content {
 	overflow: inherit;
@@ -322,6 +326,12 @@ md-input-container {
 .modal-content .app {padding: 12px 32px;}
 .modal-content .app > div {margin-right: -20px; max-height: 70vh; overflow-y: auto; overflow-x: hidden; margin-top: -4px;}
 .md-select-menu-container {z-index: 1080;}
+.modal {
+    margin-left: 0;
+}
+.contents {
+	min-width: 400px;
+}
 
 /* Style the tabs */
 .app .tab {

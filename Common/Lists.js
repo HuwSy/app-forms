@@ -1646,7 +1646,22 @@ if (typeof SP != "undefined")
                             binaryStringRequestBody: plainText != true,
                             body: data,
                             success: function (d) {
-                                return def.resolve(d);
+                                //return def.resolve(d);
+                                var b = d.body ? JSON.parse(d.body) : d;
+                                $.ajax({
+                                    url: b.d.ListItemAllFields.__deferred.uri,
+                                    type: "GET",
+                                    headers: {
+                                        "accept": "application/json;odata=verbose"
+                                    },
+                                    success: function (d) {
+                                        return def.resolve(d);
+                                    },
+                                    error: function () {
+                                        return def.resolve(null);
+                                    }
+                                });
+
                             },
                             error: function () {
                                 return def.reject();
