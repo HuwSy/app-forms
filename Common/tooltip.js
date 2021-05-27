@@ -59,8 +59,14 @@
 				});
 				element.bind('click', function (event) {
 					if (t != null) {
+						var o = t.outerHTML;
 						t.style.display = "none";
 						t.remove();
+						
+						var a = $(o).find('a');
+						if (a.length > 0)
+							window.open(a[0].href, a[0].target);
+
 					}
 					t = null;
 				});

@@ -5,10 +5,6 @@ if ((typeof ($) === "undefined" || typeof ($.fn) === "undefined") && typeof (APP
 if (typeof (APP$) === "undefined" && typeof ($.fn) !== "undefined")
     window.APP$ = $;
 
-// suppress white space in classic dialogs
-if (~document.location.href.indexOf('IsDlg=1'))
-    document.getElementById('globalNavBox').style.height = '40px';
-
 // base page context, there are the min requirement for *.js
 /*
 if (!_spPageContextInfo) {

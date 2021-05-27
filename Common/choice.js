@@ -10,97 +10,100 @@
                 scope: {
                     object: '=', // form containing field
                     field: '@', // field name on object,
-                    relative: '@', // type, desc, title etc are relative to this name
+                    relative: '@', // type, desc, title etc are prefixed with this
 
-                    radio: '=', // radio buttons for choices, not hides, other or none compatible
-                    
-                    hides: '=', // hide the Other option, only for choice
-                    other: '@', // override Other text to something else, only for choice
-                    none: '@', // none option in addition or instead of null, only for choice
+                    override: '=', // override any type, desc, title for this field
+
+                    // choice only options
+                    none: '@', // none option text in addition or instead of null
+                    radio: '=', // override choice to radio buttons, doesn't support not fill-in below
+                    hides: '=', // hide the Other fill-in option
+                    other: '@', // override Other fill-in option text to something else, will override hides
 
                     ngShow: '=',
                     ngHide: '=',
                     ngDisabled: '='
                 },
-                template: '\
-<div style="margin: 12px 0 0 0;">\
-    <span style="padding-top: 6px;" ng-if="$parent.TypeAsString[(relative || \'\') + field] == \'Boolean\'">\
-        <input flex ng-disabled="ngDisabled" type="checkbox" ng-model="object[field]" ng-required="r" name="{{(relative || \'\') + field}}_Y">\
-    </span>\
-    \
-    <span class="cTitle">{{$parent.Titles[(relative || \'\') + field]}}</span>\
-    <span ng-if="$parent.Requireds[(relative || \'\') + field]" class=required>*</span>\
-    <i ng-if="t" class="fa fa-info-circle" aria-hidden="true" tooltip="{{t}}"></i>\
-    \
-    <div layout="column" style="padding-top: 6px;" ng-if="$parent.TypeAsString[(relative || \'\') + field] == \'Text\'">\
-        <input flex ng-disabled="ngDisabled" type="text" ng-model="object[field]" ng-required="r" name="{{(relative || \'\') + field}}_T" maxlength="250">\
-    </div>\
-    \
-    <div ng-hide="ngDisabled" layout="column" style="padding-top: 6px;" ng-if="$parent.TypeAsString[(relative || \'\') + field] == \'Number\' || $parent.TypeAsString[(relative || \'\') + field] == \'Integer\'">\
-        <input flex ng-disabled="ngDisabled" type="number" ng-model="object[field]" ng-required="r" name="{{(relative || \'\') + field}}_I">\
-    </div>\
-    \
-    <div ng-show="ngDisabled" layout="column" style="padding-top: 6px;" ng-if="$parent.TypeAsString[(relative || \'\') + field] == \'Number\' || $parent.TypeAsString[(relative || \'\') + field] == \'Integer\'">\
-        <div class="disabled">{{object[field] | number:(((object[field] || 0).toString() + \'.\').split(\'.\')[1].length)}}</div>\
-    </div>\
-    \
-    <div layout="column" style="padding-top: 6px;" ng-if="$parent.TypeAsString[(relative || \'\') + field] == \'Date\'">\
-        <input flex ng-disabled="ngDisabled" type="date" ng-model="object[field]" ng-required="r" name="{{(relative || \'\') + field}}_D">\
-    </div>\
-    \
-    <div layout="column" style="padding-top: 6px;" ng-if="$parent.TypeAsString[(relative || \'\') + field] == \'DateTime\'">\
-        <input flex ng-disabled="ngDisabled" type="datetime-local" ng-model="object[field]" ng-required="r" name="{{(relative || \'\') + field}}_D">\
-    </div>\
-    \
-    <div layout="column" style="padding-top: 6px;" ng-if="$parent.TypeAsString[(relative || \'\') + field] == \'Multiple lines of text\'">\
-        <textarea rows="5" flex ng-disabled="ngDisabled" ng-model="object[field]" ng-required="r" name="{{(relative || \'\') + field}}_M"></textarea>\
-    </div>\
-    \
-    <div ng-hide="ngDisabled" layout="column" style="padding-top: 6px;" ng-if="$parent.TypeAsString[(relative || \'\') + field] == \'Note\'">\
-        <textarea ui-tinymce="tinymceOptions" rows="5" flex ng-disabled="ngDisabled" ng-model="object[field]" ng-required="r" name="{{(relative || \'\') + field}}_N"></textarea>\
-    </div>\
-    \
-    <div ng-show="ngDisabled" layout="column" style="padding-top: 6px;" ng-if="$parent.TypeAsString[(relative || \'\') + field] == \'Note\'">\
-         <textarea ui-tinymce="tinymceROOptions" rows="5" flex ng-disabled="ngDisabled" ng-model="object[field]" ng-required="r" name="{{(relative || \'\') + field}}_N"></textarea>\
-    </div>\
-    \
-    <div layout="column" style="padding-top: 6px;" ng-if="$parent.TypeAsString[(relative || \'\') + field] == \'User\' || $parent.TypeAsString[(relative || \'\') + field] == \'UserMulti\' || $parent.TypeAsString[(relative || \'\') + field] == \'Lookup\' || $parent.TypeAsString[(relative || \'\') + field] == \'LookupMulti\' || $parent.TypeAsString[(relative || \'\') + field] == \'TaxonomyFieldType\' || $parent.TypeAsString[(relative || \'\') + field] == \'TaxonomyFieldTypeMulti\'">\
-        <div class="disabled">Error, not yet available...</div>\
-    </div>\
-    <div ng-if="false">\
-        <people array="false" ng-model="object[field + \'Id\']" ng-disabled="ngDisabled" ng-required="r"></people>\
-        <people array="true" ng-model="object[field + \'Id\'].results" ng-disabled="ngDisabled" ng-required="r"></people>\
-    </div>\
-    \
-    <div layout="row" style="padding-top: 6px;" ng-show="$parent.TypeAsString[(relative || \'\') + field] == \'Choice\' && radio">\
-        <label ng-repeat="i in $parent.Choices[(relative || \'\') + field]" style="display:block; margin-right: 15px">\
-            <input ng-value="i" ng-disabled="ngDisabled" type="radio" ng-model="object[field]" ng-required="r" name="{{(relative || \'\') + field}}_R">\
-            {{i}}\
-        </label>\
-    </div>\
-    \
-    <div layout="row" style="padding-top: 6px;" ng-show="$parent.TypeAsString[(relative || \'\') + field] == \'Choice\' && !radio">\
-        <select ng-disabled="ngDisabled" ng-change="selChange()" ng-model="c" ng-required="r" name="{{(relative || \'\') + field}}_0" flex>\
-            <option ng-if="none" value="-">{{none}}</option>\
-            <option ng-repeat="i in $parent.Choices[(relative || \'\') + field]" ng-value="i">{{i}}</option>\
-            <option ng-if="!hides" ng-value="v">{{other || \'Other\'}}</option>\
-        </select>\
-        <input ng-model-options="{debounce:2500}" ng-disabled="ngDisabled" type="text" ng-if="!hides && $parent.TypeAsString[(relative || \'\') + field] == \'Choice\' && !radio" ng-show="s" flex ng-model="object[field]" ng-required="r" name="{{(relative || \'\') + field}}_1" maxlength="250" onclick="this.select();">\
-    </div>\
-    \
-    <div layout="column" style="padding-top: 6px;" ng-show="$parent.TypeAsString[(relative || \'\') + field] == \'MultiChoice\'">\
-        <select flex multiple="multiple" style="height: 80px !important" ng-disabled="ngDisabled" ng-click="selChange($event)" ng-model="c" ng-required="r" name="{{(relative || \'\') + field}}_S">\
-            <option ng-repeat="i in $parent.Choices[(relative || \'\') + field]" ng-value="i">{{i}}</option>\
-        </select>\
-    </div>\
-    \
-    <span style="display:none !important" class="fields" id="{{(relative || \'\') + field}}">{{object[field]}}</span>\
-</div>',
-                link: function(scope, element, attr) {
+                template: `
+<div style="margin: 12px 0 0 0;">
+    <label ng-if="get('TypeAsString') == 'Boolean'">
+        <input flex ng-disabled="ngDisabled" type="checkbox" ng-model="object[field]" ng-required="r" name="{{(relative || '') + field}}_Y" style="height: 10px !important;min-height: 0 !important;">
+        {{get('Titles')}}
+    </label>
+
+    <span class="cTitle" ng-if="get('TypeAsString') != 'Boolean'">{{get('Titles')}}</span>
+    <span ng-if="get('Requireds')" class=required>*</span>
+    <i ng-if="t" class="fa fa-info-circle" aria-hidden="true" tooltip="{{t}}"></i>
+    
+    <div layout="column" style="padding-top: 6px;" ng-if="get('TypeAsString') == 'Text'">
+        <input flex ng-disabled="ngDisabled" type="text" ng-model="object[field]" ng-required="r" name="{{(relative || '') + field}}_T" maxlength="250">
+    </div>
+    
+    <div ng-hide="ngDisabled" layout="column" style="padding-top: 6px;" ng-if="get('TypeAsString') == 'Number' || get('TypeAsString') == 'Integer'">
+        <input flex ng-disabled="ngDisabled" type="number" ng-model="object[field]" ng-required="r" name="{{(relative || '') + field}}_I">
+    </div>
+    
+    <div ng-show="ngDisabled" layout="column" style="padding-top: 6px;" ng-if="get('TypeAsString') == 'Number' || get('TypeAsString') == 'Integer'">
+        <div class="disabled">{{object[field] | number:(((object[field] || 0).toString() + '.').split('.')[1].length)}}</div>
+    </div>
+    
+    <div layout="column" style="padding-top: 6px;" ng-if="get('TypeAsString') == 'Date'">
+        <input flex ng-disabled="ngDisabled" type="date" ng-model="object[field]" ng-required="r" name="{{(relative || '') + field}}_D">
+    </div>
+    
+    <div layout="column" style="padding-top: 6px;" ng-if="get('TypeAsString') == 'DateTime'">
+        <input flex ng-disabled="ngDisabled" type="datetime-local" ng-model="object[field]" ng-required="r" name="{{(relative || '') + field}}_D">
+    </div>
+    
+    <div layout="column" style="padding-top: 6px;" ng-if="get('TypeAsString') == 'Multiple lines of text'">
+        <textarea rows="5" flex ng-disabled="ngDisabled" ng-model="object[field]" ng-required="r" name="{{(relative || '') + field}}_M"></textarea>
+    </div>
+    
+    <div ng-hide="ngDisabled" layout="column" style="padding-top: 6px;" ng-if="get('TypeAsString') == 'Note'">
+        <textarea ui-tinymce="tinymceOptions" rows="5" flex ng-disabled="ngDisabled" ng-model="object[field]" ng-required="r" name="{{(relative || '') + field}}_N"></textarea>
+    </div>
+    
+    <div ng-show="ngDisabled" layout="column" style="padding-top: 6px;" ng-if="get('TypeAsString') == 'Note'">
+         <textarea ui-tinymce="tinymceROOptions" rows="5" flex ng-disabled="ngDisabled" ng-model="object[field]" ng-required="r" name="{{(relative || '') + field}}_N"></textarea>
+    </div>
+    
+    <div layout="column" style="padding-top: 6px;" ng-if="get('TypeAsString') == null || get('TypeAsString') == 'User' || get('TypeAsString') == 'UserMulti' || get('TypeAsString') == 'Lookup' || get('TypeAsString') == 'LookupMulti' || get('TypeAsString') == 'TaxonomyFieldType' || get('TypeAsString') == 'TaxonomyFieldTypeMulti'">
+        <div class="disabled">Error, not yet available...</div>
+    </div>
+    
+    <div layout="row" style="padding-top: 6px;" ng-show="get('TypeAsString') == 'Choice' && radio">
+        <label ng-if="none" style="display:block; margin-right: 15px">
+            <input value="-" ng-disabled="ngDisabled" type="radio" ng-model="object[field]" ng-required="r" name="{{(relative || '') + field}}_R" style="height: 10px !important;min-height: 0 !important;">
+            {{none}}<
+        </label>
+        <label ng-repeat="i in get('Choices')" style="display:block; margin-right: 15px">
+            <input ng-value="i" ng-disabled="ngDisabled" type="radio" ng-model="object[field]" ng-required="r" name="{{(relative || '') + field}}_R" style="height: 10px !important;min-height: 0 !important;">
+            {{i}}
+        </label>
+    </div>
+    
+    <div layout="row" style="padding-top: 6px;" ng-show="get('TypeAsString') == 'Choice' && !radio">
+        <select ng-disabled="ngDisabled" ng-change="selChange()" ng-model="c" ng-required="r" name="{{(relative || '') + field}}_0" flex>
+            <option ng-if="none" value="-">{{none}}</option>
+            <option ng-repeat="i in get('Choices')" ng-value="i" ng-if="!other || other != i">{{i}}</option>
+            <option ng-if="!hides || other" ng-value="v">{{other || 'Other'}}</option>
+        </select>
+        <input ng-model-options="{debounce:2500}" ng-disabled="ngDisabled" type="text" ng-if="(!hides || other) && get('TypeAsString') == 'Choice' && !radio" ng-show="s" flex ng-model="object[field]" ng-required="r" name="{{(relative || '') + field}}_1" maxlength="250" onclick="this.select();">
+    </div>
+    
+    <div layout="column" style="padding-top: 6px;" ng-show="get('TypeAsString') == 'MultiChoice'">
+        <select flex multiple="multiple" style="height: 80px !important" ng-disabled="ngDisabled" ng-click="selChange($event)" ng-model="c" ng-required="r" name="{{(relative || '') + field}}_S">
+            <option ng-repeat="i in get('Choices')" ng-value="i">{{i}}</option>
+        </select>
+    </div>
+    
+    <span style="display:none !important" class="fields" id="{{(relative || '') + field}}">{{object[field]}}</span>
+</div>`,
+                link: function(scope, element) {
                     element.addClass('layout-column');
                     // IE only hack
                     if (element.attr('flex') == null) {
-                        element.attr('style','display: block');
+                        element.attr('style',(element.attr('style') || '') + ';display: block');
                     }
                 },
                 controller: function ($scope, $timeout, $element) {
@@ -115,6 +118,7 @@
                         debounce: false,
                         paste_data_images: true
                     };
+                    
                     $scope.tinymceROOptions = {
                         selector: "textarea",
                         height: 200,
@@ -123,15 +127,27 @@
                         statusbar: false
                     };
 
+                    $scope.get = function (t) {
+                        var p = null;
+                        if ($scope.override && $scope.override[t]) {
+                            p = $scope.override[t];
+                        } else if ($scope.$parent && $scope.$parent[t] && $scope.$parent[t][($scope.relative || '') + $scope.field]) {
+                            p = $scope.$parent[t][($scope.relative || '') + $scope.field];
+                        }
+                        if (p == null)
+                            return t == 'Choices' ? [] : null;
+                        return p;
+                    }
+
                     $scope.v = ($scope.other || 'Other') + ', please specify...';
 
                     $scope.selChange = function (event) {
                         $timeout(function(){
-                            if ($scope.$parent.TypeAsString[($scope.relative || '') + $scope.field] == 'Choice') {
+                            if ($scope.get('TypeAsString') == 'Choice') {
                                 return $scope.object[$scope.field] = $scope.c;
                             }
 
-                            if ($scope.$parent.TypeAsString[($scope.relative || '') + $scope.field] != 'MultiChoice')
+                            if ($scope.get('TypeAsString') != 'MultiChoice')
                                 return;
 
                             if (!$scope.object[$scope.field] || !$scope.object[$scope.field].results) {
@@ -166,8 +182,8 @@
                                 $scope.ngShow = false;
                             if ($element && $element.attr('data-ng-show') && $element.attr('data-ng-show') != '' && $scope.ngShow == null)
                                 $scope.ngShow = false;
-                            $scope.r = $scope.$parent.Requireds && $scope.$parent.Requireds[($scope.relative || '') + $scope.field] && ($scope.ngShow || $scope.ngShow == null) && !$scope.ngHide && !$scope.ngDisabled;
-                            $scope.t = $scope.$parent.Descriptions && $scope.$parent.Descriptions[($scope.relative || '') + $scope.field] && $scope.$parent.Descriptions[($scope.relative || '') + $scope.field].length > 0 ? $scope.$parent.Descriptions[($scope.relative || '') + $scope.field] : null;
+                            $scope.r = $scope.get('Requireds') && ($scope.ngShow || $scope.ngShow == null) && !$scope.ngHide && !$scope.ngDisabled;
+                            $scope.t = $scope.get('Descriptions');
                         },50);
                     }
 
@@ -176,21 +192,21 @@
                     $scope.$watch('ngHide', update);
                     $scope.$watch('ngDisabled', update);
 
-                    $scope.$watch('$parent.Titles[(relative || \'\') + field]', update);
-                    $scope.$watch('$parent.Requireds[(relative || \'\') + field]', update);
-                    $scope.$watch('$parent.Descriptions[(relative || \'\') + field]', update);
-                    $scope.$watch('$parent.TypeAsString[(relative || \'\') + field]', update);
+                    $scope.$watch(`$parent.Titles[(relative || '') + field]`, update);
+                    $scope.$watch(`$parent.Requireds[(relative || '') + field]`, update);
+                    $scope.$watch(`$parent.Descriptions[(relative || '') + field]`, update);
+                    $scope.$watch(`$parent.TypeAsString[(relative || '') + field]`, update);
 
                     $scope.$watch('object[field]',function () {
                         if (!$scope.object || $scope.object[$scope.field] == null) {
                             $scope.c = null;
                             $scope.s = null;
                             update();
-                        } else if ($scope.$parent.TypeAsString[($scope.relative || '') + $scope.field] == 'MultiChoice') {
+                        } else if ($scope.get('TypeAsString') == 'MultiChoice') {
                             $scope.c = $scope.object[$scope.field].results;
                             $scope.s = false;
                             $scope.r = false; // dirty hack to remove required from actual inputs once populated due to timing bug
-                        } else if ($scope.$parent.TypeAsString[($scope.relative || '') + $scope.field] == 'Choice' && ($scope.object[$scope.field] == '-' || $scope.$parent.Choices && ($scope.$parent.Choices[($scope.relative || '') + $scope.field] || []).indexOf($scope.object[$scope.field]) >= 0)) {
+                        } else if ($scope.get('TypeAsString') == 'Choice' && ($scope.object[$scope.field] == '-' || $scope.get('Choices').indexOf($scope.object[$scope.field]) >= 0)) {
                             $scope.c = $scope.object[$scope.field];
                             $scope.s = false;
                             $scope.r = false; // dirty hack to remove required from actual inputs once populated due to timing bug
@@ -200,6 +216,9 @@
                             update();
                         }
                     });
+
+                    if ($scope.override)
+                        update();
                 }
             }
         });

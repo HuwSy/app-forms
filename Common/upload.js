@@ -8,7 +8,8 @@
             return {
                 restrict: 'E',
                 scope: {
-                    attachments: "=",
+					attachments: "=",
+					prefix: "=",
                     type: "=",
 					mult: "=",
 					addOnly: '=',
@@ -19,8 +20,8 @@
                 },
 				template: '\
 <ul style="padding-left: 20px; list-style: none;">\
-	<li ng-show="attachments == null || attachments.length == 0" style="padding: 4px;" ng-class="{\'ng-invalid\':ngRequired}">No attachments</li>\
-	<li ng-repeat="a in attachments" style="padding: 4px; {{a.Deleted ? \'text-decoration: line-through\' : \'\'}}"><a href="{{a.ServerRelativeUrl || \'#\'}}{{(web ? \'?Web=1\' : \'\')}}" target="_blank">{{a.FileName}}</a> <i class="fa fa-remove" ng-click="deleteLogo(a)" style="cursor: pointer;" ng-hide="ngDisabled || a.Deleted || (addOnly && a.ServerRelativeUrl)"></i> <i class="fa fa-upload" ng-show="a.ServerRelativeUrl == null"></i></li>\
+	<li ng-show="attachments == null || (attachments | filter:search).length == 0" style="padding: 4px;" ng-class="{\'ng-invalid\':ngRequired}">No attachments</li>\
+	<li ng-repeat="a in (attachments | filter:search)" style="padding: 4px; {{a.Deleted ? \'text-decoration: line-through\' : \'\'}}"><a {{web === false ? "download=\"" + a.FileName + "\"" : ""}} href="{{a.ServerRelativeUrl || \'#\'}}{{(web ? \'?Web=1\' : \'\')}}" target="_blank">{{a.FileName}}</a> <i class="fa fa-remove" ng-click="deleteLogo(a)" style="cursor: pointer;" ng-hide="ngDisabled || a.Deleted || (addOnly && a.ServerRelativeUrl)"></i> <i class="fa fa-upload" ng-show="a.ServerRelativeUrl == null"></i></li>\
 </ul>\
 <input ng-hide="ngDisabled" accept="{{type}}" type="file" style="display: none;" multiple onchange="angular.element(this).scope().addLogo(this)" />\
 <a class="print-hide" style="color: black;padding: 7px 10px;border: 1px solid #ababab;background-color: #fdfdfd;font-size: 11px;float: right;" ng-hide="ngDisabled" onclick="this.previousElementSibling.tagName == \'DIV\' ? this.previousElementSibling.previousElementSibling.click() : this.previousElementSibling.click()">Add Files</a>\
@@ -29,7 +30,13 @@
             }
         });
 
-    function Upload($scope, $timeout) {
+    function Upload($scope) {
+		$scope.search = function (r) {
+			return $scope.prefix == null
+				|| $scope.prefix == ''
+				|| r.FileName.toLowerCase().indexOf($scope.prefix.toLowerCase()+'-') == 0
+		}
+
         $scope.deleteLogo = function (n) {
             /// <summary>Delete the selected uploaded object, or mark for pending server deletion</summary>
 			if (n.ServerRelativeUrl != null) {
@@ -52,14 +59,22 @@
 			// ensure the file name doenst already exist as duplicaes are not allowed
 			for (var f = 0; f < ths.files.length; f++) {
 				var dup = false;
-                ($scope.attachments || []).forEach(function (a) {
-				    if (!a.Deleted && a.FileName.toLowerCase() == ths.files[f].name.toLowerCase().replace(/[%'#]/g,'-')) {
-						dup = true;
-					}
-				});
-				if (dup && $scope.mult)
-			        alert('File with name ' + ths.files[f].name.replace(/[%'#]/g,'-') + ' already exists.');
-			    else
+				if ($scope.mult) {
+					var n = ($scope.prefix && $scope.prefix != '' ? $scope.prefix.toLowerCase() + '-' : '');
+					if ($scope.prefix && $scope.prefix != '' && ths.files[f].name.toLowerCase().indexOf($scope.prefix.toLowerCase()+'-') == 0)
+						n += ths.files[f].name.toLowerCase().substring($scope.prefix.length + 1).replace(/[%'#]/g,'-');
+					else
+						n += ths.files[f].name.toLowerCase().replace(/[%'#]/g,'-');
+					
+					var dup = false;
+					($scope.attachments || []).forEach(function (a) {
+						if (!dup && !a.Deleted && a.FileName.toLowerCase() == n) {
+							alert('File with name "' + a.FileName + '" already exists.');
+							dup = true;
+						}
+					});
+				}
+				if (!dup)
 			        files.push(ths.files[f]);
 			}
 			// load file(s) into js objects ready for save action
@@ -86,8 +101,14 @@
                         for (var a = $scope.attachments.length - 1; a >= 0; a--)
                             $scope.deleteLogo($scope.attachments[a]);
 
+					var n = ($scope.prefix && $scope.prefix != '' ? $scope.prefix + '-' : '');
+					if ($scope.prefix && $scope.prefix != '' && f.name.toLowerCase().indexOf($scope.prefix.toLowerCase()+'-') == 0)
+						n += f.name.substring($scope.prefix.length + 1).replace(/[%'#]/g,'-');
+					else
+						n += f.name.replace(/[%'#]/g,'-');
+					
 					$scope.attachments.push({
-						FileName: f.name.replace(/[%'#]/g,'-'),
+						FileName: n,
 						ServerRelativeUrl: null,
 						Data: data,
 						Length: len
@@ -98,7 +119,7 @@
 						$scope.callback();
 				};
 				reader.onerror = function () {
-					alert("File reading error " + f.name.replace(/[%'#]/g,'-'));
+					alert("File reading error " + f.name);
 				};
 				if (!txt)
 					reader.readAsArrayBuffer(f);

@@ -3,7 +3,7 @@
 (function ($) {
 	var appMod = angular.module('Forms', ['appforms']);
     
-    appMod.controller("Forms", function ($scope, listSvc, webSvc, $routeParams, $uibModal, $timeout, $location, $q, $rootScope,
+    appMod.controller("Forms", function ($scope, listSvc, webSvc, fileSvc, $routeParams, $uibModal, $timeout, $location, $q, $rootScope,
 		listName, spData, additFuncs, additFields, additSave) {
 		// stop reloading home.js loop
 		if (typeof app.interval != "undefined")
@@ -193,13 +193,15 @@
 				$scope.Titles[n] = c.Title;
 			if (c.TypeAsString == "DateTime" && c.DisplayFormat == 0 && !$scope.TypeAsString[n])
 				$scope.TypeAsString[n] = "Date";
+			if (c.TypeAsString == "Note" && !c.RichText && !$scope.TypeAsString[n])
+				$scope.TypeAsString[n] = "Multiple lines of text";
 			if (c.TypeAsString != null && !$scope.TypeAsString[n])
 				$scope.TypeAsString[n] = c.TypeAsString;
 		}
 		
 		// load list fields
 		if (listName)
-			listSvc.field(listName, null, null, 'InternalName,Choices,Description,Required,Title,TypeAsString,DisplayFormat', "InternalName")
+			listSvc.field(listName, null, null, 'InternalName,Choices,Description,Required,Title,TypeAsString,DisplayFormat,RichText', "InternalName")
 				.then(function (d) {
 					// choice field options from list
 					d.results.forEach(function (d) {
@@ -438,6 +440,6 @@
 		
 		// custom app specifics here
 		if (additFuncs)
-			additFuncs($scope, webSvc, listSvc, $uibModal, $timeout, $q);
+			additFuncs($scope, webSvc, listSvc, $uibModal, $timeout, $q, fileSvc);
 	})
 })(APP$ || $);
