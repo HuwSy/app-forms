@@ -133,11 +133,14 @@
                     };
 
                     // gets the required field properties and/or any overrides
+                    var override = null;
                     $scope.get = function (t) {
                         var p = null;
-                        if ($scope.override)
-                            p = JSON.parse($scope.override)[t];
-                        if (!p && $scope.$parent && $scope.$parent[t] && $scope.$parent[t][($scope.relative || '') + $scope.field])
+                        if (!override && $scope.override)
+                            override = JSON.parse($scope.override);
+                        if (override)
+                            p = override[t];
+                        if (!p && $scope.$parent && $scope.$parent[t])
                             p = $scope.$parent[t][($scope.relative || '') + $scope.field];
                         if (!p && t == 'Choices')
                             return [];
@@ -190,7 +193,7 @@
                     var time = null;
                     var update = function () {
                         if (time)
-                            clearTimeout(time.$$timeoutId);
+                            clearTimeout(time);
                         time = $timeout(function () {
                             // fix ngShow needing to be explicit bool
                             if ($element && $element.attr('ng-show') && $element.attr('ng-show') != '' && $scope.ngShow == null)
@@ -200,7 +203,7 @@
                                 // re-render the required based on enablement and info bubble from desc
                                 $scope.r = $scope.get('Requireds') && ($scope.ngShow || $scope.ngShow == null) && !$scope.ngHide && !$scope.ngDisabled;
                                 $scope.t = $scope.get('Descriptions');
-                        },50);
+                        },50).$$timeoutId;
                     }
 
                     $scope.$watch('s', update);
