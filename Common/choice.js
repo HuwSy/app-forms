@@ -12,7 +12,7 @@
                     field: '@', // field name on object,
                     relative: '@', // type, desc, title etc are prefixed with this
 
-                    override: '=', // override any type, desc, title for this field
+                    override: '@', // override any type, desc, title for this field. sent as string as passing object kills large form performance for the few tiles this is useful
 
                     // choice only options
                     none: '@', // none option text in addition or instead of null
@@ -74,7 +74,7 @@
     <div layout="row" style="padding-top: 6px;" ng-show="get('TypeAsString') == 'Choice' && radio">
         <label ng-if="none" style="display:block; margin-right: 15px">
             <input value="-" ng-disabled="ngDisabled" type="radio" ng-model="object[field]" ng-required="r" name="{{(relative || '') + field}}_R" style="height: 10px !important;min-height: 0 !important;">
-            {{none}}<
+            {{none}}
         </label>
         <label ng-repeat="i in get('Choices')" style="display:block; margin-right: 15px">
             <input ng-value="i" ng-disabled="ngDisabled" type="radio" ng-model="object[field]" ng-required="r" name="{{(relative || '') + field}}_R" style="height: 10px !important;min-height: 0 !important;">
@@ -83,7 +83,7 @@
     </div>
     
     <div layout="row" style="padding-top: 6px;" ng-show="get('TypeAsString') == 'Choice' && !radio">
-        <select ng-disabled="ngDisabled" ng-change="selChange()" ng-model="c" ng-required="r" name="{{(relative || '') + field}}_0" flex>
+        <select ng-disabled="ngDisabled" ng-change="selChangeS()" ng-model="c" ng-required="r" name="{{(relative || '') + field}}_0" flex>
             <option ng-if="none" value="-">{{none}}</option>
             <option ng-repeat="i in get('Choices')" ng-value="i" ng-if="!other || other != i">{{i}}</option>
             <option ng-if="!hides || other" ng-value="v">{{other || 'Other'}}</option>
@@ -92,7 +92,7 @@
     </div>
     
     <div layout="column" style="padding-top: 6px;" ng-show="get('TypeAsString') == 'MultiChoice'">
-        <select flex multiple="multiple" style="height: 80px !important" ng-disabled="ngDisabled" ng-click="selChange($event)" ng-model="c" ng-required="r" name="{{(relative || '') + field}}_S">
+        <select flex multiple="multiple" style="height: 80px !important" ng-disabled="ngDisabled" ng-click="selChangeM($event)" ng-model="c" ng-required="r" name="{{(relative || '') + field}}_S">
             <option ng-repeat="i in get('Choices')" ng-value="i">{{i}}</option>
         </select>
     </div>
@@ -107,6 +107,10 @@
                     }
                 },
                 controller: function ($scope, $timeout, $element) {
+                    // define the default other value
+                    $scope.v = ($scope.other || 'Other') + ', please specify...';
+
+                    // rich text field
                     $scope.tinymceOptions = {
                         resize: false,
                         selector: "textarea",
@@ -119,6 +123,7 @@
                         paste_data_images: true
                     };
                     
+                    // readonly/disabled rich text field
                     $scope.tinymceROOptions = {
                         selector: "textarea",
                         height: 200,
@@ -127,51 +132,61 @@
                         statusbar: false
                     };
 
+                    // gets the required field properties and/or any overrides
                     $scope.get = function (t) {
                         var p = null;
-                        if ($scope.override && $scope.override[t]) {
-                            p = $scope.override[t];
-                        } else if ($scope.$parent && $scope.$parent[t] && $scope.$parent[t][($scope.relative || '') + $scope.field]) {
+                        if ($scope.override)
+                            p = JSON.parse($scope.override)[t];
+                        if (!p && $scope.$parent && $scope.$parent[t] && $scope.$parent[t][($scope.relative || '') + $scope.field])
                             p = $scope.$parent[t][($scope.relative || '') + $scope.field];
-                        }
-                        if (p == null)
-                            return t == 'Choices' ? [] : null;
+                        if (!p && t == 'Choices')
+                            return [];
                         return p;
                     }
 
-                    $scope.v = ($scope.other || 'Other') + ', please specify...';
-
-                    $scope.selChange = function (event) {
-                        $timeout(function(){
-                            if ($scope.get('TypeAsString') == 'Choice') {
-                                return $scope.object[$scope.field] = $scope.c;
-                            }
-
-                            if ($scope.get('TypeAsString') != 'MultiChoice')
-                                return;
-
-                            if (!$scope.object[$scope.field] || !$scope.object[$scope.field].results) {
-                                return $scope.object[$scope.field] = {
-                                    __metadata: {type: "Collection(Edm.String)"},
-                                    results: $scope.c && $scope.c.length >= 1 ? [$scope.c[0]] : []
-                                }
-                            }
-                            
-                            if (!event)
-                                return;
-
-                            var i = $scope.object[$scope.field].results.indexOf(event.target.value.replace('string:',''));
-                            if (~i)
-                                $scope.object[$scope.field].results.splice(i,1);
-                            else
-                                $scope.object[$scope.field].results.push(event.target.value.replace('string:',''));
-                        },1);
+                    // on single selection change
+                    $scope.selChangeS = function () {
+                        // may get triggered on other type changes but ignore
+                        if ($scope.get('TypeAsString') != 'Choice')
+                            return;
                         
+                        // set field value to match c either immediately 
+                        if ($scope.c != $scope.v)
+                            return $scope.object[$scope.field] = $scope.c;
+                        // or slight delay for 'other' option
                         $timeout(function(){
-                            $scope.c = $scope.object[$scope.field] == null ? null : ($scope.object[$scope.field].results || $scope.object[$scope.field]);
-                        },10)
+                            $scope.object[$scope.field] = $scope.c;
+                        },1);
                     }
 
+                    // on multi selection change
+                    $scope.selChangeM = function (event) {
+                        // may get triggered on other type changes but ignore
+                        if ($scope.get('TypeAsString') != 'MultiChoice')
+                            return;
+
+                        // set c to match new field value after creating below
+                        $timeout(function(){
+                            $scope.c = $scope.object[$scope.field] == null ? null : $scope.object[$scope.field].results;
+                        },10);
+
+                        // if no results set the field to the multiselect value
+                        if (!$scope.object[$scope.field] || !$scope.object[$scope.field].results)
+                            return $scope.object[$scope.field] = {
+                                __metadata: {type: "Collection(Edm.String)"},
+                                results: $scope.c && $scope.c.length >= 1 ? [$scope.c[0]] : []
+                            }
+
+                        // if there are selected results set the field to add/remove the most recent click
+                        var i = $scope.object[$scope.field].results.indexOf(event.target.value.replace('string:',''));
+                        if (~i)
+                            $scope.object[$scope.field].results.splice(i,1);
+                        else
+                            $scope.object[$scope.field].results.push(event.target.value.replace('string:',''));
+                    }
+
+                    // on updates to model, field properties, visibility, override etc trigger to ensure no show, required state and info text are correct
+                    // but dont run too much so set timeout for too many calls
                     var time = null;
                     var update = function () {
                         if (time)
@@ -182,8 +197,9 @@
                                 $scope.ngShow = false;
                             if ($element && $element.attr('data-ng-show') && $element.attr('data-ng-show') != '' && $scope.ngShow == null)
                                 $scope.ngShow = false;
-                            $scope.r = $scope.get('Requireds') && ($scope.ngShow || $scope.ngShow == null) && !$scope.ngHide && !$scope.ngDisabled;
-                            $scope.t = $scope.get('Descriptions');
+                                // re-render the required based on enablement and info bubble from desc
+                                $scope.r = $scope.get('Requireds') && ($scope.ngShow || $scope.ngShow == null) && !$scope.ngHide && !$scope.ngDisabled;
+                                $scope.t = $scope.get('Descriptions');
                         },50);
                     }
 
@@ -191,12 +207,13 @@
                     $scope.$watch('ngShow', update);
                     $scope.$watch('ngHide', update);
                     $scope.$watch('ngDisabled', update);
-
+                    $scope.$watch(`override`, update);
                     $scope.$watch(`$parent.Titles[(relative || '') + field]`, update);
                     $scope.$watch(`$parent.Requireds[(relative || '') + field]`, update);
                     $scope.$watch(`$parent.Descriptions[(relative || '') + field]`, update);
                     $scope.$watch(`$parent.TypeAsString[(relative || '') + field]`, update);
 
+                    // as field changes, ensure choice drop down and other fill-in setup correctly
                     $scope.$watch('object[field]',function () {
                         if (!$scope.object || $scope.object[$scope.field] == null) {
                             $scope.c = null;
@@ -211,14 +228,11 @@
                             $scope.s = false;
                             $scope.r = false; // dirty hack to remove required from actual inputs once populated due to timing bug
                         } else {
-                            $scope.c = $scope.v;
+                            $scope.c = $scope.v; // other value on the choice field
                             $scope.s = true;
                             update();
                         }
                     });
-
-                    if ($scope.override)
-                        update();
                 }
             }
         });
