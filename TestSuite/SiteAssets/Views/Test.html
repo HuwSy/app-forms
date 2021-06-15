@@ -392,7 +392,8 @@
 							
 							document.getElementById('results').innerHTML += "<b>Web - Email</b>: <a href='<List here that can show apps using functions>?FilterField1=Libs&FilterType1=MultiChoice&FilterValue1=" + encodeURIComponent('Web - Email') + "' style=color:" + (!pass ? 'red' : 'green') + ">" + (!pass ? 'FAIL' : 'PASS') + "</a><br>";
 						}
-
+						
+						document.getElementById('results').innerHTML += "<br><a href='" + document.location.href + "'>rerun here</a>";
 						document.title = 'Early Warning - Failed: ' + fails.toString();
 						$('#modRes').html($('#results').html());
 						$('#dialogTitleSpan').text('Results - Failed: ' + fails.toString());
@@ -479,7 +480,7 @@
 				<choice object="form" field="K"></choice>
 				<choice object="form" field="L"></choice>
 				<choice object="form" field="M" ng-disabled="true"></choice>
-				<choice object="form" field="N" radio="true"></choice>
+				<choice object="form" field="N" radio="true" override="{ Titles: 'TitleNOverride',Requireds: true,Descriptions: 'C',Choices: ['1', '2'],TypeAsString: 'Choice' }"></choice>
 			</div>
 
 			<div>
