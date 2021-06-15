@@ -1,4 +1,4 @@
-(function () {
+(function ($) {
 	var appMod = angular.module('tooltip', []);
 	
     appMod.directive('tooltip',
@@ -72,4 +72,4 @@
 				});
 			}
 		});
-})();
+})(APP$ || $);
