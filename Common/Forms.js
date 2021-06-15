@@ -265,7 +265,7 @@
 				$scope.form.Status = 'Draft';
 			return $scope.save(true, dontClose);
 		}
-		$scope.reject = function (allowInvalid, dontClose, field) {
+		$scope.reject = function (allowInvalid, dontClose, field, initial) {
 			var scope = $scope;
 			scope.submitted = true;
 			if (field && scope.form[field] && scope.form[field].trim() != '') {
@@ -277,13 +277,14 @@
 								<h4 class="modal-title">Reason</h4>\
 							</div>\
 							<div class="modal-body">\
-								<input ng-model="Reason" style="width: 95%;" placeholder="Reason to email back to the initiator.">\
+								<textarea ng-model="Reason" style="height: 50px; width: 100%; box-sizing: border-box;" placeholder="Reason to email back to the initiator." maxlength="255"></textarea>\
 							</div>\
 							<div class="modal-footer">\
 								<button class="btn" ng-click="$close()" ng-disabled="submitting">Cancel</button>\
 								<button class="btn btn-primary" ng-click="ok()" ng-disabled="submitting">OK</button>\
 							</div>',
 				controller: function ($scope) {
+					$scope.Reason = initial || '';
 					$scope.ok = function () {
 						scope.form[field || 'Rejection'] = $scope.Reason;
 						$scope.$close();
