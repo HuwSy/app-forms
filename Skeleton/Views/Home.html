@@ -13,7 +13,7 @@
 			<option value="">Filter by status</option>
 			<option ng-repeat="i in Status" value="{{i}}">{{i}}</option>
 		</select>
-		<input type="text" ng-model="Search" placeholder="Search by name" style="width: 300px;" ng-change="currentPage = 1" ng-change="saveFilter('itemsPerPage');/>
+		<input type="text" ng-model="Search" placeholder="Search by name" style="width: 300px;" ng-change="currentPage = 1"/>
 		<i class="fa fa-search" ng-click="loadData(true)"></i>
 		<i class="fa fa-print" onclick="print()"></i>
 		<i class="fa fa-file-excel-o" ng-click="Export()"></i>
