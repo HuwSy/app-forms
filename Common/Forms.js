@@ -266,11 +266,14 @@
 			return $scope.save(true, dontClose);
 		}
 		$scope.reject = function (allowInvalid, dontClose, field, initial) {
+			$scope.submitted = true;
+			if (!$scope.form.valid && !allowInvalid)
+				return;
+			
+			if (field && $scope.form[field] && $scope.form[field].trim() != '')
+				return $scope.save(allowInvalid, dontClose);
+			
 			var scope = $scope;
-			scope.submitted = true;
-			if (field && scope.form[field] && scope.form[field].trim() != '') {
-				return scope.save(allowInvalid, dontClose);
-			}
 			$uibModal.open({
 				size: 'sm',
 				template: ' <div class="modal-header">\
