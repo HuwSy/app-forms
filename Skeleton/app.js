@@ -5,11 +5,11 @@
         // routing
         .config([
             "$routeProvider", "$mdThemingProvider", "$mdDateLocaleProvider", function ($routeProvider, $mdThemingProvider, $mdDateLocaleProvider) {
-				// theming
+				// USS theming
                 $mdThemingProvider.theme('default').primaryPalette('red', {
-                    'default': '900',
-                    'hue-1': '800',
-                    'hue-2': '800'
+                    'default': '800',
+                    'hue-1': '900',
+                    'hue-2': '900'
                 }).accentPalette('grey');
 				
 				// UK dates
@@ -27,13 +27,13 @@
                     /* Can have multiple controllers, common to use a prefix then trap stage and editing id (or 0/0 if new item under same route) */
 					.when('/<something>/:Stage/:Id/:Tab', {
                         /* Template view file */
-                        templateUrl: window.appsubfolder + "Views/<something>.html",
+                        templateUrl: window.appsubfolder + "Views/Department.html",
                         /* Controller of Forms or Home */
 						controller: 'Forms',
                         resolve: {
                             listName: function () {
                                 /* List Title for saving to */
-                                return '<somethings>';
+                                return 'Departments';
                             },
                             spData: function () {
                                 /* Override SP.Data.<this>ListItem where required, i.e. list title changed since creation */
@@ -42,6 +42,36 @@
                             additFuncs: function () {
                                 return function (scope, webSvc, listSvc, $uibModal, $timeout, $q) {
                                     /* Any additional functions related to this route including new, i.e. Loading additional lists */
+                                    scope.openViewModalExample = function (id) {
+                                        $uibModal.open({
+                                            animation: true,
+                                            templateUrl: window.appsubfolder + "Views/Department.html",
+						                    controller: 'Forms',
+                                            resolve: {
+                                                listName: function () {
+                                                    return 'Departments';
+                                                },
+                                                spData: function () {
+                                                    return null;
+                                                },
+                                                additFuncs: function () {
+                                                    return null;
+                                                },
+                                                additFields: function () {
+                                                    return null;
+                                                },
+                                                additSave: function () {
+                                                    return null
+                                                },
+                                                $routeParams: function () {
+                                                    return {
+                                                        Id: id,
+                                                        Stage: '-1'
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    }
                                     if (!scope.id)
                                         return;
                                     /* Any additional functions related to this route for loaded data ids */
@@ -53,7 +83,7 @@
                             },
                             additSave: function () {
                                 return function (form, allowInvalid, stageViewed, scope) {
-                                    /* During save function, additional logic such as changing status if conditions met */
+                                    /* During save function, additional logic such as changing status if conditions met, to invalidate form from here update scope.form.<field> */
                                 }
                             }
                         }
@@ -65,7 +95,7 @@
 						resolve: {
                             listName: function () {
                                 /* List Title for primary loading from */
-                                return '<somethings>';
+                                return 'Departments';
                                 /* Can be a function call for variations */
                                 return function (scope) {
                                     return '';
@@ -86,7 +116,7 @@
                             },
                             select: function () {
                                 /* OData style select, will automatically calculate expands */
-                                return 'Id,Title,Author/Id,Author/Title,Status,History';
+                                return 'Id,Title,Author/Id,Author/Title,ExCo/Id,ExCo/Title,Owner/Id,Owner/Title,Representatives/Id,Representatives/Title,Site,Status,History';
                                 /* Can be a function call for variations */
                                 return function (scope) {
                                     return '';
@@ -133,4 +163,4 @@
                     })
             }
         ]);
-})(APP$ || $);
+})(USS$ || $);
