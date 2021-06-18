@@ -5,7 +5,7 @@
         // routing
         .config([
             "$routeProvider", "$mdThemingProvider", "$mdDateLocaleProvider", function ($routeProvider, $mdThemingProvider, $mdDateLocaleProvider) {
-				// USS theming
+				// theming
                 $mdThemingProvider.theme('default').primaryPalette('red', {
                     'default': '800',
                     'hue-1': '900',
@@ -163,4 +163,4 @@
                     })
             }
         ]);
-})(USS$ || $);
+})(APP$ || $);
