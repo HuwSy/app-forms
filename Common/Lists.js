@@ -186,7 +186,7 @@ if (typeof SP != "undefined")
                 });
 
                 if (items.length > 1) {
-                    $.when(promises).then(function () {
+                    $.when.apply($, promises).then(function () {
                         return def.resolve();
                     },function (a, b) {
                         return def.reject(a, b);
