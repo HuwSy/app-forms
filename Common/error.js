@@ -8,6 +8,12 @@
                 if (!e || !e.tagName)
                     return false;
                 
+                e.onload = function () {
+                    this.style.visibility = null;
+                    if ((this.getAttribute('error') || '') != '' && !this.src.endsWith(this.getAttribute('error').replace('./','').replace('../','')))
+                        this.style.opacity = null;
+                }
+                
                 e.onerror = function () {
                     if ((this.getAttribute('error') || '') != '') {
                         this.src = this.getAttribute('error');
