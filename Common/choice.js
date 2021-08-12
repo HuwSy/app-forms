@@ -19,6 +19,7 @@
                     radio: '=', // override choice to radio buttons, doesn't support not fill-in below
                     hides: '=', // hide the Other fill-in option
                     other: '@', // override Other fill-in option text to something else, will override hides
+                    filter: '=', // filter field by function
 
                     ngShow: '=',
                     ngHide: '=',
@@ -144,6 +145,8 @@
                             p = $scope.$parent[t][($scope.relative || '') + $scope.field];
                         if (!p && t == 'Choices')
                             return [];
+                        if (p && t == 'Choices' && typeof $scope.filter == "function")
+                            return p.filter($scope.filter);
                         return p;
                     }
 
