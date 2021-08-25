@@ -632,10 +632,10 @@ if (typeof SP != "undefined")
 			return def.promise();
 		}
 		
-		Lists.UrlExists = function (url) {
+		Lists.UrlExists = function (url, web) {
             var def = $.Deferred();
             
-            Lists.UrlContent(url).then(function (s) {
+            Lists.UrlContent(url, web, true).then(function (s) {
                 def.resolve(s);
             }, function (s) {
                 def.reject(s);
@@ -644,7 +644,7 @@ if (typeof SP != "undefined")
 			return def.promise();
 		}
 		
-		Lists.UrlContent = function (url) {
+		Lists.UrlContent = function (url, web, exists) {
 			var def = $.Deferred();
 			var xhttp = new XMLHttpRequest();
 			xhttp.onreadystatechange = function () {
@@ -657,6 +657,11 @@ if (typeof SP != "undefined")
 						return def.resolve(true, xhttp.response);
 				}
 			};
+			// if checking existance only, no dot in final segment then assume folder, this should check both file and folder separately in case its a folder with a dot or file with no extension?
+			if (exists && url.split('/').pop().indexOf('.') < 0)
+                		url = (web || _spPageContextInfo.webServerRelativeUrl).replace(/\/$/,'') + "/_api/web/GetFolderByServerRelativeUrl('" + url + "')";
+			else if (exists)
+                		url = (web || _spPageContextInfo.webServerRelativeUrl).replace(/\/$/,'') + "/_api/web/GetFileByServerRelativeUrl('" + url + "')";
 			xhttp.open("GET", url, true);
 			if (url == null || url == '' || url.match(/^undefined$/i) != null)
 				def.reject(false);
