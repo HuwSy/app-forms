@@ -170,7 +170,7 @@ export class ChoiceComponent implements OnInit {
     // if no title use internal field name
     if (!p && t == 'Title')
       return this.field;
-    return p.results || p;
+    return !p || typeof p.results == "undefined" ? p : p.results;
   }
 
   // selected field option not in available choices, i.e. other
