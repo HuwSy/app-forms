@@ -1,0 +1,92 @@
+<div style="margin: 12px 0 0 0;" layout="column">
+    <label *ngIf="get('TypeAsString') == 'Boolean'">
+        <input flex [disabled]="disabled" type="checkbox" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_Y" style="height: 10px !important;min-height: 0 !important;">
+        {{get('Title')}}
+    </label>
+    <span *ngIf="get('TypeAsString') != 'Boolean'">{{get('Title')}}</span>
+    <span *ngIf="get('Required')" style="color:red">*</span>
+    <i *ngIf="(get('Description') || '') != ''" class="fa fa-info-circle" aria-hidden="true" title="{{get('Description')}}"></i>
+
+    <div layout="column" style="padding-top: 6px;" *ngIf="get('TypeAsString') == 'MultiChoice'">
+        <select (mousedown)="false" (click)="selChangeC($event)" flex multiple="multiple" style="height: 80px !important" [disabled]="disabled" [ngModel]="form[field].results" [required]="required()" name="{{field}}_S"><!--  (ngModelChange)="selChangeM($event)" -->
+            <option *ngFor="let i of get('Choices')" [value]="i">{{i}}</option>
+        </select>
+    </div>
+    
+    <div layout="row" style="padding-top: 6px;" *ngIf="get('TypeAsString') == 'Choice' && get('Format') != 'RadioButtons'">
+        <select [disabled]="disabled" (ngModelChange)="selChangeS($event)" [ngModel]="form[field]" [required]="required()" name="{{field}}_0" flex>
+            <option *ngIf="none" [value]="!form[field] ? form[field] : '-'">{{none}}</option>
+            <option *ngFor="let i of get('Choices')" [value]="i">{{i}}</option>
+            <option *ngIf="other || get('FillInChoice')" [value]="!form[field] || !notInChoices() ? 'Please select...' : form[field]">{{other || 'Other'}}, please specify...</option>
+        </select>
+        <span *ngIf="get('TypeAsString') == 'Choice' && (form[field] == '' || notInChoices()) && form[field] != '-'">
+            <input [disabled]="disabled" type="text" flex [(ngModel)]="form[field]" [required]="required()" name="{{field}}_1" maxlength="250" onclick="this.select();">
+        </span>
+    </div>
+    
+    <div layout="row" style="padding-top: 6px;" *ngIf="get('TypeAsString') == 'Choice' && get('Format') == 'RadioButtons'">
+        <label *ngIf="none" style="display:block; margin-right: 15px">
+            <input [value]="null" [disabled]="disabled" type="radio" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_R" style="height: 10px !important;min-height: 0 !important;">
+            {{none}}
+        </label>
+        <label *ngFor="let i of get('Choices')" style="display:block; margin-right: 15px">
+            <input [value]="i" [disabled]="disabled" type="radio" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_R" style="height: 10px !important;min-height: 0 !important;">
+            {{i}}
+        </label>
+    </div>
+
+    <div layout="column" style="padding-top: 6px;" *ngIf="get('TypeAsString') == 'Text'">
+        <input flex [disabled]="disabled" type="text" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_T" maxlength="250">
+    </div>
+    
+    <div ayout="column" style="padding-top: 6px;" *ngIf="!disabled && (get('TypeAsString') == 'Number' || get('TypeAsString') == 'Integer')">
+        <input flex [disabled]="disabled" type="number" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_I">
+    </div>
+    
+    <div layout="column" style="padding-top: 6px;" *ngIf="disabled && (get('TypeAsString') == 'Number' || get('TypeAsString') == 'Integer')">
+        {{niceNumber()}}
+    </div>
+    
+    <div layout="column" style="padding-top: 6px;" *ngIf="get('TypeAsString') == 'DateTime' && get('DisplayFormat') == 0">
+        <input flex [disabled]="disabled" type="date" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_D">
+    </div>
+    
+    <div layout="column" style="padding-top: 6px;" *ngIf="get('TypeAsString') == 'DateTime' && get('DisplayFormat') != 0">
+        <input flex [disabled]="disabled" type="datetime-local" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_D">
+    </div>
+    
+    <div layout="column" style="padding-top: 6px;" *ngIf="get('TypeAsString') == 'Note' && !get('RichText')">
+        <textarea rows="5" flex [disabled]="disabled" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_M"></textarea>
+    </div>
+    
+    <div layout="column" style="padding-top: 6px;" *ngIf="!disabled && (get('TypeAsString') == 'Note' && get('RichText'))">
+        <textarea ui-tinymce="tinymceOptions" rows="5" flex [disabled]="disabled" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_N"></textarea>
+    </div>
+    
+    <div layout="column" style="padding-top: 6px;" *ngIf="disabled && (get('TypeAsString') == 'Note' && get('RichText'))">
+         <textarea ui-tinymce="tinymceROOptions" rows="5" flex [disabled]="disabled" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_N"></textarea>
+    </div>
+    
+    <div layout="row" style="padding-top: 6px;" *ngIf="get('TypeAsString') == 'URL'">
+        <input flex="50" [disabled]="disabled" [(ngModel)]="form[field].Url" [required]="required()" name="{{field}}_UU" placeholder="https://" pattern="^.+\:\/\/.+$|^mailto\:.+$">
+        <input flex="50" [disabled]="disabled" [(ngModel)]="form[field].Description" name="{{field}}_UD">
+    </div>
+    
+    <div layout="column" style="padding-top: 6px;" *ngIf="get('TypeAsString') == 'Attachments'">
+        <ul style="padding-left: 20px; list-style: none;">
+            <li [hidden]="attachments().length > 0" style="padding: 4px">No attachments</li>
+            <li *ngFor="let a of attachments()" [hidden]="!a.Deleted" style="padding: 4px; text-decoration: line-through">{{a.FileName}} &nbsp;<a style="color: green; font-size: smaller;vertical-align: top;" (click)="undelete(a)" [hidden]="disabled || !a.Deleted">+</a></li>
+            <li *ngFor="let a of attachments()" [hidden]="a.Deleted" style="padding: 4px;"><a [hidden]="!get('Download')" [download]="a.FileName" [href]="(a.ServerRelativeUrl || '#')">{{a.FileName}}</a><a [hidden]="get('Download')" [href]="(a.ServerRelativeUrl || '#')" target="_blank">{{a.FileName}}</a> &nbsp;<a style="color: red; font-size: smaller;vertical-align: top;" (click)="delete(a)" [hidden]="disabled || a.Deleted">X</a> <span ng-show="a.ServerRelativeUrl == null">^</span></li>
+        </ul>
+        <input [hidden]="disabled" accept="{{get('Accept')}}" type="file" style="display: none;" multiple (change)="add($event)" />
+        <a style="color: black;padding: 7px 10px;border: 1px solid #ababab;background-color: #fdfdfd;font-size: 11px;float: right;" [hidden]="disabled" onclick="this.previousElementSibling.click()">Add Files</a>
+    </div>
+
+    <div layout="column" style="padding-top: 6px;" *ngIf="get('TypeAsString') == null || ['User','UserMulti','Lookup','LookupMulti','TaxonomyFieldType','TaxonomyFieldTypeMulti','AllDayEvent','Calculated','Computed','ContentTypeId','Counter','CrossProjectLink','Currency','File','GridChoice','Guid','ModStat','MultiColumn','PageSeparator','Recurrence','ThreadIndex','Threading','WorkflowEventType','WorkflowStatus'].indexOf(get('TypeAsString')) >= 0">
+        <div style="opacity:0.85">Error, not yet available...</div>
+    </div>
+    
+    <span style="display:none !important" id="DebugValue_{{field}}">{{form[field]}}</span>
+    <span style="display:none !important" id="DebugType_{{field}}">{{get('TypeAsString')}}</span>
+    <span style="display:none !important" id="DebugReq_{{field}}">{{required()}}</span>
+</div>
