@@ -21,6 +21,7 @@ export class ChoiceComponent implements OnInit {
 
   declare tinymceOptions: object;
   declare tinymceROOptions: object;
+  declare tooltip: boolean;
 
   // on init
   ngOnInit(): void {
@@ -45,6 +46,16 @@ export class ChoiceComponent implements OnInit {
         toolbar: false,
         statusbar: false
     };
+  }
+
+  // max length countdown
+  remaining(): number {
+    var m = this.get('MaxLength');
+    if (!m && this.get('TypeAsString') == 'Text')
+      m = 255;
+    if (!m)
+      return 15;
+    return m - (this.form[this.field] || '').length;
   }
 
   // files post filtering
