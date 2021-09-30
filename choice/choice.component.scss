@@ -1,1 +1,15 @@
-
+.ToolTip {
+    position:absolute;
+	z-index:10000;
+    background:white;
+    padding:4px;
+    border:1px solid #ddd;
+    box-shadow:2px 2px 2px #ddd;
+    max-width:350px;
+    top:-20px;
+    left:-20px;
+}
+.MaxLength {
+    font-size: 10px;
+    color: red;
+}
