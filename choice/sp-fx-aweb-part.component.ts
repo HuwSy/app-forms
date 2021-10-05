@@ -19,10 +19,21 @@ export class SpFxAWebPartComponent implements OnInit {
     this.spec = {};
     this.form = {__metadata:{type:'SP.Data.NullListItem'}};
 
-    this.perm = {Test: true};
-
+    this.permissions();
     this.fields();
     this.data(1);
+  }
+
+  async permissions():Promise<void> {
+    try {
+      this.perm = [];
+      var perm = await pnp.sp.web.currentUser.groups.get();
+      perm.forEach(x => {
+        this.perm[x.LoginName] = true;
+      })
+    } catch (e) {
+      this.perm = {Error: true};
+    }
   }
 
   async fields():Promise<void> {
@@ -63,17 +74,17 @@ export class SpFxAWebPartComponent implements OnInit {
         }
         // parse objects
         try {
-					if (this.form[key].toString().trim().substring(0,1) == '{' || this.form[key].toString().trim().substring(0,1) == '[') {
-						this.form[key] = JSON.parse(this.form[key]);
-						this.form[key] = this.parseLoop(this.form[key]);
-						continue;
-					}
-				} catch (e) {}
-				// dates
-				if (this.form[key].toString().match(/[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]/) != null) {
-					this.form[key] = new Date(this.form[key]);
-					continue;
-				}
+          if (this.form[key].toString().trim().substring(0,1) == '{' || this.form[key].toString().trim().substring(0,1) == '[') {
+            this.form[key] = JSON.parse(this.form[key]);
+            this.form[key] = this.parseLoop(this.form[key]);
+            continue;
+          }
+        } catch (e) {}
+          // dates
+          if (this.form[key].toString().match(/[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]/) != null) {
+            this.form[key] = new Date(this.form[key]);
+            continue;
+          }
       }
       this.uned = JSON.parse(JSON.stringify(this.form));
     } catch (e) {
