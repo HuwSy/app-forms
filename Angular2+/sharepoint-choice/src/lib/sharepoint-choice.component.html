@@ -95,21 +95,21 @@
                 <a style="color: green; padding-left: 8px;" (click)="undelete(a)" [hidden]="disabled || !a.Deleted" title="Undelete">+</a>
             </li>
             <li *ngFor="let a of attachments()" [hidden]="a.Deleted">
-                <select style="margin-right: 8px;height: 20px; width: auto;" *ngIf="prefixes()" (change)="prefix(a, $event.target)">
+                <select style="margin-right: 8px;height: 20px; width: auto;" *ngIf="prefixes() && a.ServerRelativeUrl == null" (change)="prefix(a, $event.target)">
                     <option value=""></option>
                     <option *ngFor="let i of get('Prefix')" value="{{i}}">{{i}}</option>
                 </select> 
-                <a [hidden]="!get('Download')" [download]="a.FileName" [href]="(a.ServerRelativeUrl || '#')">{{a.FileName}}</a>
-                <a [hidden]="get('Download')" [href]="(a.ServerRelativeUrl || '#')" target="_blank">{{a.FileName}}</a>
+                <a [hidden]="!get('Download')" [download]="a.FileName" [href]="(a.ServerRelativeUrl || '#')">{{a.UploadName || a.FileName}}</a>
+                <a [hidden]="get('Download')" [href]="(a.ServerRelativeUrl || '#')" target="_blank">{{a.UploadName || a.FileName}}</a>
                 <a style="color: red; padding-left: 8px" (click)="delete(a)" [hidden]="disabled || a.Deleted" title="Delete">x</a> 
-                <span style="margin-left: 2px; font-family: inherit;" ng-show="a.ServerRelativeUrl == null" title="Pending upload">&#8593;</span>
+                <span style="margin-left: 2px; font-family: inherit;" [hidden]="a.ServerRelativeUrl != null" title="Pending upload">&#8593;</span>
             </li>
         </ul>
         <div [hidden]="disabled" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}" style="width: 175px; text-align: center;">
             <b style="font-size: 48px;">&#8613;</b><br>
             Drag and drop files here<br>
             or<br>
-            <input [hidden]="disabled" accept="{{get('Accept')}}" type="file" style="display: none !important;" multiple (change)="add($event.target.files)" />
+            <input [hidden]="disabled" accept="{{get('Accept')}}" type="file" style="display: none !important;" multiple (change)="add($event.target)" />
             <button onclick="this.previousElementSibling.click()">Browse for file</button>
         </div>
     </div>
