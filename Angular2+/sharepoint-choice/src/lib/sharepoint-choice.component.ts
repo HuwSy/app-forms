@@ -242,11 +242,14 @@ export class SharepointChoiceComponent implements OnInit {
   attachments(): any[string] {
     if (!this.form[this.field] || !this.form[this.field].results)
       return [];
-    var ths = this;
+    this.form[this.field].results.forEach((r:any) => {
+      r.Prefix = r.Prefix || (~r.FileName.indexOf('-') ? r.FileName.split('-')[0] : '');
+    });
+    var prefix:any = this.get('Prefix') || '';
     return this.form[this.field].results.filter((r:any[string]) => {
-      return (ths.get('Prefix') || '') == ''
-        || typeof ths.get('Prefix') == "object"
-        || r.FileName.toLowerCase().indexOf(ths.get('Prefix').toLowerCase()+'-') == 0
+      return prefix == ''
+        || typeof prefix == "object"
+        || r.Prefix.toLowerCase() == prefix.toLowerCase()
     })
   }
 
@@ -267,28 +270,28 @@ export class SharepointChoiceComponent implements OnInit {
 
   // add attachment to array
   add(file:any) {
-    var files:any[any[any]] = [], dup:any[string] = [], ths = this;
+    var prefix = ((this.get('Prefix') || '') != '' && typeof this.get('Prefix') == "string" ? this.get('Prefix') + '-' : '');
+    var r = new RegExp(`^${prefix}`, 'i');
+    var files:any[any[any]] = [], dup:any[string] = [];
+
     // ensure the file name doenst already exist as duplicaes are not allowed
-    for (var f = 0; f < file.length; f++) {
-      var n = ((ths.get('Prefix') || '') != '' && typeof ths.get('Prefix') == "string" ? ths.get('Prefix').toLowerCase() + '-' : '');
-      var r = new RegExp(`^${n}`, 'i');
-      n += file[f].name.toLowerCase().replace(r, '').replace(/[%'#]/g,'-');
+    for (var f = 0; f < file.files.length; f++) {
+      var n = prefix + file.files[f].name.replace(r, '').replace(/[%'#]/g,'-');
       
       this.form[this.field].results.forEach((a:any[string]) => {
-        if (!a.Deleted && a.FileName.toLowerCase() == n) {
+        if (!a.Deleted && a.FileName.toLowerCase() == n.toLowerCase()) {
           dup.push(n);
         }
       });
 
       if (dup.indexOf(n) == -1)
-        files.push(file[f]);
+        files.push(file.files[f]);
     }
 
     if (dup.length > 0)
       alert('File(s) already exist with name(s): ' + dup.join(', '));
     
-    file = null;
-
+    var ths = this;
     files.forEach((f:any) => {
       var reader = new window.FileReader();
       reader.onload = function (event:any) {
@@ -299,18 +302,21 @@ export class SharepointChoiceComponent implements OnInit {
           data += String.fromCharCode(bytes[i]);
         }
 
-        var n = ((ths.get('Prefix') || '') != '' && typeof ths.get('Prefix') == "string" ? ths.get('Prefix') + '-' : '');
-        var r = new RegExp(`^${n}`, 'i');
-        n += f.name.replace(r, '').replace(/[%'#]/g,'-');
+        var n = prefix + f.name.replace(r, '').replace(/[%'#]/g,'-');
         
         ths.form[ths.field].results.push({
           FileName: n,
           ServerRelativeUrl: null,
           Data: data,
-          Length: len
+          Length: len,
+          Prefix: prefix,
+          UploadName: n
         });
+
+        setTimeout(() => file.value = null, 10);
       }
       reader.onerror = function () {
+        alert('File read error: ' + f.name);
         Logger.log({
           message: `Inside - add(${f.name})`,
           level: LogLevel.Error,
@@ -346,16 +352,13 @@ export class SharepointChoiceComponent implements OnInit {
       }
     });
 
-    // if no duplicates set new file name
-    if (dup.length == 0)
+    if (dup.length == 0) {
+      // if no duplicates set new file name
       a.FileName = rem;
-    else {
-      // if the old file name was a falid prefix, revert ddl to last value
-      if (this.get('Prefix').indexOf(a.FileName.split('-')[0]) >= 0)
-        p.value = a.FileName.split('-')[0];
-      // else if the ddl is not blank set blank, dont always to prevent infinat loop risk
-      else if (p.value != '')
-        p.value = '';
+      a.Prefix = p.value;
+    } else {
+      // return to last prefix
+      p.value = a.Prefix;
       // inform user
       alert('File(s) already exist with name(s): ' + dup.join(', '));
     }
