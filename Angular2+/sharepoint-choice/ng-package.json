@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/ng-packagr/ng-package.schema.json",
+  "dest": "./dist/sharepoint-choice",
+  "allowedNonPeerDependencies": [
+    "@angular/animations",
+    "@angular/compiler",
+    "@angular/common",
+    "@angular/forms",
+    "@angular/platform-browser",
+    "@angular/platform-browser-dynamic",
+    "@tinymce/tinymce-angular",
+    "@pnp/msaljsclient",
+    "@pnp/pnpjs",
+    "tslib"
+  ]
+}
