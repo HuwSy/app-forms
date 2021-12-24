@@ -115,6 +115,7 @@
     </div>
 
     <div layout="column" *ngIf="['User','UserMulti'].indexOf(get('TypeAsString')) >= 0">
+        <input hidden type="text" [required]="required()" [value]="people()" name="{{field}}_P">
         <div *ngIf="form[field + 'Id'] && form[field + 'Id'].results">
             <span *ngFor="let user of form[field + 'Id'].results" style="padding: 8px;">{{displayUser(user)}} <a (click)="removeUser(user)" style="color: red;" [hidden]="disabled">X</a></span>
         </div>

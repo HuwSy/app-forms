@@ -78,6 +78,10 @@ export class SharepointChoiceComponent implements OnInit {
     this.key = App.TinyMCEKey;
   }
 
+  people(): string {
+    return this.form[this.field + 'Id'] && this.form[this.field + 'Id'].results ? (this.form[this.field + 'Id'].results.length > 0 ? this.form[this.field + 'Id'].results[0].toString() : null) : this.form[this.field + 'Id'];
+  }
+
   // select user
   async selectedUser(res:any): Promise<void> {
     // ensure correct schema
