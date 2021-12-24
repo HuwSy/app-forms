@@ -79,7 +79,11 @@ export class SharepointChoiceComponent implements OnInit {
   }
 
   people(): string {
-    return this.form[this.field + 'Id'] && this.form[this.field + 'Id'].results ? (this.form[this.field + 'Id'].results.length > 0 ? this.form[this.field + 'Id'].results[0].toString() : null) : this.form[this.field + 'Id'];
+    return this.form[this.field + 'Id'] && (!this.form[this.field + 'Id'].results || this.form[this.field + 'Id'].results.length > 0) ? 'true' : null;
+  }
+
+  attach(): string {
+    return this.attachments().length > 0 ? 'true' : null;
   }
 
   // select user
