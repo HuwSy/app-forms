@@ -88,6 +88,7 @@
     </div>
     
     <div layout="column" *ngIf="get('TypeAsString') == 'Attachments'">
+        <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A">
         <ul>
             <li [hidden]="attachments().length > 0">No attachments</li>
             <li *ngFor="let a of attachments()" [hidden]="!a.Deleted" style="text-decoration: line-through">
