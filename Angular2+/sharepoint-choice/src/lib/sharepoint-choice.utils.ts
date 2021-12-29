@@ -125,11 +125,11 @@ export class SharepointChoiceUtils {
               redirectUri: this._context
           }
         });
-        var t = await c.getToken([`https://${App.Tenancy}/${tokenRole}`]);
+        var t = await c.getToken([`${App.Token}/${release}/${tokenRole}`]);
         
         var r = await fetch(~document.location.href.toLowerCase().indexOf('workbench.aspx') || document.location.host.toLowerCase().startsWith('localhost')
-            ? `https://localhost:${endPoint}`
-            : `https://${App.Tenancy}/${release}/${endPoint}`, {
+            ? `https://localhost/${endPoint}`
+            : `${App.Token}/${release}/${endPoint}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${t}`
