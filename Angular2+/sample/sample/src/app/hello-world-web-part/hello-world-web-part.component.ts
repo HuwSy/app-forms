@@ -221,7 +221,7 @@ export class HelloWorldWebPartComponent implements OnInit {
   // additional choice data via api
   async moreData(): Promise<any> {
     var results:any[any] = await this._spUtils.msalApi(App.AzureApp,
-      '/Read',
+      'Read',
       `MoreData`,
       App.Release);
 
