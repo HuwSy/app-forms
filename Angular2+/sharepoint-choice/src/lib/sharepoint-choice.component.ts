@@ -183,7 +183,7 @@ export class SharepointChoiceComponent implements OnInit {
 
     this.UserQuery.queryParams.QueryString = this.name;
     // set group each query to adapt to changes
-    this.UserQuery.queryParams.SharePointGroupID = parseInt(this.get('UserSelectionScope') || 0);
+    this.UserQuery.queryParams.SharePointGroupID = parseInt(this.get('SelectionGroup') || 0);
     this.getResponse(this.UserQuery)
       .subscribe(
         (res) => {
