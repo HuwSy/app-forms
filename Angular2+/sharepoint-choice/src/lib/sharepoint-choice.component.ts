@@ -387,7 +387,7 @@ export class SharepointChoiceComponent implements OnInit {
   drop(evt:any) {
     evt.preventDefault();
     evt.stopPropagation();
-    this.add(evt.dataTransfer.files);
+    this.add(evt.dataTransfer);
     this.filesOver = false;
   }
 
