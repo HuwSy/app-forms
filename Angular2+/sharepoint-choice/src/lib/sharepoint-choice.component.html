@@ -1,16 +1,16 @@
 <div layout="column" class="choice">
     <label *ngIf="get('TypeAsString') == 'Boolean'">
-        <input style="width: auto; height: auto;" flex [disabled]="disabled" type="checkbox" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_Y">
+        <input style="width: auto; height: auto;" flex [disabled]="disabled" type="checkbox" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_Y" (change)="change($event)">
         <span style="font-size: inherit;">{{get('Title')}}</span>
     </label>
-    <span *ngIf="get('TypeAsString') != 'Boolean'">{{get('Title')}}</span>
+    <span *ngIf="get('TypeAsString') != 'Boolean' && get('UploadOnly') != true">{{get('Title')}}</span>
     <span *ngIf="get('Required')" class="Required">*</span>
     
     <i *ngIf="(get('Description') || '') != ''" title="{{get('Description')}}" (mouseenter)="tooltip = true" (mouseleave)="tooltip = false">(i)</i>
     <div class="ToolTip" [hidden]="!tooltip">{{get('Description')}}</div>
 
     <div layout="column" *ngIf="get('TypeAsString') == 'MultiChoice'">
-        <select (mousedown)="false" (click)="selChangeC($event)" flex multiple="multiple" style="height: 80px !important" [disabled]="disabled" [ngModel]="form[field].results" [required]="required()" name="{{field}}_S"><!--  (ngModelChange)="selChangeM($event)" -->
+        <select (mousedown)="false" (click)="change($event)" flex multiple="multiple" style="height: 80px !important" [disabled]="disabled" [ngModel]="form[field].results" [required]="required()" name="{{field}}_S">
             <option *ngFor="let i of choices()" [value]="i">{{i}}</option>
         </select>
     </div>
@@ -22,44 +22,44 @@
             <option *ngIf="other || get('FillInChoice')" [value]="!form[field] || !notInChoices() ? 'Please select...' : form[field]">{{other || 'Other'}}, please specify...</option>
         </select>
         <span *ngIf="get('TypeAsString') == 'Choice' && (form[field] == '' || notInChoices()) && form[field] != '-'">
-            <input [disabled]="disabled" type="text" flex [(ngModel)]="form[field]" [required]="required()" name="{{field}}_1" maxlength="250" onclick="this.select();">
+            <input [disabled]="disabled" type="text" flex [(ngModel)]="form[field]" [required]="required()" name="{{field}}_1" maxlength="250" onclick="this.select();" (change)="change($event)">
         </span>
     </div>
     
     <div layout="row" *ngIf="get('TypeAsString') == 'Choice' && get('Format') == 'RadioButtons'">
         <label *ngIf="none">
-            <input [value]="null" [disabled]="disabled" type="radio" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_R">
+            <input [value]="null" [disabled]="disabled" type="radio" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_R" (change)="change($event)">
             {{none}}
         </label>
         <label *ngFor="let i of choices()">
-            <input [value]="i" [disabled]="disabled" type="radio" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_R">
+            <input [value]="i" [disabled]="disabled" type="radio" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_R" (change)="change($event)">
             {{i}}
         </label>
     </div>
 
     <div ayout="column" *ngIf="!disabled && (get('TypeAsString') == 'Number' || get('TypeAsString') == 'Integer')">
-        <input flex [disabled]="disabled" type="number" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_I" [min]="get('Min')" [max]="get('Max')">
+        <input flex [disabled]="disabled" type="number" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_I" [min]="get('Min')" [max]="get('Max')" (change)="change($event)">
     </div>
     
     <div layout="column" *ngIf="disabled && (get('TypeAsString') == 'Number' || get('TypeAsString') == 'Integer')">
         {{niceNumber()}}
     </div>
     
-    <div layout="column" *ngIf="get('TypeAsString') == 'DateTime' && get('DisplayFormat') == 0">
-        <input flex [disabled]="disabled" type="date" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_D">
+    <div layout="column" *ngIf="get('TypeAsString') == 'DateTime' && get('DisplayFormat') != 1">
+        <input flex [disabled]="disabled" type="date" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_D" (change)="change($event)">
     </div>
     
-    <div layout="column" *ngIf="get('TypeAsString') == 'DateTime' && get('DisplayFormat') != 0">
-        <input flex [disabled]="disabled" type="datetime-local" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_D">
+    <div layout="column" *ngIf="get('TypeAsString') == 'DateTime' && get('DisplayFormat') == 1">
+        <input flex [disabled]="disabled" type="datetime-local" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_D" (change)="change($event)">
     </div>
     
     <div layout="column" *ngIf="get('TypeAsString') == 'Text'">
-        <input flex [disabled]="disabled" type="text" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_T" [maxlength]="get('MaxLength')">
+        <input flex [disabled]="disabled" type="text" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_T" [maxlength]="get('MaxLength')" (change)="change($event)">
         <div class="MaxLength" [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
     </div>
     
     <div layout="column" *ngIf="!disabled && get('TypeAsString') == 'Note' && !get('RichText') && !get('AppendOnly')">
-        <textarea rows="5" flex [(ngModel)]="form[field]" [required]="required()" name="{{field}}_M"></textarea>
+        <textarea rows="5" flex [(ngModel)]="form[field]" [required]="required()" name="{{field}}_M" (change)="change($event)"></textarea>
         <div class="MaxLength" [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
     </div>
 
@@ -71,52 +71,67 @@
     <div layout="column" *ngIf="disabled && get('TypeAsString') == 'Note' && !get('RichText')" style="max-height: 500px; overflow: auto;">{{form[field]}}</div>
     
     <div layout="column" *ngIf="!disabled && get('TypeAsString') == 'Note' && get('RichText') && !get('AppendOnly')">
-        <editor apiKey="{{key}}" [init]="tinymceOptions" flex [(ngModel)]="form[field]" [required]="required()" name="{{field}}_N"></editor>
+        <editor apiKey="{{key}}" [init]="tinymceOptions" flex [(ngModel)]="form[field]" allowedEvents="onChange" (onChange)="change($event)"></editor>
         <div class="MaxLength" [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
     </div>
     
     <div layout="column" *ngIf="!disabled && get('TypeAsString') == 'Note' && get('RichText') && get('AppendOnly')">
-        <editor apiKey="{{key}}" [init]="tinymceOptions" flex [required]="required()" name="{{field}}_N" allowedEvents="onChange" (onChange)="change($event)"></editor>
+        <editor apiKey="{{key}}" [init]="tinymceOptions" flex allowedEvents="onChange" (onChange)="change($event)"></editor>
         <div class="MaxLength" [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
     </div>
     
     <div layout="column" *ngIf="disabled && get('TypeAsString') == 'Note' && get('RichText')" style="max-height: 500px; overflow: auto;" [innerHTML]="form[field]"></div>
     
     <div layout="row" *ngIf="get('TypeAsString') == 'URL'">
-        <input flex="50" [disabled]="disabled" [(ngModel)]="form[field].Url" [required]="required()" name="{{field}}_UU" placeholder="https://" pattern="^.+\:\/\/.+$|^mailto\:.+$">
-        <input flex="50" [disabled]="disabled" [(ngModel)]="form[field].Description" name="{{field}}_UD" maxlength="250">
+        <input flex="50" [disabled]="disabled" [(ngModel)]="form[field].Url" [required]="required()" name="{{field}}_UU" placeholder="https://" pattern="^.+\:\/\/.+$|^mailto\:.+$" (change)="change($event)">
+        <input flex="50" [disabled]="disabled" [(ngModel)]="form[field].Description" name="{{field}}_UD" maxlength="250" (change)="change($event)">
     </div>
     
-    <div layout="column" *ngIf="get('TypeAsString') == 'Attachments'">
-        <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A">
-        <ul>
-            <li [hidden]="attachments().length > 0">No attachments</li>
-            <li *ngFor="let a of attachments()" [hidden]="!a.Deleted" style="text-decoration: line-through">
-                {{a.FileName}} 
-                <a style="color: green; padding-left: 8px;" (click)="undelete(a)" [hidden]="disabled || !a.Deleted" title="Undelete">+</a>
-            </li>
-            <li *ngFor="let a of attachments()" [hidden]="a.Deleted">
-                <select style="margin-right: 8px;height: 20px; width: auto;" *ngIf="prefixes() && a.ServerRelativeUrl == null" (change)="prefix(a, $event.target)">
-                    <option value=""></option>
-                    <option *ngFor="let i of get('Prefix')" value="{{i}}">{{i}}</option>
-                </select> 
-                <a [hidden]="!get('Download')" [download]="a.FileName" [href]="(a.ServerRelativeUrl || '#')">{{a.UploadName || a.FileName}}</a>
-                <a [hidden]="get('Download')" [href]="(a.ServerRelativeUrl || '#')" target="_blank">{{a.UploadName || a.FileName}}</a>
-                <a style="color: red; padding-left: 8px" (click)="delete(a)" [hidden]="disabled || a.Deleted" title="Delete">x</a> 
-                <span style="margin-left: 2px; font-family: inherit;" [hidden]="a.ServerRelativeUrl != null" title="Pending upload">&#8593;</span>
-            </li>
-        </ul>
+    <div layout="column" *ngIf="get('TypeAsString') == 'Attachments' && get('UploadOnly') == true">
+        <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A" (change)="change($event)">
         <div [hidden]="disabled" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}" style="width: 175px; text-align: center;">
             <b style="font-size: 48px;">&#8613;</b><br>
             Drag and drop files here<br>
             or<br>
-            <input [hidden]="disabled" accept="{{get('Accept')}}" type="file" style="display: none !important;" multiple (change)="add($event.target)" />
+            <input accept="{{get('Accept')}}" type="file" style="display: none !important;" multiple (change)="add($event.target)" />
             <button onclick="this.previousElementSibling.click()">Browse for file</button>
         </div>
     </div>
+    
+    <div layout="column" *ngIf="get('TypeAsString') == 'Attachments' && get('UploadOnly') != true" style="position: relative;">
+        <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A" (change)="change($event)">
+        <ul>
+            <li [hidden]="attachments().length > 0">No attachments</li>
+            <li *ngFor="let a of attachments()">
+                <div [hidden]="!a.Deleted">
+                    <span style="text-decoration: line-through">{{a.FileName}}</span>
+
+                    <a style="color: green; padding-left: 8px;" (click)="undelete(a)" [hidden]="disabled" title="Undelete">+</a>
+                </div>
+                <div [hidden]="a.Deleted">
+                    <select style="margin-right: 8px; height: 20px; width: auto;" *ngIf="prefixes() && a.ServerRelativeUrl == null" (change)="prefix(a, $event.target)" [hidden]="disabled">
+                        <option value=""></option>
+                        <option *ngFor="let i of get('Prefix')" value="{{i}}">{{i}}</option>
+                    </select>
+
+                    <a [hidden]="!get('Download')" [download]="a.FileName" [href]="(a.ServerRelativeUrl || '#')">{{a.UploadName || a.FileName}}</a>
+                    <a [hidden]="get('Download')" [href]="(a.ServerRelativeUrl || '#')" target="_blank">{{a.UploadName || a.FileName}}</a>
+
+                    <a style="color: red; padding-left: 8px" (click)="delete(a)" [hidden]="disabled" title="Delete">x</a> 
+                    <b style="margin-left: 2px; font-family: inherit;" [hidden]="a.ServerRelativeUrl != null" title="Pending upload">&#8593;</b>
+                </div>
+            </li>
+        </ul>
+        <div [hidden]="disabled" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}" style="width: 175px; text-align: right;position: absolute;bottom: 0;right: 0;background: white;">
+            Drag and drop files here or<br>
+            <input accept="{{get('Accept')}}" type="file" style="display: none !important;" multiple (change)="add($event.target)" />
+            <button onclick="this.previousElementSibling.click()" style="margin-top: 4px;">Browse for file</button>
+        </div>
+        <br style="clear: both;">
+    </div>
 
     <div layout="column" *ngIf="['User','UserMulti'].indexOf(get('TypeAsString')) >= 0">
-        <input hidden type="text" [required]="required()" [value]="people()" name="{{field}}_P">
+        <input hidden type="text" [required]="required()" [value]="people()" name="{{field}}_P" (change)="change($event)">
         <div *ngIf="form[field + 'Id'] && form[field + 'Id'].results">
             <span *ngFor="let user of form[field + 'Id'].results" style="padding: 8px;">{{displayUser(user)}} <a (click)="removeUser(user)" style="color: red;" [hidden]="disabled">X</a></span>
         </div>
@@ -132,7 +147,7 @@
                     </li>
                 </ul>
                 <ul>
-                    <li style="text-align: right;" (click)="selectedUser()">
+                    <li style="text-align: right;" (click)="selectedUser(null)">
                         Cancel
                     </li>
                 </ul>

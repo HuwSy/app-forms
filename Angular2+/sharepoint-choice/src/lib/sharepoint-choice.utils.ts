@@ -1,20 +1,34 @@
 import pnp from '@pnp/pnpjs';
-import { MsalClient } from "@pnp/msaljsclient";
+import * as MSAL from "@azure/msal-browser";
 import {App} from './App';
 
 export class SharepointChoiceUtils {
+    public context:string = '';
+
     constructor(
-        private _context: string
+        c: string
     ) {
-        pnp.sp.setup({sp:{baseUrl:_context}});
+        if ((c || "") == "") {
+          if (typeof window['_spPageContextInfo'] == "object") {
+            this.context = window['_spPageContextInfo']['webAbsoluteUrl'];
+          } else {
+            this.context = document.location.href.split('?')[0].split('#')[0].split('/_layouts/')[0].split('/Lists/')[0].split('/Pages/')[0].split('/SitePages/')[0];
+          }
+        } else {
+          this.context = c;
+        }
+
+        pnp.sp.setup({sp:{baseUrl:this.context}});
     }
 
     public async permissions():Promise<any> {
         var p = {}, u = 0;
 
         try {
-          u = await (await pnp.sp.web.currentUser.get()).Id;
-          var webTitle = await (await pnp.sp.web.get()).Title;
+          var user = await pnp.sp.web.currentUser.get();
+          u = user.Id;
+          var web = await pnp.sp.web.get();
+          var webTitle = web.Title;
           var perm = await pnp.sp.web.currentUser.groups.get();
           perm.forEach(x => {
             p[x.LoginName] = true;
@@ -35,7 +49,7 @@ export class SharepointChoiceUtils {
             var arr = await pnp.sp.web.lists.getByTitle(list).fields.get();
             arr.forEach(x => {
                 spec[x.InternalName] = x;
-                spec[x.InternalName].Context = this._context;
+                spec[x.InternalName].Context = this.context;
             });
         } catch (e) {
             spec['Title'] = {TypeAsString:'Text',MaxLength:16,Description:'Tooltip'};
@@ -118,25 +132,47 @@ export class SharepointChoiceUtils {
     }
 
     public async msalApi(clientId: string, tokenRole: string, endPoint: string, release: string):Promise<any> {
-        var c = new MsalClient({
-          auth: {
-              authority: `https://login.microsoftonline.com/${App.Tenancy}.onmicrosoft.com`,
-              clientId: clientId,
-              redirectUri: this._context
-          }
-        });
-        var t = await c.getToken([`${App.Token}/${release}/${tokenRole}`]);
-        
-        var r = await fetch(~document.location.href.toLowerCase().indexOf('workbench.aspx') || document.location.host.toLowerCase().startsWith('localhost')
-            ? `https://localhost/${endPoint}`
-            : `${App.Token}/${release}/${endPoint}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${t}`
-                }
-            });
-        
-        return await r.json();
+      // connect client
+      var config = {
+        auth: {
+            clientId: clientId,
+            authority: `https://login.microsoftonline.com/${App.Tenancy}.onmicrosoft.com`,
+            redirectUri: this.context.replace(/\/$/,'')
+        },
+        cache: {
+            cacheLocation: "localStorage",
+            storeAuthStateInCookie: false
+        }
+      }
+      
+      var msal = new MSAL.PublicClientApplication(config);
+      
+      var params = {
+        scopes: [`${App.Token}/${release}/${tokenRole}`],
+        account: msal.getAllAccounts()[0]
+      };
+
+      var login;
+      try {
+        login = await msal.acquireTokenSilent(params);
+      } catch (error) {
+        await msal.loginPopup(params);
+        params.account = msal.getAllAccounts()[0];
+        login = await msal.acquireTokenSilent(params);
+      }
+
+      // query api
+      var r = await fetch(release == 'Local'
+          ? `https://localhost/${endPoint}`
+          : `${App.Token}/${release}/${endPoint}`, {
+              method: 'GET',
+              headers: {
+                  'Authorization': `Bearer ${login.accessToken}`
+              }
+          });
+      
+      // return formatted data
+      return await r.json();
     }
 
     public async save(form, uned, list):Promise<number> {
@@ -167,10 +203,11 @@ export class SharepointChoiceUtils {
           }
           
           // save/update the item
-          if (typeof form.Id == "undefined" || form.Id < 1) {
-            save.Id = await (await pnp.sp.web.lists.getByTitle(list).items.add(save)).data.Id;
+          if (typeof save.Id == "undefined" || save.Id < 1) {
+            var saving = await pnp.sp.web.lists.getByTitle(list).items.add(save);
+            save.Id = saving.data.Id;
           } else {
-            await pnp.sp.web.lists.getByTitle(list).items.getById(form.Id).update(save);
+            await pnp.sp.web.lists.getByTitle(list).items.getById(save.Id).update(save);
           }
     
           // process attachments as deletes then uploads
@@ -181,10 +218,8 @@ export class SharepointChoiceUtils {
               return a.FileName;
             });
 
-            //if (deletes.length > 0)
-            //  await pnp.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).attachmentFiles.deleteMultiple.apply(deletes);
             for (var i = 0; i < deletes.length; i++)
-              await pnp.sp.web.lists.getByTitle(list).items.getById(form.Id).attachmentFiles.getByName(deletes[i]).delete();
+              await pnp.sp.web.lists.getByTitle(list).items.getById(save.Id).attachmentFiles.getByName(deletes[i]).delete();
     
             var adds = form.Attachments.results.filter(a => {
               return !a.Deleted && !a.ServerRelativeUrl
@@ -196,7 +231,7 @@ export class SharepointChoiceUtils {
             });
 
             if (adds.length > 0)
-              await pnp.sp.web.lists.getByTitle(list).items.getById(form.Id).attachmentFiles.addMultiple(adds);
+              await pnp.sp.web.lists.getByTitle(list).items.getById(save.Id).attachmentFiles.addMultiple(adds);
           }
         } catch (e) {
           alert('Error saving');
