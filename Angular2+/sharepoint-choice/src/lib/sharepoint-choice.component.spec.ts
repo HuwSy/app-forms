@@ -11,9 +11,7 @@ describe('SharepointChoiceComponent', () => {
       declarations: [ SharepointChoiceComponent ]
     })
     .compileComponents();
-  });
 
-  beforeEach(() => {
     fixture = TestBed.createComponent(SharepointChoiceComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();

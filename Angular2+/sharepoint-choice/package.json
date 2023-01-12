@@ -1,66 +1,49 @@
 {
   "name": "sharepoint-choice",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "SharePoint driven multi choice and form fields",
-  "private": false,
-  "main": "dist/sharepoint-choice/bundles/sharepoint-choice.umd.js",
-  "module": "dist/sharepoint-choice/fesm2015/sharepoint-choice.js",
-  "es2015": "dist/sharepoint-choice/fesm2015/sharepoint-choice.js",
-  "esm2015": "dist/sharepoint-choice/esm2015/sharepoint-choice.js",
-  "fesm2015": "dist/sharepoint-choice/fesm2015/sharepoint-choice.js",
-  "typings": "dist/sharepoint-choice/sharepoint-choice.d.ts",
-  "metadata": "dist/sharepoint-choice/sharepoint-choice.metadata.json",
-  "sideEffects": false,
   "scripts": {
     "ng": "ng",
-    "build": "ng build --prod",
-    "test": "ng test",
-    "lint": "ng lint"
+    "start": "ng serve",
+    "build": "ng build sharepoint-choice",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test"
   },
+  "private": false,
+  "sideEffects": false,
   "contributors": [
     {
       "name": "Huw Bentley-Smith"
     }
   ],
   "license": "ISC",
-  "peerDependencies": {
-    "@angular/core": "~11.2.14",
-    "@angular/router": "~11.2.14",
-    "rxjs": "~6.6.0",
-    "zone.js": "~0.11.3",
-    "@angular/elements": "^11.2.14",
-    "stacktrace-js": "^2.0.2"
-  },
   "dependencies": {
-    "@angular/animations": "~11.2.14",
-    "@angular/compiler": "~11.2.14",
-    "@angular/common": "~11.2.14",
-    "@angular/forms": "~11.2.14",
-    "@angular/platform-browser": "~11.2.14",
-    "@angular/platform-browser-dynamic": "~11.2.14",
+    "@angular/animations": "^14.0.0",
+    "@angular/common": "^14.0.0",
+    "@angular/compiler": "^14.0.0",
+    "@angular/core": "^14.0.0",
+    "@angular/forms": "^14.0.0",
+    "@angular/platform-browser": "^14.0.0",
+    "@angular/platform-browser-dynamic": "^14.0.0",
+    "@azure/msal-browser": "^2.28.1",
+    "@pnp/pnpjs": "^2.14.0",
     "@tinymce/tinymce-angular": "^4.0.0",
-    "@pnp/msaljsclient": "^2.11.0",
-    "@pnp/pnpjs": "^2.11.0",
-    "tslib": "^2.0.0"
+    "rxjs": "~7.5.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.11.4"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "~0.1102.13",
-    "@angular/cli": "~11.2.14",
-    "@angular/compiler-cli": "~11.2.14",
-    "@types/jasmine": "~3.6.0",
-    "@types/node": "^12.11.1",
-    "codelyzer": "^6.0.0",
-    "jasmine-core": "~3.6.0",
-    "jasmine-spec-reporter": "~5.0.0",
-    "karma": "~6.1.0",
+    "@angular-devkit/build-angular": "^14.2.1",
+    "@angular/cli": "~14.2.1",
+    "@angular/compiler-cli": "^14.0.0",
+    "@types/jasmine": "~4.0.0",
+    "jasmine-core": "~4.3.0",
+    "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.1.0",
-    "karma-coverage": "~2.0.3",
-    "karma-jasmine": "~4.0.0",
-    "karma-jasmine-html-reporter": "~1.5.0",
-    "ng-packagr": "^11.0.0",
-    "protractor": "~7.0.0",
-    "ts-node": "~8.3.0",
-    "tslint": "~6.1.0",
-    "typescript": "~4.1.5"
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "~2.0.0",
+    "ng-packagr": "^14.2.0",
+    "typescript": "~4.7.2"
   }
 }
