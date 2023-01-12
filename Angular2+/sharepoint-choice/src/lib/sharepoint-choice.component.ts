@@ -23,6 +23,7 @@ export class SharepointChoiceComponent implements OnInit {
   @Input() none!: string; // none option text instead of null
   @Input() other!: string; // Other fill-in option text, will override to allow other
   @Input() filter!: Function; // filter choices by a function
+  @Input() onchange!: Function; // onchange choices by a function
 
   @Input() disabled!: boolean;
 
@@ -336,7 +337,7 @@ export class SharepointChoiceComponent implements OnInit {
 
   // prefix passed is array use as drop down
   prefixes(): boolean {
-    return typeof this.get('Prefix') == "object"
+    return this.get('Prefix') != null && typeof this.get('Prefix') == "object" && this.get('Prefix').length > 0
   }
 
   // on change prefix drop down
@@ -396,11 +397,11 @@ export class SharepointChoiceComponent implements OnInit {
   get(t:string) {
     var p = null;
     var overrode = this.override ? (typeof this.override == "string" ? JSON.parse(this.override) : this.override) : {};
-    if (overrode && overrode[t])
+    if (overrode && overrode[t] != null)
       p = overrode[t];
-    if (!p && this.spec && this.spec[this.field.replace(/^OData_/, '')] && this.spec[this.field.replace(/^OData_/, '')][t])
+    if (p == null && this.spec && this.spec[this.field.replace(/^OData_/, '')] && this.spec[this.field.replace(/^OData_/, '')][t])
       p = this.spec[this.field.replace(/^OData_/, '')][t];
-    if (!p && this.spec && this.spec[this.field] && this.spec[this.field][t])
+    if (p == null && this.spec && this.spec[this.field] && this.spec[this.field][t])
       p = this.spec[this.field][t];
     // if its a multi choice, ensure the object is the correct type
     if (t == 'TypeAsString' && p == 'MultiChoice' && (!this.form[this.field] || !this.form[this.field].results))
@@ -420,23 +421,18 @@ export class SharepointChoiceComponent implements OnInit {
         results: []
       }
     // if no choices return empty array
-    if (t == 'Choices' && !p)
+    if (t == 'Choices' && p == null)
       return [];
     // if no title use internal field name
-    if (t == 'Title' && !p)
+    if (t == 'Title' && p == null)
       return this.field;
     // if no type, non attached local dev, then use random type
-    if (t == 'TypeAsString' && !p) {
+    if (t == 'TypeAsString' && p == null) {
       this.spec[this.field] = this.spec[this.field] || {};
       this.spec[this.field][t] = ['Boolean','Choice','Integer','DateTime','Text','Note'].splice(Math.floor(Math.random()*5),1)
       return this.spec[this.field][t];
     }
-    return !p || typeof p.results == "undefined" ? p : p.results;
-  }
-
-  // text area append only changes needs 1 way bind
-  change(event:any) : void {
-    this.form[this.field] = event.editor ? event.editor.getContent() : event.target.value;
+    return p == null || typeof p.results == "undefined" ? p : p.results;
   }
 
   // choices need filtering
@@ -476,28 +472,36 @@ export class SharepointChoiceComponent implements OnInit {
     this.form[this.field].results = v;
   }
 
-  // on multi select, not using ctrl key
-  selChangeC(e:any): void {
-    e.stopPropagation();
-    let scrollTop = 0;
-    if ( e.target.parentNode )
-      scrollTop = e.target.parentNode.scrollTop;
-
-    var v = e.target.value.split( '\'' )[1];
-    // if there are selected results set the field to add/remove the most recent click
-    var i = this.form[this.field].results.indexOf(v);
-    if (i >= 0)
-      this.form[this.field].results.splice(i,1);
-    else
-      this.form[this.field].results.push(v);
-
-    const tmp = this.form[this.field].results;
-    this.form[this.field].results = [];
-    for ( let i = 0; i < tmp.length; i++ ) {
-        this.form[this.field].results[i] = tmp[i];
+  change(e:any) : void {
+    // on multi select, not using ctrl key
+    if (this.get('TypeAsString') == 'MultiChoice') {
+      e.stopPropagation();
+      let scrollTop = 0;
+      if ( e.target.parentNode )
+        scrollTop = e.target.parentNode.scrollTop;
+  
+      var v = e.target.value.split( '\'' )[1];
+      // if there are selected results set the field to add/remove the most recent click
+      var i = this.form[this.field].results.indexOf(v);
+      if (i >= 0)
+        this.form[this.field].results.splice(i,1);
+      else
+        this.form[this.field].results.push(v);
+  
+      const tmp = this.form[this.field].results;
+      this.form[this.field].results = [];
+      for ( let i = 0; i < tmp.length; i++ ) {
+          this.form[this.field].results[i] = tmp[i];
+      }
+      setTimeout(( function() { e.target.parentNode.scrollTop = scrollTop; } ), 0 );
+      setTimeout(( function() { e.target.parentNode.focus(); } ), 0 );
     }
-    setTimeout(( function() { e.target.parentNode.scrollTop = scrollTop; } ), 0 );
-    setTimeout(( function() { e.target.parentNode.focus(); } ), 0 );
+    // text area append only changes needs 1 way bind
+    else if (this.get('AppendOnly'))
+      this.form[this.field] = e.editor ? e.editor.getContent() : e.target.value;
+    // if on change passed in
+    if (typeof this.onchange == "function")
+      this.onchange();
   }
 
   // show numbers with only1 dot and without any trailing zeros
