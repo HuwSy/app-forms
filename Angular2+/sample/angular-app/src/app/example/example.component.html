@@ -1,0 +1,62 @@
+<form ngNativeValidate #input (keydown.enter)="$event.preventDefault()">
+
+    <app-choice [form]="form" [spec]="spec" [field]="'Title'"></app-choice>
+    
+    <app-choice [form]="files" [spec]="spec" [field]="'Attachments'"></app-choice>
+
+    <div *ngIf="loading">
+      Loading...
+    </div>
+    <table *ngIf="!loading" class="table" cellspacing="0">
+        <tr *ngIf="maxPage(null, false) == 0">
+            <td colspan="99">No remaining attestations for this date</td>
+        </tr>
+        <thead *ngIf="maxPage(null, false) > 0">
+            <tr>
+                <th style="width: 0">
+                    <input type="checkbox" checked (click)="toggleAll(all.checked)" #all name="all" />
+                </th>
+                <th (click)="sort('Id')" style="width: 30px;cursor: pointer;">
+                    ID
+                    <i *ngIf="orderKey == 'Id' && !orderDir">&uarr;</i>
+                    <i *ngIf="orderKey == 'Id' && orderDir">&darr;</i>
+                </th>
+                <th (click)="sort('Title')" style="cursor: pointer;">
+                    Title
+                    <i *ngIf="orderKey == 'Title' && !orderDir">&uarr;</i>
+                    <i *ngIf="orderKey == 'Title' && orderDir">&darr;</i>
+                </th>
+            </tr>
+        </thead>
+        <tbody *ngFor="let d of rows(null, true)">
+            <tr>
+                <td>
+                    <input [(ngModel)]="d.Submit" type="checkbox" name="cb_{d.Id}" />
+                </td>
+                <td style="text-align:center">{{d.Id}}</td>
+                <td>{{d.Title}}</td>
+            </tr>
+        </tbody>
+        <tfoot *ngIf="maxPage(null, false) > 0">
+            <tr *ngIf="maxPage(null, false) > 0">
+                <th colspan="99" style="text-align: right;">
+                    <a (click)="changePage(1)" *ngIf="currentPage > 2">&laquo; 1</a>
+                    <a (click)="changePage(currentPage - 1)" *ngIf="currentPage > 1">&lsaquo; {{currentPage - 1}}</a>
+                    {{currentPage}}
+                    <a (click)="changePage(currentPage + 1)" *ngIf="maxPage(null, false) > currentPage">{{currentPage + 1}} &rsaquo;</a>
+                    <a (click)="changePage(maxPage(null, true))" *ngIf="maxPage(null, false) > currentPage + 1">{{maxPage(null, true)}} &raquo;</a>
+                </th>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="Actions">
+        <div style="float: right;">
+          <button (click)="close()">Close</button>
+        </div>
+    
+        <div *ngIf="perm['Owners']">
+          <button [disabled]="!input.checkValidity()" (click)="save()">Submit</button>
+        </div>
+    </div> 
+</form>
