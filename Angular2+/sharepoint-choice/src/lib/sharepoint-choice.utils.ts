@@ -101,7 +101,7 @@ export class SharepointChoiceUtils {
           // parse objects within text fields for looped data
             try {
               let f = d[key].toString().trim().substring(0,1), e = d[key].toString().trim();
-              if ((f == '{' || f == '[') && (e.endsWith(']') || e.endsWith('}'))) {
+              if ((f == '{' || f == '[') && e.endsWith(f == '{' ? '}' : ']')) {
                 d[key] = JSON.parse(d[key]);
                 d[key] = this.parseLoop(d[key]);
                 continue;
