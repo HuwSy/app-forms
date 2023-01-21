@@ -98,10 +98,10 @@ export class SharepointChoiceUtils {
             if (!d[key])
               continue;
 
-          // parse objects within text fields for looped data
+            // parse objects within text fields for looped data
             try {
-              let f = d[key].toString().trim().substring(0,1), e = d[key].toString().trim();
-              if ((f == '{' || f == '[') && e.endsWith(f == '{' ? '}' : ']')) {
+              let f = d[key].toString().trim().substring(0,1);
+              if ((f == '{' || f == '[') && d[key].toString().trim().endsWith(f == '{' ? '}' : ']')) {
                 d[key] = JSON.parse(d[key]);
                 d[key] = this.parseLoop(d[key]);
                 continue;
