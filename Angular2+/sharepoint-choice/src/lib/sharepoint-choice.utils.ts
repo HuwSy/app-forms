@@ -193,7 +193,7 @@ export class SharepointChoiceUtils {
     public async save(formDataIncIdToUpdate: any, uneditedDataToBuildPatch: any, listTitle: string):Promise<number> {
         let form = formDataIncIdToUpdate, uned = uneditedDataToBuildPatch;
         var save = JSON.parse(JSON.stringify(form));
-        if (uned == null)
+        if (!uned || uned == null)
           uned = {};
 
         try {
