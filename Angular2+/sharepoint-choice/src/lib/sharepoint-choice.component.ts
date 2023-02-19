@@ -116,7 +116,13 @@ export class SharepointChoiceComponent implements OnInit {
     if (t == 'TypeAsString' && p == 'MultiChoice' && (!this.form[this.field] || !this.form[this.field].results))
       this.form[this.field] = {
         __metadata: {type: "Collection(Edm.String)"},
-        results: []
+        results: this.form[this.field] || []
+      }
+    // if its a multi user, ensure the object is the correct type
+    if (t == 'TypeAsString' && p == 'UserMulti' && (!this.form[this.field + 'Id'] || !this.form[this.field + 'Id'].results))
+      this.form[this.field + 'Id'] = {
+        __metadata: {type: "Collection(Edm.Int32)"},
+        results: this.form[this.field + 'Id'] || []
       }
     // if its a url, ensure the correct object type and clone data into url for flat stored occurrences 
     if (t == 'TypeAsString' && p == 'URL' && (!this.form[this.field] || !this.form[this.field].Description))
@@ -448,7 +454,7 @@ export class SharepointChoiceComponent implements OnInit {
       this.loading = [];
     
     // dont trigger a new load web request if the users aready loading
-    if (this.loading.indexOf(user) < 0) {
+    if (this.loading.indexOf(user) < 0 && typeof user == "number" && user > 0) {
       this.loading.push(user);
       // load the user
       pnp.sp.web.getUserById(user).get().then(u => {
@@ -458,6 +464,9 @@ export class SharepointChoiceComponent implements OnInit {
           Key: u.LoginName,
           Id: u.Id
         });
+        // touch results to force display update
+        this.form[this.field + 'Id'].results.push(0);
+        this.form[this.field + 'Id'].results.pop();
       });
     }
     
