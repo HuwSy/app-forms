@@ -95,7 +95,7 @@ export class SharepointChoiceUtils {
               delete d[key];
 
             // dont process nulls
-            if (!d[key])
+            if (!d[key] || d[key] === null)
               continue;
 
             // parse objects within text fields for looped data
@@ -200,7 +200,7 @@ export class SharepointChoiceUtils {
           delete save["$$hashKey"];
 
           for (var key in save) {
-            if (save[key] === null || key == "Id" || key == "__metadata")
+            if ((save[key] === null && uned[key] !== null) || key == "Id" || key == "__metadata")
               continue;
             
             // remove and unedited, including internal fields
