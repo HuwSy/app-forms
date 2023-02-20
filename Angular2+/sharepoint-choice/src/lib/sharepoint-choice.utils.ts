@@ -97,6 +97,14 @@ export class SharepointChoiceUtils {
             // dont process nulls
             if (!d[key] || d[key] === null)
               continue;
+              
+            // return arrays back to results, fix pnpjs not behaving as expected
+            if (typeof d[key] == "object" && !d[key].results && d[key].length > 0) {
+              d[key] = {
+                results: d[key],
+                __metadata: {type: (typeof d[key][0] == "number" ? "Collection(Edm.Int32)" : "Collection(Edm.String)")}
+              }
+            }
 
             // parse objects within text fields for looped data
             try {
