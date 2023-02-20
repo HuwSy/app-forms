@@ -160,6 +160,12 @@ export class SharepointChoiceComponent implements OnInit {
         scrollTop = e.target.parentNode.scrollTop;
   
       var v = e.target.value.split( '\'' )[1];
+      // ensure object type is correct
+      if (!this.form[this.field] || !this.form[this.field].__metadata)
+        this.form[this.field] = {
+          __metadata: {type: "Collection(Edm.String)"},
+          results: !this.form[this.field] ? [] : this.form[this.field].results ? this.form[this.field].results : typeof this.form[this.field] == "object" ? this.form[this.field] : [this.form[this.field]]
+        }
       // if there are selected results set the field to add/remove the most recent click
       var i = this.form[this.field].results.indexOf(v);
       if (i >= 0)
