@@ -178,8 +178,8 @@ export class SharepointChoiceComponent implements OnInit {
       for ( let i = 0; i < tmp.length; i++ ) {
           this.form[this.field].results[i] = tmp[i];
       }
-      setTimeout(( function() { e.target.parentNode.scrollTop = scrollTop; } ), 0 );
-      setTimeout(( function() { e.target.parentNode.focus(); } ), 0 );
+      setTimeout(( function() { e.target.parentNode.scrollTop = scrollTop; } ), 10 );
+      setTimeout(( function() { e.target.parentNode.focus(); } ), 10 );
     }
     // text area append only changes needs 1 way bind
     else if (this.get('AppendOnly'))
