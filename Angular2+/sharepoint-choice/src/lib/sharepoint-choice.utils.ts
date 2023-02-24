@@ -52,7 +52,7 @@ export class SharepointChoiceUtils {
     
     // get list fields in the appropriate format for use in <sharepoint-choice spec=""> attributes
     public async fields(listTitle:string):Promise<any> {
-        var spec = {};
+        var spec = {'odata.metadata': this.context};
 
         try {
             var arr = await pnp.sp.web.lists.getByTitle(listTitle).fields.get();
