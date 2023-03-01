@@ -33,6 +33,7 @@ export class SharepointChoiceComponent implements OnInit {
   declare loading:any[number];
   declare key: string;
   declare UserQuery: UserQuery;
+  declare filterMulti:string;
 
   constructor(
     private elRef: ElementRef
@@ -195,15 +196,26 @@ export class SharepointChoiceComponent implements OnInit {
 
   // choices need filtering
   choices(): any[string] {
-    if (typeof this.filter != "function")
-      return this.get('Choices');
-    var ths = this;
-    return this.get('Choices').filter((x:string) => {
-      // on choices exclude the other value
-      if (ths.other && ths.other == x)
+    // get choices from list
+    let choices = this.get('Choices');
+    // use any provided filter 
+    if (typeof this.filter == "function")
+      choices = choices.filter((c:any, i:number, a:any) => this.filter (c, i, a, this));
+    // common filters
+    var other = this.other;
+    return choices.filter ((x:string) => {
+      if (!x || x == "")
         return false;
-      // if there is a filter use it
-      return ths.filter(x, ths);
+      // filter exclude other if present 
+      if (other && other == X)
+        return false;
+      // exclude unselected items on disabled fields 
+      if (this.disabled && this.form[this.field] && this.form[this.field].results && !~this.form[this.field].results.indexOf(x))
+        return false;
+      // filter on search above multichoice field
+      if (this.filterMulti && this.filterMulti.length > 0 && !~x.toLowerCase().indexOf(this.filterMulti.toLowerCase()))
+        return false;
+      return true;
     });
   }
 
