@@ -207,7 +207,7 @@ export class SharepointChoiceComponent implements OnInit {
       if (!x || x == "")
         return false;
       // filter exclude other if present 
-      if (other && other == X)
+      if (other && other == x)
         return false;
       // exclude unselected items on disabled fields 
       if (this.disabled && this.form[this.field] && this.form[this.field].results && !~this.form[this.field].results.indexOf(x))
@@ -483,8 +483,10 @@ export class SharepointChoiceComponent implements OnInit {
           Id: u.Id
         });
         // touch results to force display update
-        this.form[this.field + 'Id'].results.push(0);
-        this.form[this.field + 'Id'].results.pop();
+        try {
+          this.form[this.field + 'Id'].results.push(0);
+          this.form[this.field + 'Id'].results.pop();
+        } catch (e) {}
       });
     }
     
