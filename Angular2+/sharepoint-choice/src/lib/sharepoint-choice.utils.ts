@@ -194,6 +194,8 @@ export class SharepointChoiceUtils {
           });
       
       // return formatted data
+      if (r.status == 204)
+        return null;
       return await r.json();
     }
 
