@@ -10,6 +10,7 @@
     <div class="ToolTip" [hidden]="!tooltip">{{get('Description')}}</div>
 
     <div layout="column" *ngIf="get('TypeAsString') == 'MultiChoice'">
+        <input placeholder="Filter" *ngIf="!disabled" [(ngModel)]="filterMulti"><br>
         <select (mousedown)="false" (click)="change($event)" flex multiple="multiple" style="height: 80px !important" [disabled]="disabled" [ngModel]="form[field].results" [required]="required()" name="{{field}}_S">
             <option *ngFor="let i of choices()" [value]="i">{{i}}</option>
         </select>
