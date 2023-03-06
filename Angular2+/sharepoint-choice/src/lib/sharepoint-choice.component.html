@@ -17,7 +17,7 @@
     </div>
     
     <div layout="row" *ngIf="get('TypeAsString') == 'Choice' && get('Format') != 'RadioButtons'">
-        <select [disabled]="disabled" (ngModelChange)="selChangeS($event)" [ngModel]="form[field]" [required]="required()" name="{{field}}_0" flex>
+        <select [disabled]="disabled" (ngModelChange)="selChangeS($event)" [ngModel]="form[field]" [required]="required()" name="{{field}}_0" flex [hidden]="disabled && get('TypeAsString') == 'Choice' && (form[field] == '' || notInChoices()) && form[field] != '-'">
             <option *ngIf="none" [value]="!form[field] ? form[field] : '-'">{{none}}</option>
             <option *ngFor="let i of choices()" [value]="i">{{i}}</option>
             <option *ngIf="other || get('FillInChoice')" [value]="!form[field] || !notInChoices() ? 'Please select...' : form[field]">{{other || 'Other'}}, please specify...</option>
