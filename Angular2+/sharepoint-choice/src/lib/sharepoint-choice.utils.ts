@@ -178,13 +178,23 @@ export class SharepointChoiceUtils {
       try {
         login = await msal.acquireTokenSilent(params);
       } catch (error) {
-        await msal.loginPopup(params);
-        params.account = msal.getAllAccounts()[0];
-        login = await msal.acquireTokenSilent(params);
+        try {
+          await msal.loginPopup(params);
+          params.account = msal.getAllAccounts()[0];
+          login = await msal.acquireTokenSilent(params);
+        } catch (e) {
+          throw `Exception logging in to MSAL for scope ${permissionScope} with error ${e}`;
+        }
       }
 
+      // if no url, login only, then return
+      if (apiUrl == null)
+        return null;
+
       // query api
-      var r = await fetch(apiUrl, {
+      var r;
+      try {
+        r = await fetch(apiUrl, {
               method: httpMethod,
               headers: {
                   'Authorization': `Bearer ${login.accessToken}`,
@@ -193,10 +203,13 @@ export class SharepointChoiceUtils {
               body: jsonPostData ? JSON.stringify(jsonPostData) : null,
           });
       
-      // return formatted data
-      if (r.status == 204)
-        return null;
-      return await r.json();
+        // return formatted data for 2xx, 4xx and 5xx will not return
+        if (r.status == 204)
+          return null;
+        return await r.json();
+      } catch (e) {
+        throw `Exception getting API data with status ${r.status} response ${await r.text()}`;
+      }
     }
 
     // patch save list item data and parse any data types appropriate for use in <sharepoint-choice ngModel=""> attributes
@@ -228,6 +241,10 @@ export class SharepointChoiceUtils {
             // convert JSON
             if (typeof save[key] == "object" && !save[key].results)
               save[key] = JSON.stringify(save[key]);
+            
+            // ensure no nulls selected, should never occur but does on some browsers?
+            if (typeof save[key] == "object" && save[key].results)
+              save[key].results = save[key].results.filter(i => i !== null && i !== undefined);
           }
           
           // save/update the item

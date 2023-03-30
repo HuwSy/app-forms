@@ -142,12 +142,6 @@ export class SharepointChoiceComponent implements OnInit {
     // if no title use internal field name
     if (t == 'Title' && p == null)
       return this.field;
-    // if no type, non attached local dev, then use random type
-    if (t == 'TypeAsString' && p == null) {
-      this.spec[this.field] = this.spec[this.field] || {};
-      this.spec[this.field][t] = ['Boolean','Choice','Integer','DateTime','Text','Note'].splice(Math.floor(Math.random()*5),1)
-      return this.spec[this.field][t];
-    }
     return p == null || typeof p.results == "undefined" ? p : p.results;
   }
 
@@ -198,25 +192,28 @@ export class SharepointChoiceComponent implements OnInit {
   choices(): any[string] {
     // get choices from list
     let choices = this.get('Choices');
-    // use any provided filter 
+    // use any provided filter
     if (typeof this.filter == "function")
-      choices = choices.filter((c:any, i:number, a:any) => this.filter (c, i, a, this));
+      choices = choices.filter((c:any, i:number, a:any) => this.filter(c,i,a,this));
     // common filters
     var other = this.other;
-    return choices.filter ((x:string) => {
-      if (!x || x == "")
+    if (!choices.filter)
+      return choices;
+    return choices.filter((x:string) => {
+      if (!x || x == '')
         return false;
-      // filter exclude other if present 
+      // filter exclude other if present
       if (other && other == x)
         return false;
-      // exclude unselected items on disabled fields 
+      // exclude unselected items on disabled fields
       if (this.disabled && this.form[this.field] && this.form[this.field].results && !~this.form[this.field].results.indexOf(x))
         return false;
       // filter on search above multichoice field
       if (this.filterMulti && this.filterMulti.length > 0 && !~x.toLowerCase().indexOf(this.filterMulti.toLowerCase()))
         return false;
+      // else true
       return true;
-    });
+    })
   }
 
   // selected field option not in available choices, i.e. other
@@ -483,10 +480,10 @@ export class SharepointChoiceComponent implements OnInit {
           Id: u.Id
         });
         // touch results to force display update
-        try {
+        if (this.form[this.field + 'Id'].results) {
           this.form[this.field + 'Id'].results.push(0);
           this.form[this.field + 'Id'].results.pop();
-        } catch (e) {}
+        }
       });
     }
     
