@@ -4,4 +4,4 @@ A simple Angular framework for rapid development of SharePoint hosted and ShareP
 
 This was originally an AngularJS/JavaScript coded, simplified version of Nintex/PowerPlatform but based on the now deprecated AngularJS, due to when the work began. It requires a content web part or script editor web part or a modern equivelent of these. As there were so many deprecated requirements here then it is uploaded as is with unlikely/minimal further development to the AngularJS version but may be of use for rapid prototyping or fall back interfaces.
 
-The Angular2+ version is an initial concept to recreate this within newer versions of Angular (11 currently) within an SPFx package.
+The Angular2+ version has now matured using a newer versions of Angular (16 currently) within an SPFx package.
