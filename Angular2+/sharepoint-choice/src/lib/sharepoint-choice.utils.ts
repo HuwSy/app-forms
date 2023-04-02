@@ -206,7 +206,7 @@ export class SharepointChoiceUtils {
         // return formatted data for 2xx, 4xx and 5xx will not return
         if (r.status == 204)
           return null;
-        return await r.json();
+        return await r.clone().json();
       } catch (e) {
         throw `Exception getting API data with status ${r.status} response ${await r.text()}`;
       }
