@@ -82,7 +82,23 @@ export class SharepointChoiceComponent implements OnInit {
 
   // show numbers with only 1 dot and without any trailing zeros
   niceNumber(): string {
-    return !this.form[this.field] ? '' : this.form[this.field].toString().split('.')[0] + (this.form[this.field].toString().split('.').length == 1 ? '' : '.' + this.form[this.field].toString().split('.')[1].replace(/0*$/,''));
+    // toLocaleString() doesnt retuirn all decimal places
+    // if no dp then dont displat decimal dot
+    // if more than 1 dot exclude 2nd onward
+    return !this.form[this.field] ? '' : this.form[this.field].toLocaleString().split('.')[0] + (this.form[this.field].toString().split('.').length == 1 ? '' : '.' + this.form[this.field].toString().split('.')[1].replace(/0*$/,''));
+  }
+
+  numberSet(e) {
+    if (!e || e == '')
+      return this.form[this.field] = null;
+    var p = parseFloat(e.replace(/[^0-9\.]/g, ''));
+    if (isNaN(p))
+      return this.form[this.field] = null;
+    if (p < this.get('Min') && this.get('Min'))
+      p = this.get('Min');
+    if (p > this.get('Max') && this.get('Max'))
+      p = this.get('Max');
+    this.form[this.field] = p;
   }
 
   // field required based on spec but required is not needed for hidden/disabled items
