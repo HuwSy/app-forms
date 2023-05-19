@@ -12,8 +12,8 @@
     "@angular/platform-browser",
     "@angular/platform-browser-dynamic",
     "@azure/msal",
-    "@tinymce/tinymce-angular",
     "@pnp/pnpjs",
+    "ngx-editor",
     "tslib"
   ],
   "lib": {
