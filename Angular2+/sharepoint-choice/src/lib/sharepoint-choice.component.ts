@@ -1,9 +1,10 @@
-import { Component, OnInit, Input, ElementRef, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, ElementRef, ViewEncapsulation } from '@angular/core';
 import { UserQuery, User } from "./Models";
 import pnp from '@pnp/pnpjs';
 import { Logger, LogLevel } from "@pnp/logging";
 import { PnPLogging } from './PnPLogging';
 import { App } from './App'
+import { Editor, Toolbar } from 'ngx-editor';
 
 @Component({
   selector: 'app-choice',
@@ -11,7 +12,7 @@ import { App } from './App'
   styleUrls: ['./sharepoint-choice.component.scss'],
   encapsulation: ViewEncapsulation.Emulated
 })
-export class SharepointChoiceComponent implements OnInit {
+export class SharepointChoiceComponent implements OnInit, OnDestroy {
   @Input() form!: any[string]; // form containing field
   @Input() spec!: any[any[string]]; // spec of field loaded from list
   @Input() field!: string; // internal field name on form object, used for push back and against spec
@@ -24,14 +25,14 @@ export class SharepointChoiceComponent implements OnInit {
 
   @Input() disabled!: boolean;
 
-  declare tinymceOptions: object;
+  declare editor: Editor;
+  declare toolbar: Toolbar;
   declare tooltip: boolean;
   declare filesOver: boolean;
   declare name: string;
   declare users: User[];
   declare display: any;
   declare loading:any[number];
-  declare key: string;
   declare UserQuery: UserQuery;
   declare filterMulti:string;
 
@@ -39,18 +40,17 @@ export class SharepointChoiceComponent implements OnInit {
     private elRef: ElementRef
   ) {
     // rich text field
-    this.tinymceOptions = {
-      resize: false,
-      height: 500,
-      menubar: false,
-      plugins: "textcolor lists table link paste",
-      toolbar: "forecolor | bold italic underline | bullist numlist outdent indent | table | link",
-      statusbar: false,
-      debounce: false,
-      paste_data_images: true
-    };
-    this.key = App.TinyMCEKey;
-
+    this.editor = new Editor();
+    this.toolbar = [
+      ['text_color', 'background_color'],
+      ['bold', 'italic', 'underline', 'strike'],
+      ['ordered_list', 'bullet_list'],
+      [{ heading: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] }],
+      ['code', 'blockquote'],
+      ['link', 'image'],
+      ['align_left', 'align_center', 'align_right', 'align_justify'],
+    ];
+    
     // user(s)
     this.users = [];
     this.display = [];
@@ -76,24 +76,32 @@ export class SharepointChoiceComponent implements OnInit {
     Logger.activeLogLevel = LogLevel.Warning;
   }
 
+  ngOnDestroy(): void {
+    this.editor.destroy();
+  }
+
   /* 
   Common parts between multiple field types or minimal functions
   */
 
   // show numbers with only 1 dot and without any trailing zeros
   niceNumber(): string {
-    // toLocaleString() doesnt retuirn all decimal places
-    // if no dp then dont displat decimal dot
-    // if more than 1 dot exclude 2nd onward
+    // .toLocaleString() will only retain 3 decimal places therefore split and do dp manually
+    // if no dp then no decimal dot either
+    // if dp only get 1st, should never be 2 i.e. 0.1.2
     return !this.form[this.field] ? '' : this.form[this.field].toLocaleString().split('.')[0] + (this.form[this.field].toString().split('.').length == 1 ? '' : '.' + this.form[this.field].toString().split('.')[1].replace(/0*$/,''));
   }
 
-  numberSet(e) {
-    if (!e || e == '')
-      return this.form[this.field] = null;
+  numberSet(e:string|undefined):void {
+    if (!e || e == '') {
+      this.form[this.field] = null
+      return;
+    }
     var p = parseFloat(e.replace(/[^0-9\.]/g, ''));
-    if (isNaN(p))
-      return this.form[this.field] = null;
+    if (isNaN(p)) {
+      this.form[this.field] = null
+      return;
+    }
     if (p < this.get('Min') && this.get('Min'))
       p = this.get('Min');
     if (p > this.get('Max') && this.get('Max'))
@@ -194,7 +202,10 @@ export class SharepointChoiceComponent implements OnInit {
     }
     // text area append only changes needs 1 way bind
     else if (this.get('AppendOnly'))
-      this.form[this.field] = e.editor ? e.editor.getContent() : e.target.value;
+      this.form[this.field] = e.editor ? e.editor.getContent() : e.target ? e.target.value : e;
+    // ngModelChange triggers before model change so force update before running function
+    else if (this.get('RichText') && !e.editor && !e.target && this.form[this.field] != e)
+      this.form[this.field] = e;
     // if on change passed in
     if (typeof this.onchange == "function")
       this.onchange();
@@ -203,6 +214,11 @@ export class SharepointChoiceComponent implements OnInit {
   /* 
   Common parts between choice fields
   */
+
+  // many choices render bigger box
+  multiLargeorSmall(): string {
+    return this.choices().length > 10 ? 'multilarge' : 'multismall'
+  }
 
   // choices need filtering
   choices(): any[string] {
@@ -213,8 +229,6 @@ export class SharepointChoiceComponent implements OnInit {
       choices = choices.filter((c:any, i:number, a:any) => this.filter(c,i,a,this));
     // common filters
     var other = this.other;
-    if (!choices.filter)
-      return choices;
     return choices.filter((x:string) => {
       if (!x || x == '')
         return false;
@@ -260,8 +274,8 @@ export class SharepointChoiceComponent implements OnInit {
   */
 
   // get outcomes of non standard fields into a plain text field for [required] to be triggered automatically
-  attach(): string {
-    return this.attachments().length > 0 ? 'true' : null;
+  attach(): string|undefined {
+    return this.attachments().length > 0 ? 'true' : undefined;
   }
 
   // files post filtering
@@ -419,8 +433,8 @@ export class SharepointChoiceComponent implements OnInit {
   */
 
   // get outcomes of non standard fields into a plain text field for [required] to be triggered automatically
-  people(): string {
-    return this.form[this.field + 'Id'] && (!this.form[this.field + 'Id'].results || this.form[this.field + 'Id'].results.length > 0) ? 'true' : null;
+  people(): string|undefined {
+    return this.form[this.field + 'Id'] && (!this.form[this.field + 'Id'].results || this.form[this.field + 'Id'].results.length > 0) ? 'true' : undefined;
   }
   
   // select user

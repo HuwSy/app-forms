@@ -9,19 +9,20 @@ import { App } from './App';
 ///</summary>
 export class SharepointChoiceUtils {
     // context can be read and updated
-    public context:string = '';
+    public context?:string = '';
 
     // attempt to establish correct context url for the site from one of the available sources then setup logging for this class
     constructor(
         context?: string
     ) {
       this.context = context;
+      let w:any = window;
       if ((this.context || "") == "")
-        this.context = typeof window['_spPageContextInfo'] == "object" ? window['_spPageContextInfo']['webAbsoluteUrl'] : null;
+        this.context = typeof w['_spPageContextInfo'] == "object" ? w['_spPageContextInfo']['webAbsoluteUrl'] : undefined;
       if ((this.context || "") == "")
         this.context = document.location.href.split('?')[0].split('#')[0].split('/_layouts/')[0].split('/Lists/')[0].split('/Pages/')[0].split('/SitePages/')[0];
 
-      this.context = this.context.replace(/\/$/,'');
+      this.context = this.context?.replace(/\/$/,'');
 
       pnp.sp.setup({sp:{baseUrl:this.context}});
       Logger.subscribe(new PnPLogging());
@@ -30,7 +31,7 @@ export class SharepointChoiceUtils {
 
     // get the current user and permissions to a flat object for easier use in [disabled]="permission['']" etc
     public async permissions():Promise<any> {
-        var p = {}, u = 0;
+        var p:any = {}, u = 0;
 
         try {
           var user = await pnp.sp.web.currentUser.get();
@@ -52,7 +53,7 @@ export class SharepointChoiceUtils {
     
     // get list fields in the appropriate format for use in <sharepoint-choice spec=""> attributes
     public async fields(listTitle:string):Promise<any> {
-        var spec = {'odata.metadata': this.context};
+        var spec:any = {'odata.metadata': this.context};
 
         try {
             var arr = await pnp.sp.web.lists.getByTitle(listTitle).fields.get();
@@ -69,7 +70,7 @@ export class SharepointChoiceUtils {
 
     // load list item data and parse any data types appropriate for use in <sharepoint-choice ngModel=""> attributes
     public async data(id:number, listTitle:string):Promise<any> {
-        var d = {};
+        var d:any = {};
 
         try {
           d = await pnp.sp.web.lists.getByTitle(listTitle).items.getById(id).get();
@@ -150,13 +151,13 @@ export class SharepointChoiceUtils {
     }
   
     // calls an api more generically
-    public async callApi(tenancyOnMicrosoft: string, clientId: string, permissionScope: string, apiUrl: string, httpMethod: string, jsonPostData: any):Promise<any> {
+    public async callApi(tenancyOnMicrosoft: string, clientId: string, permissionScope: string, apiUrl?: string, httpMethod?: string, jsonPostData?: any):Promise<any> {
       // client settings
       var config = {
         auth: {
             clientId: clientId,
             authority: `https://login.microsoftonline.com/${tenancyOnMicrosoft}.onmicrosoft.com`,
-            redirectUri: this.context.replace(/\/$/,'')
+            redirectUri: this.context?.replace(/\/$/,'')
         },
         cache: {
             cacheLocation: "localStorage",
@@ -195,7 +196,7 @@ export class SharepointChoiceUtils {
       var r;
       try {
         r = await fetch(apiUrl, {
-              method: httpMethod,
+              method: httpMethod || 'GET',
               headers: {
                   'Authorization': `Bearer ${login.accessToken}`,
                   'Content-Type': 'application/json'
@@ -208,7 +209,7 @@ export class SharepointChoiceUtils {
           return null;
         return await r.clone().json();
       } catch (e) {
-        throw `Exception getting API data with status ${r.status} response ${await r.text()}`;
+        throw `Exception getting API data with status ${r?.status} response ${await r?.text()}`;
       }
     }
 
@@ -244,7 +245,7 @@ export class SharepointChoiceUtils {
             
             // ensure no nulls selected, should never occur but does on some browsers?
             if (typeof save[key] == "object" && save[key].results)
-              save[key].results = save[key].results.filter(i => i !== null && i !== undefined);
+              save[key].results = save[key].results.filter((i:any) => i !== null && i !== undefined);
           }
           
           // save/update the item
@@ -257,18 +258,18 @@ export class SharepointChoiceUtils {
     
           // process attachments as deletes then uploads
           if (form.Attachments && form.Attachments.results && form.Attachments.results.length > 0) {
-            var deletes = form.Attachments.results.filter(a => {
+            var deletes = form.Attachments.results.filter((a:any) => {
               return a.Deleted
-            }).map(a => {
+            }).map((a:any) => {
               return a.FileName;
             });
 
             for (var i = 0; i < deletes.length; i++)
               await pnp.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).attachmentFiles.getByName(deletes[i]).delete();
     
-            var adds = form.Attachments.results.filter(a => {
+            var adds = form.Attachments.results.filter((a:any) => {
               return !a.Deleted && !a.ServerRelativeUrl
-            }).map(a => {
+            }).map((a:any) => {
               return {
                 name: a.FileName,
                 content: a.Data
@@ -287,9 +288,9 @@ export class SharepointChoiceUtils {
     }
 
     // get query parameters, not strictly sharepoint but reused a lot
-    public param(parameterToReturn:string):string {
+    public param(parameterToReturn:string):string|undefined {
         var rx = new RegExp(`[?&]${parameterToReturn}=([^&]+).*$`);
         var returnVal = document.location.search.match(rx);
-        return returnVal === null ? null : returnVal[1];
+        return returnVal === null ? undefined : returnVal[1];
     }
 }
