@@ -10,8 +10,8 @@
     <div class="ToolTip" [hidden]="!tooltip">{{get('Description')}}</div>
 
     <div layout="column" *ngIf="get('TypeAsString') == 'MultiChoice'">
-        <input placeholder="Filter" *ngIf="!disabled" [(ngModel)]="filterMulti"><br>
-        <select (mousedown)="false" (click)="change($event)" flex multiple="multiple" style="height: 80px !important" [disabled]="disabled" [ngModel]="form[field].results" [required]="required()" name="{{field}}_S">
+        <input placeholder="Filter or search the choices below" *ngIf="!disabled" [(ngModel)]="filterMulti"><br>
+        <select (mousedown)="false" (click)="change($event)" flex multiple="multiple" class="{{multiLargeorSmall()}}" [disabled]="disabled" [ngModel]="form[field].results" [required]="required()" name="{{field}}_S">
             <option *ngFor="let i of choices()" [value]="i">{{i}}</option>
         </select>
     </div>
@@ -38,7 +38,7 @@
         </label>
     </div>
 
-    <div layout="column" *ngIf="get('TypeAsString') == 'Number' || get('TypeAsString') == 'Integer'">
+    <div ayout="column" *ngIf="get('TypeAsString') == 'Number' || get('TypeAsString') == 'Integer'">
         <input flex [disabled]="disabled" type="text" [ngModel]="niceNumber()" (ngModelChange)="numberSet($event)" [required]="required()" name="{{field}}_I" [min]="get('Min')" [max]="get('Max')" (change)="change($event)">
     </div>
     
@@ -68,12 +68,18 @@
     <div layout="column" *ngIf="disabled && get('TypeAsString') == 'Note' && !get('RichText')" style="max-height: 500px; overflow: auto;">{{form[field]}}</div>
     
     <div layout="column" *ngIf="!disabled && get('TypeAsString') == 'Note' && get('RichText') && !get('AppendOnly')">
-        <editor apiKey="{{key}}" [init]="tinymceOptions" flex [(ngModel)]="form[field]" allowedEvents="onChange" (onChange)="change($event)"></editor>
+        <div class="NgxEditor__Wrapper">
+            <ngx-editor-menu [editor]="editor" [toolbar]="toolbar"></ngx-editor-menu>
+            <ngx-editor [editor]="editor" flex [(ngModel)]="form[field]" [placeholder]="'Type here...'" (ngModelChange)="change($event)"></ngx-editor>
+        </div>
         <div class="MaxLength" [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
     </div>
     
     <div layout="column" *ngIf="!disabled && get('TypeAsString') == 'Note' && get('RichText') && get('AppendOnly')">
-        <editor apiKey="{{key}}" [init]="tinymceOptions" flex allowedEvents="onChange" (onChange)="change($event)"></editor>
+        <div class="NgxEditor__Wrapper">
+            <ngx-editor-menu [editor]="editor" [toolbar]="toolbar"></ngx-editor-menu>
+            <ngx-editor [editor]="editor" flex [placeholder]="'Type here...'" (ngModelChange)="change($event)"></ngx-editor>
+        </div>
         <div class="MaxLength" [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
     </div>
     
@@ -152,12 +158,12 @@
         </div>
     </div>
 
-    <div layout="column" *ngIf="get('TypeAsString') == null || get('TypeAsString') == ''">
-        <div style="opacity:0.85">Error, not loaded yet...</div>
+    <div layout="column" *ngIf="get('TypeAsString') == null || get('TypeAsString') == ''" style="position:relative;">
+        <div class="spin"></div>
     </div>
     
     <div layout="column" *ngIf="['Lookup','LookupMulti','TaxonomyFieldType','TaxonomyFieldTypeMulti','AllDayEvent','Calculated','Computed','ContentTypeId','Counter','CrossProjectLink','Currency','File','GridChoice','Guid','ModStat','MultiColumn','PageSeparator','Recurrence','ThreadIndex','Threading','WorkflowEventType','WorkflowStatus','FieldLocation'].indexOf(get('TypeAsString')) >= 0">
-        <div style="opacity:0.85">Error, not yet available...</div>
+        <div style="opacity:0.85">Error, field type not yet available...</div>
     </div>
     
     <span style="display:none !important" id="DebugValue_{{field}}">{{form[field]}}</span>

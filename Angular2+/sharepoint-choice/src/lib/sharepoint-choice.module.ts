@@ -4,8 +4,8 @@ import { BrowserModule } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { EditorModule } from '@tinymce/tinymce-angular';
 import { AngularLogging } from './AngularLogging';
+import { NgxEditorModule } from 'ngx-editor';
 
 @NgModule({
   declarations: [
@@ -16,7 +16,7 @@ import { AngularLogging } from './AngularLogging';
     FormsModule,
     HttpClientModule,
     BrowserAnimationsModule,
-    EditorModule
+    NgxEditorModule
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   providers: [{
