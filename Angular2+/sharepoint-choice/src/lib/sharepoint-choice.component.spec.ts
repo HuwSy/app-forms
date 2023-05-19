@@ -6,12 +6,10 @@ describe('SharepointChoiceComponent', () => {
   let component: SharepointChoiceComponent;
   let fixture: ComponentFixture<SharepointChoiceComponent>;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [ SharepointChoiceComponent ]
-    })
-    .compileComponents();
-
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      declarations: [SharepointChoiceComponent]
+    });
     fixture = TestBed.createComponent(SharepointChoiceComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
