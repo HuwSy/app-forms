@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-choice",
-  "version": "1.0.1",
+  "version": "3.0.1",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
@@ -18,32 +18,32 @@
   ],
   "license": "ISC",
   "dependencies": {
-    "@angular/animations": "^14.0.0",
-    "@angular/common": "^14.0.0",
-    "@angular/compiler": "^14.0.0",
-    "@angular/core": "^14.0.0",
-    "@angular/forms": "^14.0.0",
-    "@angular/platform-browser": "^14.0.0",
-    "@angular/platform-browser-dynamic": "^14.0.0",
-    "@azure/msal-browser": "^2.28.1",
-    "@pnp/pnpjs": "^2.14.0",
-    "@tinymce/tinymce-angular": "^4.0.0",
-    "rxjs": "~7.5.0",
+    "@angular/animations": "^16.0.0",
+    "@angular/common": "^16.0.0",
+    "@angular/compiler": "^16.0.0",
+    "@angular/core": "^16.0.0",
+    "@angular/forms": "^16.0.0",
+    "@angular/platform-browser": "^16.0.0",
+    "@angular/platform-browser-dynamic": "^16.0.0",
+    "@azure/msal-browser": "^2.37.0",
+    "@pnp/pnpjs": "^2.15.0",
+    "ngx-editor": "^15.3.0",
+    "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
-    "zone.js": "~0.11.4"
+    "zone.js": "~0.13.0"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^14.2.1",
-    "@angular/cli": "~14.2.1",
-    "@angular/compiler-cli": "^14.0.0",
-    "@types/jasmine": "~4.0.0",
-    "jasmine-core": "~4.3.0",
+    "@angular-devkit/build-angular": "^16.0.1",
+    "@angular/cli": "~16.0.1",
+    "@angular/compiler-cli": "^16.0.0",
+    "@types/jasmine": "~4.3.0",
+    "jasmine-core": "~4.6.0",
     "karma": "~6.4.0",
-    "karma-chrome-launcher": "~3.1.0",
+    "karma-chrome-launcher": "~3.2.0",
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.0.0",
-    "ng-packagr": "^14.2.0",
-    "typescript": "~4.7.2"
+    "ng-packagr": "^16.0.0",
+    "typescript": "~5.0.2"
   }
 }
