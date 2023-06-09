@@ -18,6 +18,13 @@
         background-color: transparent;
         font-family: inherit;
     }
+    
+    select.multismall {
+        height: 100px !important;
+    }
+    select.multilarge {
+        height: 200px !important;
+    }
 
     input:hover, select:hover, textarea:hover,
     input:focus-visible, select:focus-visible, textarea:focus-visible {
