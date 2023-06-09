@@ -70,7 +70,7 @@
     <div layout="column" *ngIf="!disabled && get('TypeAsString') == 'Note' && get('RichText') && !get('AppendOnly')">
         <div class="NgxEditor__Wrapper">
             <ngx-editor-menu [editor]="editor" [toolbar]="toolbar"></ngx-editor-menu>
-            <ngx-editor [editor]="editor" flex [(ngModel)]="form[field]" [placeholder]="'Type here...'" (ngModelChange)="change($event)"></ngx-editor>
+            <ngx-editor [editor]="editor" flex [(ngModel)]="form[field]" [placeholder]="'Type here...'" (ngModelChange)="change($event)" [outputFormat]="'html'"></ngx-editor>
         </div>
         <div class="MaxLength" [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
     </div>
@@ -78,7 +78,7 @@
     <div layout="column" *ngIf="!disabled && get('TypeAsString') == 'Note' && get('RichText') && get('AppendOnly')">
         <div class="NgxEditor__Wrapper">
             <ngx-editor-menu [editor]="editor" [toolbar]="toolbar"></ngx-editor-menu>
-            <ngx-editor [editor]="editor" flex [placeholder]="'Type here...'" (ngModelChange)="change($event)"></ngx-editor>
+            <ngx-editor [editor]="editor" flex [placeholder]="'Type here...'" (ngModelChange)="change($event)" [outputFormat]="'html'"></ngx-editor>
         </div>
         <div class="MaxLength" [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
     </div>
