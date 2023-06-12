@@ -1,6 +1,7 @@
 import pnp from '@pnp/pnpjs';
 import * as MSAL from "@azure/msal-browser";
 import { Logger, LogLevel } from "@pnp/logging";
+import { PermissionKind } from "@pnp/sp/security";
 import { PnPLogging } from './PnPLogging';
 import { App } from './App';
 
@@ -30,6 +31,7 @@ export class SharepointChoiceUtils {
     }
 
     // get the current user and permissions to a flat object for easier use in [disabled]="permission['']" etc
+    // NOTE: this will only detect direct assignments or users added to a mail enabled global security group
     public async permissions():Promise<any> {
         var p:any = {}, u = 0;
 
@@ -49,6 +51,18 @@ export class SharepointChoiceUtils {
         }
 
         return {userId: u, perms: p}
+    }
+    
+    // check permission against object
+    public async hasPermission(object:any, permissions:any[PermissionKind]):Promise<boolean> {
+      try {
+        var perm = await object.getCurrentUserEffectivePermissions();
+        for (var p in permissions) {
+          if (pnp.sp.web.hasPermissions(perm, permissions[p]))
+            return true;
+        }
+      } catch (e) {}
+      return false;
     }
     
     // get list fields in the appropriate format for use in <sharepoint-choice spec=""> attributes
