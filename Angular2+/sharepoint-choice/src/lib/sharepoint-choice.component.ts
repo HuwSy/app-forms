@@ -21,7 +21,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   @Input() none!: string; // none option text instead of null
   @Input() other!: string; // Other fill-in option text, will override to allow other
   @Input() filter!: Function; // filter choices by a function
-  @Input() onchange!: Function; // onchange choices by a function
+  @Input() onchange!: Function; // onchange trigger a function, to supliment (change)= only needed for some use cases i.e. rich text fields
 
   @Input() disabled!: boolean;
 
@@ -35,12 +35,14 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   declare loading:any[number];
   declare UserQuery: UserQuery;
   declare filterMulti:string;
+  declare unused:string;
 
   constructor(
     private elRef: ElementRef
   ) {
     // rich text field
     this.editor = new Editor();
+    // rtf menu items
     this.toolbar = [
       ['text_color', 'background_color'],
       ['bold', 'italic', 'underline', 'strike'],
@@ -50,6 +52,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       ['link', 'image'],
       ['align_left', 'align_center', 'align_right', 'align_justify'],
     ];
+    // field must be model bound even if not is use
+    this.unused = '';
     
     // user(s)
     this.users = [];
@@ -200,12 +204,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       setTimeout(( function() { e.target.parentNode.scrollTop = scrollTop; } ), 10 );
       setTimeout(( function() { e.target.parentNode.focus(); } ), 10 );
     }
-    // text area append only changes needs 1 way bind
+    // append only changes needs 1 way bind to form
     else if (this.get('AppendOnly'))
-      this.form[this.field] = e.editor ? e.editor.getContent() : e.target ? e.target.value : e;
-    // ngModelChange triggers before model change so force update before running function
-    else if (this.get('RichText') && !e.editor && !e.target && this.form[this.field] != e)
-      this.form[this.field] = e;
+      this.form[this.field] = e.target ? e.target.value : e;
     // if on change passed in
     if (typeof this.onchange == "function")
       this.onchange();
