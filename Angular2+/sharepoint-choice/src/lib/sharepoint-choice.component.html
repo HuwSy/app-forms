@@ -39,19 +39,19 @@
     </div>
 
     <div ayout="column" *ngIf="get('TypeAsString') == 'Number' || get('TypeAsString') == 'Integer'">
-        <input flex [disabled]="disabled" type="text" [ngModel]="niceNumber()" (ngModelChange)="numberSet($event)" [required]="required()" name="{{field}}_I" [min]="get('Min')" [max]="get('Max')" (change)="change($event)">
+        <input flex [disabled]="disabled" type="text" pattern="-{0,1}[0-9]*\.{0,1}[0-9]*" [ngModel]="niceNumber()" (ngModelChange)="numberSet($event)" [required]="required()" name="{{field}}_I" [min]="get('Min')" [max]="get('Max')" (change)="change($event)">
     </div>
     
     <div layout="column" *ngIf="get('TypeAsString') == 'DateTime' && get('DisplayFormat') != 1">
-        <input flex [disabled]="disabled" type="date" [ngModel]="form[field] | date:'yyyy-MM-dd'" (ngModelChange)="form[field] = $event" [required]="required()" name="{{field}}_D" (change)="change($event)">
+        <input flex [disabled]="disabled" type="date" [ngModel]="form[field] | date:'yyyy-MM-dd'" (ngModelChange)="form[field] = $event" [required]="required()" name="{{field}}_D" (change)="change($event)" [min]="get('Min')" [max]="get('Max')">
     </div>
     
     <div layout="column" *ngIf="get('TypeAsString') == 'DateTime' && get('DisplayFormat') == 1">
-        <input flex [disabled]="disabled" type="datetime-local" [ngModel]="form[field] | date:'yyyy-MM-ddTHH:mm'" (ngModelChange)="form[field] = $event" [required]="required()" name="{{field}}_D" (change)="change($event)">
+        <input flex [disabled]="disabled" type="datetime-local" [ngModel]="form[field] | date:'yyyy-MM-ddTHH:mm'" (ngModelChange)="form[field] = $event" [required]="required()" name="{{field}}_D" (change)="change($event)" [min]="get('Min')" [max]="get('Max')">
     </div>
     
     <div layout="column" *ngIf="get('TypeAsString') == 'Text'">
-        <input flex [disabled]="disabled" type="text" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_T" [maxlength]="get('MaxLength')" (change)="change($event)">
+        <input flex [disabled]="disabled" type="text" [pattern]="pattern" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_T" [maxlength]="get('MaxLength')" (change)="change($event)">
         <div class="MaxLength" [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
     </div>
     
