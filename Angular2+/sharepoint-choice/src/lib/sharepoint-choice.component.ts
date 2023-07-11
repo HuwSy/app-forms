@@ -22,7 +22,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   @Input() other!: string; // Other fill-in option text, will override to allow other
   @Input() filter!: Function; // filter choices by a function
   @Input() onchange!: Function; // onchange trigger a function, to supliment (change)= only needed for some use cases i.e. rich text fields
-
+  @Input() pattern!: string; // html regex pattern
+  
   @Input() disabled!: boolean;
 
   declare editor: Editor;
@@ -40,6 +41,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   constructor(
     private elRef: ElementRef
   ) {
+    if (!this.pattern)
+      this.pattern = null;
+    
     // rich text field
     this.editor = new Editor();
     // rtf menu items
@@ -170,6 +174,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // if no title use internal field name
     if (t == 'Title' && p == null)
       return this.field;
+    if (p == null && (t == 'Min' || t == 'Max') && this.get('TypeAsString') == 'DateTime')
+      return (t == 'Min' ? '1970-01-01' : '9999-12-31') + (this.get('DisplayFormat') == 1 ? 'T00:00:00' : '');
     return p == null || typeof p.results == "undefined" ? p : p.results;
   }
 
