@@ -254,7 +254,7 @@ export class SharepointChoiceUtils {
             }
 
             // convert JSON
-            if (typeof save[key] == "object" && !save[key].results)
+            if (typeof save[key] == "object" && !save[key].results && !save[key].Url)
               save[key] = JSON.stringify(save[key]);
             
             // ensure no nulls selected, should never occur but does on some browsers?
