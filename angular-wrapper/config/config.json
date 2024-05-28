@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "angular-wrapper-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/angularWrapper/AngularWrapperWebPart.js",
+          "manifest": "./src/webparts/angularWrapper/AngularWrapperWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "AngularWrapperWebPartStrings": "lib/webparts/angularWrapper/loc/{locale}.js"
+  }
+}
