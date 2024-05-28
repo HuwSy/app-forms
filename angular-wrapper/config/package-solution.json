@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "angular-wrapper-client-side-solution",
+    "id": "99999999-9999-9999-9999-999999999999",
+    "version": "1.0.0.1",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "HuwSy",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.15.2"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "angular-wrapper description"
+      },
+      "longDescription": {
+        "default": "angular-wrapper description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "Angular-wrapper Feature",
+        "description": "The feature that activates elements of the angular-wrapper solution.",
+        "id": "99999999-9999-9999-9999-999999999999",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/angular-wrapper.sppkg"
+  }
+}
