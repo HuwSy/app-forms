@@ -5,7 +5,7 @@ import { SharepointChoiceModule } from 'sharepoint-choice';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { AngularLogging } from './util/AngularLogging';
+import { App, AngularLogging } from '../../App';
 
 import { HelloWorldWebPartComponent } from './hello-world-web-part/hello-world-web-part.component';
 
@@ -25,13 +25,12 @@ import { HelloWorldWebPartComponent } from './hello-world-web-part/hello-world-w
     provide: ErrorHandler,
     useClass: AngularLogging
   }],
-  entryComponents: [HelloWorldWebPartComponent]
+  bootstrap: []
 })
 export class AppModule {
   constructor(private injector: Injector) {}
 
   ngDoBootstrap() {
-    const el = createCustomElement(HelloWorldWebPartComponent, { injector: this.injector });
-    customElements.define('app-hello-world-web-part', el);
+    customElements.define('app-hello-world-web-part', createCustomElement(HelloWorldWebPartComponent, { injector: this.injector }));
   }
 }

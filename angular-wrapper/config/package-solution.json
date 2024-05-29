@@ -3,7 +3,7 @@
   "solution": {
     "name": "angular-wrapper-client-side-solution",
     "id": "99999999-9999-9999-9999-999999999999",
-    "version": "1.0.0.1",
+    "version": "1.0.0.2",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,

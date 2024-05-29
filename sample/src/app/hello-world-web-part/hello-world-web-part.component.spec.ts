@@ -7,13 +7,9 @@ describe('HelloWorldWebPartComponent', () => {
   let fixture: ComponentFixture<HelloWorldWebPartComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
+    TestBed.configureTestingModule({
       declarations: [ HelloWorldWebPartComponent ]
-    })
-    .compileComponents();
-  });
-
-  beforeEach(() => {
+    });
     fixture = TestBed.createComponent(HelloWorldWebPartComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
