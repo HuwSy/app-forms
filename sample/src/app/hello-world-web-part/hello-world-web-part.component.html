@@ -94,6 +94,12 @@
       <div style="font-weight: bold;">{{h.Author.LookupValue}} on {{h.Created | date:'dd MMM yyyy HH:mm:ss'}}</div>
       <div [innerHTML]="h.Comments"></div>
     </div>
+
+    <div *ngFor="let d of form.PlainTextMultiLine;let i = index">
+      <input type="date" [(ngModel)]="d.DateIntoJSONObj" name="Date_{{i}}">
+      <input type="text" [(ngModel)]="d.TextIntoJSONObj" name="Text_{{i}}">
+    </div>
+    <div (click)="form.PlainTextMultiLine = form.PlainTextMultiLine || [];form.PlainTextMultiLine.push({});">Add</div>
     
     <div class="Actions">
       <div style="float: left;" *ngIf="stage == 'New'">
