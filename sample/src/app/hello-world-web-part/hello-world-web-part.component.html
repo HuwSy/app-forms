@@ -84,7 +84,7 @@
 </div>
 
 <div *ngIf="!dashboard">
-  <form ngNativeValidate #input (keydown.enter)="$event.preventDefault()">
+  <form ngNativeValidate #input (keydown.enter)="enterKey($event)">
     <app-choice [form]="form" [spec]="spec" [field]="'Title'" [disabled]="stage == 'View'"></app-choice>
 
     <app-choice [form]="form" [spec]="spec" [field]="'Attachments'" [disabled]="stage == 'View'" [override]="prefix()"></app-choice>

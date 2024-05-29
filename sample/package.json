@@ -5,9 +5,8 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "test": "ng test",
-    "lint": "ng lint",
-    "bundle": "ng build --prod --output-hashing none --optimization=false --single-bundle --source-map"
+    "watch": "ng build --watch --configuration development",
+    "bundle": "ng build --aot --build-optimizer --delete-output-path --output-hashing none"
   },
   "private": true,
   "dependencies": {
@@ -22,10 +21,8 @@
     "@angular/router": "^18.0.0",
     "@pnp/pnpjs": "^2.15.0",
     "sharepoint-choice": "^4.0.1",
-    "htmldiff-js": "^1.0.5",
     "rxjs": "~7.8.1",
     "tslib": "^2.6.2",
-    "xlsx": "^0.18.5",
     "zone.js": "~0.14.3"
   },
   "devDependencies": {

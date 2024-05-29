@@ -2,6 +2,16 @@
 
 A simple Angular framework for rapid development originally in AngularJS/JavaScript and progressed to Angular18 within an SPFx wrapper giving controls which can use this.spec to determin the field details and manipulate this.form
 
+Requires node 22, nvm can be used effectively
+npm install @angular/cli@18
+
+npm run ng new --commit=false --routing=false --style=scss --directory .\ <solution>
+
+New web parts
+```
+npm run ng generate component --style=scss <webpart>
+```
+
 To be added to app module
 ```
 import { SharepointChoiceModule } from 'sharepoint-choice';
@@ -106,6 +116,22 @@ To be added to tsconfig.json to avoid some errors
 To add to package.json for easier use of the wrapper
 ```
   "bundle": "ng build --aot --build-optimizer --delete-output-path --output-hashing none"
+```
+
+Make the index.html multi webpart
+```
+<script>
+  let e = 'root';
+  if (document.location.search != '')
+    e = document.location.search.replace('?','');
+  let c = document.createElement(`app-${e}`)
+  document.body.appendChild(c);
+</script>
+```
+
+.vscode/launch.json
+```
+  "url": "https://.sharepoint.com/sites/DEV-<site name>"
 ```
 
 To generate SSL certs for debugging within localhost and SPFx wrapper
