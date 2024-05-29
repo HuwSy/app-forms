@@ -1,9 +1,8 @@
 import { Component, Input, OnInit, ViewEncapsulation } from '@angular/core';
 import pnp from '@pnp/pnpjs';
 import { Logger, LogLevel } from "@pnp/logging";
-import { PnPLogging } from '../util/PnPLogging';
 import { SharepointChoiceUtils } from 'sharepoint-choice';
-import { App } from '../util/App';
+import { App, PnPLogging } from '../../../App';
 
 @Component({
   selector: 'app-hello-world-web-part',
@@ -41,10 +40,22 @@ export class HelloWorldWebPartComponent implements OnInit {
   declare versions:any;
   declare uned:any[string];
   declare stage:string;
+  declare tabs:any;
+  declare files:any;
 
   constructor() { }
 
   ngOnInit() {
+    this.tabs = [
+      {tab: 'New', display: 'Submission', status: 'Draft', owner: 'Visitors'},
+      {tab: 'Close', display: 'Close', status: 'Closing', owner: 'Members'},
+      {tab: 'Audit', display: 'Completed', status: 'Completed', owner: null}
+    ];
+
+    this.files = {Submission: {results:[]}};
+    for (var f in this.tabs)
+      this.files[this.tabs[f].tab] = {results:[]};
+
     this._spUtils = new SharepointChoiceUtils(this.context);
 
     var id = parseInt(this._spUtils.param('aid'));
@@ -91,7 +102,7 @@ export class HelloWorldWebPartComponent implements OnInit {
     }
 
     // Form
-    this.form = {__metadata:{type:`SP.Data.${this.list}ListItem`}};
+    this.form = {__metadata:{type:`SP.Data.${this.list}ListItem`}, Status: 'Draft'};
     this.uned = {};
     this.versions = [];
     this.stage = this._spUtils.param('stage') || (id > 0 ? 'View' : 'New');
@@ -250,10 +261,184 @@ export class HelloWorldWebPartComponent implements OnInit {
     return '';
   }
 
+  async getFolder(needsCreating?:boolean) {
+    if (this.form.Storage && this.form.Storage.Url)
+      return this.form.Storage.Url;
+    
+    try {
+      let root = await pnp.sp.web.lists.getByTitle('Documents').rootFolder();
+      let path = `${root.ServerRelativeUrl}/${this.form.Id}`;
+
+      if (needsCreating)
+        await this.ensurePath(path, this.context.length < 2 ? 2 : 4);
+
+      return document.location.origin + path;
+    } catch (e) {
+      alert("Unable to access documents area.");
+    }
+      
+    return null;
+  }
+
+  async ensurePath(path: string, start: number) {
+    var p = path.split('/').slice(0, start + 1).join('/');
+    var folder = pnp.sp.web.getFolderByServerRelativeUrl(p);
+    try {
+      var f = await folder.get();
+      if (!f.Exists)
+        await pnp.sp.web.getFolderByServerRelativeUrl(path.split('/').slice(0,start).join('/')).addSubFolderUsingPath(path.split('/').slice(start)[0]);
+    } catch (e) {
+      await pnp.sp.web.getFolderByServerRelativeUrl(path.split('/').slice(0,start).join('/')).addSubFolderUsingPath(path.split('/').slice(start)[0]);
+    }
+    if (p != path)
+      await this.ensurePath(path, start + 1);
+  }
+
+  async getFiles(f:string, o:string) {
+    var files = await pnp.sp.web.getFolderByServerRelativeUrl(f.substring(f.indexOf('/', 9)).replace(/\/$/, '') + '/' + o).files.expand('ListItemAllFields').get();
+    
+    files.forEach(file => {
+      this.files[o].results.push({
+        Name: file.Name,
+        FileName: file.Name,
+        TimeCreated: file.TimeCreated,
+        Classification: file['ListItemAllFields'].Classification,
+        OldClassification: file['ListItemAllFields'].Classification,
+        Request: file['ListItemAllFields'].Request,
+        ServerRelativeUrl: file.ServerRelativeUrl
+      })
+    });
+  }
+
+  async saveFiles(o:string) {
+    if (this.form.Storage.Url == null)
+      return;
+    
+    var req = {Url: `${document.location.href.split('?')[0]}?aid=${this.form.Id}`, Description: `REF ${this.form.Id}`};
+    let path = this.form.Storage.Url.substring(this.form.Storage.Url.indexOf('/', 9));
+
+    await this.ensurePath(path + '/' + o, this.context.length < 2 ? 2 : 4);
+
+    var folder = await pnp.sp.web.getFolderByServerRelativeUrl(path).getItem();
+    await folder.update({Request: req});
+
+    // subfolders for these
+    path += '/' + o;
+    var folder = await pnp.sp.web.getFolderByServerRelativeUrl(path).getItem();
+    await folder.update({Request: req});
+
+    // process saves and deletes
+    for (var i = 0; i < this.files[o].results.length; i++) {
+      var file = this.files[o].results[i];
+      if (file.Delete)
+        await pnp.sp.web.getFileByServerRelativeUrl(path+'/'+file.Name).recycle();
+      else if (file.Data) {
+        let f = await pnp.sp.web.getFolderByServerRelativeUrl(path).files.add(file.FileName, file.Data, false);
+        let i = await f.file.getItem();
+        await i.update({
+          Classification: file.Classification,
+          Request: req
+        });
+      } else if (file.Classification != file.OldClassification || !file.Request) {
+        let i = await pnp.sp.web.getFileByServerRelativeUrl(path+'/'+file.Name).getItem();
+        await i.update({
+          Classification: file.Classification,
+          Request: req
+        });
+      }
+    }
+  }
+
+  neededStage(stage:string):boolean {
+    if (this.stage == stage)
+      return true;
+    switch (stage) {
+    }
+    return true;
+  }
+
+  enterKey(e):void {
+    if (e.srcElement.tagName != 'TEXTAREA')
+      e.preventDefault();
+  }
+
+  hasPermission():boolean {
+    try {
+      switch (this.form.Status) {
+        case 'Reject':
+        case 'Completed':
+          return false;
+      }
+      // is the owner of the task group
+      return this.perm[this.tabs.filter(tab => tab.status == this.form.Status)[0].owner];
+    } catch (e) {
+      return false;
+    }
+  }
+
   // save
   async save(status):Promise<void> {
-    // any additional logic
+    if (this.stage == 'View')
+      return;
+
+    this.form.Audit = status == 'Unread' ? 'Unread' : status ? 'Completed' : 'Updated';
+    if (status == 'Unread')
+      status = undefined;
+
     this.form.Id = await this._spUtils.save(this.form, this.uned, this.list);
+
+    // update versions to abuse its user name processing later
+    this.versions = await pnp.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).versions.top(5000).get();
+
+    // handle approval of task for next stage
+    switch (status) {
+      case 'Approved':
+        this.form.Rejection = null;
+        for (var i = 0; i < this.tabs.length; i++)
+          if (this.tabs[i].status == this.form.Status)
+            break;
+        for (i++; i < this.tabs.length; i++)
+          if (this.neededStage(this.tabs[i].tab)) {
+            status = this.tabs[i].status;
+            break;
+          }
+        break;
+      case 'Reject':
+        var reason = prompt("Please provide a rejection reason:");
+        if (reason == null || reason == '')
+          return;
+        this.form.Rejection = `${this.versions[0].Editor.LookupValue} (${(new Date()).toString().split(' GMT')[0]}): ${reason}`;
+        for (var i = 0; i < this.tabs.length; i++)
+          if (this.tabs[i].status == this.form.Status)
+            break;
+        for (i--; i >= 0; i--)
+          if (this.neededStage(this.tabs[i].tab)) {
+            status = this.tabs[i].status;
+            break;
+          }
+        break;
+    }
+    
+    // if no folder path calculate and save to request
+    if (!this.form.Storage || !this.form.Storage.Url) {
+      // may fail to save on long paths, continue anyway
+      this.form.Storage = {Url: await this.getFolder(true), Description: 'here'};
+      if (this.form.Storage.Url != null)
+        await pnp.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).update({ Storage: this.form.Storage });
+    }
+
+    // save relevant files
+    for (var o in this.files)
+      if (this.files[o].results.length > 0)
+        await this.saveFiles(o);
+
+    await this._spUtils.save(this.form, this.uned, this.list);
+
+    if (this.hasPermission() && this.form.Rejection == null) {
+      document.location.href = `${document.location.href.split('?')[0]}?aid=${this.form.Id}`;
+      return;
+    }
+
     this.close();
   }
 

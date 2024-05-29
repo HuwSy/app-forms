@@ -9,6 +9,12 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
-  <app-hello-world-web-part description="Hello world!"></app-hello-world-web-part>
+  <script>
+    let e = 'hello-world-web-part';
+    if (document.location.search != '')
+      e = document.location.search.replace('?','');
+    let c = document.createElement(`app-${e}`)
+    document.body.appendChild(c);
+  </script>
 </body>
 </html>
