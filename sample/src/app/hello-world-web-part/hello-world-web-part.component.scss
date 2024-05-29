@@ -1,0 +1,85 @@
+table {
+    border: none;
+    width: 100%;
+
+    tr {
+        th {
+            font-weight: bold;
+            background-color: #f7f7f7;
+            vertical-align: top;
+            padding: 7px 10px;
+        }
+
+        th.Subs {
+            background-color: #ddd;
+        }
+
+        td {
+            padding: 7px 10px;
+        }
+
+        .Tasks {
+            a {
+                text-decoration: none;
+                font-size: 22px;
+            }
+        }
+    }
+
+    tr:nth-child(even) {
+        background-color: #f5f5f5;
+    }
+
+    tr:hover {
+        background-color: #ddd !important;
+    }
+}
+
+input, select {
+    height: 34px;
+    font-size: 14px;
+    border-width: 0 0 1px 0;
+    border-color: rgba(0,0,0,0.87);
+    border-style: solid;
+    border-radius: 0;
+    box-sizing: border-box;
+    background-color: transparent;
+    font-family: sans-serif;
+}
+
+input:hover, select:hover,
+input:focus-visible, select:focus-visible {
+    border-bottom-width: 2px;
+    border-color: #12283c;
+    outline: inherit;
+}
+
+input:disabled, select:disabled {
+    border-bottom-style: dotted;
+}
+
+div.Actions {
+    margin-top: 12px;
+
+    button {
+        color: #20476b;
+        padding: 7px 10px;
+        border: 1px solid #20476b;
+        background-color: transparent;
+        box-shadow: none;
+        font-size: 14px;
+        border-radius: 4px;
+    }
+
+    button:hover {
+        background-color: #16314a;
+        box-shadow: 0 1px 3px rgba(0,0,0,.24);
+        color: white;
+    }
+    
+    button:disabled {
+        color: #ddd;
+        border-color: #ddd;
+        background-color: transparent;
+    }    
+}
