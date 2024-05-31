@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, Input, ElementRef, ViewEncapsulation } from '@angular/core';
 import { UserQuery, User } from "./Models";
-import pnp from '@pnp/pnpjs';
+import { spfi, SPFI } from "@pnp/sp";
+import "@pnp/sp/webs";
 import { Logger, LogLevel } from "@pnp/logging";
 import { PnPLogging } from './PnPLogging';
 import { App } from './App'
@@ -77,13 +78,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     };
   }
 
-  // on init
+  // on init, destroy
   ngOnInit(): void {
-    pnp.sp.setup({sp:{baseUrl:this.spec['odata.metadata']}});
-    Logger.subscribe(new PnPLogging());
-    Logger.activeLogLevel = LogLevel.Warning;
   }
-
   ngOnDestroy(): void {
     this.editor.destroy();
   }
@@ -446,6 +443,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   
   // select user
   async selectedUser(res:any): Promise<void> {
+    if (!this.spec['odata.context'])
+      return;
+
     // ensure correct schema
     if (this.get('TypeAsString') == 'UserMulti' && (!this.form[this.field + 'Id'] || !this.form[this.field + 'Id'].__metadata))
       this.form[this.field + 'Id'] = {
@@ -466,22 +466,22 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         return;
 
       // setup context late to adapt to changes
-      var u = await pnp.sp.web.ensureUser(res.Key);
+      var u = await this.spec['odata.context'].web.ensureUser(res.Key);
 
       // add to field
       if (this.get('TypeAsString') == 'UserMulti') {
-        this.form[this.field + 'Id'].results.push(u.data.Id);
+        this.form[this.field + 'Id'].results.push(u.Id);
         this.display.push({
           DisplayText: res.DisplayText,
           Key: res.Key,
-          Id: u.data.Id
+          Id: u.Id
         });
       } else {
-        this.form[this.field + 'Id'] = u.data.Id;
+        this.form[this.field + 'Id'] = u.Id;
         this.display = [{
           DisplayText: res.DisplayText,
           Key: res.Key,
-          Id: u.data.Id
+          Id: u.Id
         }];
       }
     }
@@ -493,8 +493,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // load list data only has IDs so expand the object
   displayUser(user:any): string {
-    if (!user)
-      return '';
+    if (!this.spec['odata.context'] || !user)
+      return user || '';
+
     var u = this.display.filter((x:any) => {
       return x.Id == user
     });
@@ -509,7 +510,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (this.loading.indexOf(user) < 0 && typeof user == "number" && user > 0) {
       this.loading.push(user);
       // load the user
-      pnp.sp.web.getUserById(user).get().then(u => {
+      this.spec['odata.context'].web.getUserById(user)().then(u => {
         // update the display table
         this.display.push({
           DisplayText: u.Title,
@@ -560,7 +561,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       }
     });
     let digest = await token.json();
-    // query users api
+    // query users api, no pnp endpoint for this
     var search:any = await fetch(this.get('Context') + '/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.ClientPeoplePickerSearchUser', {
       method: 'POST',
       headers: {

@@ -1,6 +1,4 @@
-import { ILogListener } from "@pnp/logging";
 import { ErrorHandler } from '@angular/core';
-import pnp from '@pnp/pnpjs';
 
 export const App = {
     AppName: 'Sample',
@@ -17,25 +15,10 @@ export const App = {
 }
 
 export class AngularLogging implements ErrorHandler {
-    private _user: string;
-
     constructor() {
-        setTimeout(() => { pnp.sp.web.currentUser.get().then((u) => this._user = (u.LoginName), () => {}); }, 100);
     }
 
     public async handleError(error: any): Promise<void> {
         console.log(error);
-    }
-}
-
-export class PnPLogging implements ILogListener {
-    private _user: string;
-
-    constructor() {
-        setTimeout(() => { pnp.sp.web.currentUser.get().then((u) => this._user = (u.LoginName), () => {}); }, 100);
-    }
-
-    public async log(entry: any): Promise<void> {
-        console.log(entry);
     }
 }

@@ -3,7 +3,6 @@ import { NgModule, Injector, CUSTOM_ELEMENTS_SCHEMA, ErrorHandler } from '@angul
 import { createCustomElement } from '@angular/elements';
 import { SharepointChoiceModule } from 'sharepoint-choice';
 import { FormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { App, AngularLogging } from '../../App';
 
@@ -16,7 +15,6 @@ import { HelloWorldWebPartComponent } from './hello-world-web-part/hello-world-w
   imports: [
     BrowserModule,
     FormsModule,
-    HttpClientModule,
     BrowserAnimationsModule,
     SharepointChoiceModule
   ],

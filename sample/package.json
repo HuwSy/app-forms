@@ -1,6 +1,6 @@
 {
   "name": "sample",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -9,6 +9,7 @@
     "bundle": "ng build --aot --build-optimizer --delete-output-path --output-hashing none"
   },
   "private": true,
+  "sideEffects": false,
   "dependencies": {
     "@angular/animations": "^18.0.0",
     "@angular/common": "^18.0.0",
@@ -19,7 +20,6 @@
     "@angular/platform-browser": "^18.0.0",
     "@angular/platform-browser-dynamic": "^18.0.0",
     "@angular/router": "^18.0.0",
-    "@pnp/pnpjs": "^2.15.0",
     "sharepoint-choice": "^4.0.1",
     "rxjs": "~7.8.1",
     "tslib": "^2.6.2",

@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-choice",
-  "version": "4.0.1",
+  "version": "5.0.0",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
@@ -27,7 +27,8 @@
     "@angular/platform-browser": "^18.0.0",
     "@angular/platform-browser-dynamic": "^18.0.0",
     "@azure/msal-browser": "^3.14.0",
-    "@pnp/pnpjs": "^2.15.0",
+    "@pnp/logging": "^4.1.0",
+    "@pnp/sp": "^4.1.0",
     "ngx-editor": "^17.5.4",
     "rxjs": "^7.8.1",
     "tslib": "^2.6.2",
