@@ -1,8 +1,6 @@
 import { Component, Input, OnInit, ViewEncapsulation } from '@angular/core';
-import pnp from '@pnp/pnpjs';
-import { Logger, LogLevel } from "@pnp/logging";
 import { SharepointChoiceUtils } from 'sharepoint-choice';
-import { App, PnPLogging } from '../../../App';
+import { App } from '../../../App';
 
 @Component({
   selector: 'app-hello-world-web-part',
@@ -61,13 +59,8 @@ export class HelloWorldWebPartComponent implements OnInit {
     var id = parseInt(this._spUtils.param('aid'));
     this.dashboard = !(id > 0 || id === 0);
 
-    // Common
-    pnp.sp.setup({sp:{baseUrl:this.context}});
-    Logger.subscribe(new PnPLogging());
-    Logger.activeLogLevel = LogLevel.Warning;
-
     this.list = 'List';
-    this.spec = {'odata.metadata': this.context};
+    this.spec = {};
 
     this.userId = 0;
     this.perm = {};
@@ -87,7 +80,7 @@ export class HelloWorldWebPartComponent implements OnInit {
 
     this.searchText = '';
     this.currentPage = 1;
-		this.itemsPerPage = 25;
+    this.itemsPerPage = 25;
     this.orderKey = null;
     this.orderDir = false;
     this.refresh = -1;
@@ -102,7 +95,7 @@ export class HelloWorldWebPartComponent implements OnInit {
     }
 
     // Form
-    this.form = {__metadata:{type:`SP.Data.${this.list}ListItem`}, Status: 'Draft'};
+    this.form = {Status: 'Draft'};
     this.uned = {};
     this.versions = [];
     this.stage = this._spUtils.param('stage') || (id > 0 ? 'View' : 'New');
@@ -113,9 +106,15 @@ export class HelloWorldWebPartComponent implements OnInit {
         this._spUtils.data(id, this.list).then(d => {
           this.form = d;
           this.uned = JSON.parse(JSON.stringify(this.form));
-        });
-        this._spUtils.history(id, this.list).then(d => {
-          this.versions = d
+      
+          this.util.sp.web.lists.getByTitle(this.list).items.getById(id).versions.top(5000)().then(d => {
+            this.versions = d
+          });
+
+          var f = await this.getFolder();
+          if (f != null)
+            for (var o in this.files)
+              this.files[o].results = await this.util.getFiles(f, o);
         });
       }
     }
@@ -124,7 +123,7 @@ export class HelloWorldWebPartComponent implements OnInit {
   // Dashboard
   // load data
   async loadData(restart: boolean) {
-    var cur = JSON.parse(localStorage.getItem(`${this._prefix}-${App.AppName}-${App.Release}-${this.context}`) || '{}');
+    var cur = JSON.parse(localStorage.getItem(`${this._prefix}-${App.AppName}-${App.Release}-${this._spUtils.context}`) || '{}');
     for(var f in cur) {
       this[f] = cur[f];
     }
@@ -134,7 +133,7 @@ export class HelloWorldWebPartComponent implements OnInit {
       this.currentPage = 1;
     }
 
-    this.data = await pnp.sp.web.lists.getByTitle(this.list).items.filter(``).select("Id", "Created", "Title", "Modified").orderBy("Modified", true).getAll(5000);
+    this.data = await this._spUtils.sp.web.lists.getByTitle(this.list).items.filter(``).select("Id", "Created", "Title", "Modified").orderBy("Modified", true).top(5000)();
     
     // data adjusts, for display, searches etc
     this.data.forEach(r => {
@@ -146,9 +145,9 @@ export class HelloWorldWebPartComponent implements OnInit {
 
   // save specific filter field
   saveFilter(f, r) {
-    var cur = JSON.parse(localStorage.getItem(`${this._prefix}-${App.AppName}-${App.Release}-${this.context}`) || '{}');
+    var cur = JSON.parse(localStorage.getItem(`${this._prefix}-${App.AppName}-${App.Release}-${this._spUtils.context}`) || '{}');
     cur[f] = this[f];
-    localStorage.setItem(`${this._prefix}-${App.AppName}-${App.Release}-${this.context}`, JSON.stringify(cur));
+    localStorage.setItem(`${this._prefix}-${App.AppName}-${App.Release}-${this._spUtils.context}`, JSON.stringify(cur));
 
     if (r) {
       this.selected = null;
@@ -266,11 +265,11 @@ export class HelloWorldWebPartComponent implements OnInit {
       return this.form.Storage.Url;
     
     try {
-      let root = await pnp.sp.web.lists.getByTitle('Documents').rootFolder();
-      let path = `${root.ServerRelativeUrl}/${this.form.Id}`;
+      let root = await this.util.getRoot('Documents');
+      let path = `${root}/${this.form.Id}`;
 
       if (needsCreating)
-        await this.ensurePath(path, this.context.length < 2 ? 2 : 4);
+        await this.util.ensurePath(path, this.util.context.length < 2 ? 2 : 4);
 
       return document.location.origin + path;
     } catch (e) {
@@ -280,73 +279,15 @@ export class HelloWorldWebPartComponent implements OnInit {
     return null;
   }
 
-  async ensurePath(path: string, start: number) {
-    var p = path.split('/').slice(0, start + 1).join('/');
-    var folder = pnp.sp.web.getFolderByServerRelativeUrl(p);
-    try {
-      var f = await folder.get();
-      if (!f.Exists)
-        await pnp.sp.web.getFolderByServerRelativeUrl(path.split('/').slice(0,start).join('/')).addSubFolderUsingPath(path.split('/').slice(start)[0]);
-    } catch (e) {
-      await pnp.sp.web.getFolderByServerRelativeUrl(path.split('/').slice(0,start).join('/')).addSubFolderUsingPath(path.split('/').slice(start)[0]);
-    }
-    if (p != path)
-      await this.ensurePath(path, start + 1);
-  }
-
-  async getFiles(f:string, o:string) {
-    var files = await pnp.sp.web.getFolderByServerRelativeUrl(f.substring(f.indexOf('/', 9)).replace(/\/$/, '') + '/' + o).files.expand('ListItemAllFields').get();
-    
-    files.forEach(file => {
-      this.files[o].results.push({
-        Name: file.Name,
-        FileName: file.Name,
-        TimeCreated: file.TimeCreated,
-        Classification: file['ListItemAllFields'].Classification,
-        OldClassification: file['ListItemAllFields'].Classification,
-        Request: file['ListItemAllFields'].Request,
-        ServerRelativeUrl: file.ServerRelativeUrl
-      })
-    });
-  }
-
   async saveFiles(o:string) {
     if (this.form.Storage.Url == null)
       return;
     
     var req = {Url: `${document.location.href.split('?')[0]}?aid=${this.form.Id}`, Description: `REF ${this.form.Id}`};
-    let path = this.form.Storage.Url.substring(this.form.Storage.Url.indexOf('/', 9));
 
-    await this.ensurePath(path + '/' + o, this.context.length < 2 ? 2 : 4);
+    await this.util.ensurePath(this.form.Storage.Url + '/' + o, this.util.context.length < 2 ? 2 : 4);
 
-    var folder = await pnp.sp.web.getFolderByServerRelativeUrl(path).getItem();
-    await folder.update({Request: req});
-
-    // subfolders for these
-    path += '/' + o;
-    var folder = await pnp.sp.web.getFolderByServerRelativeUrl(path).getItem();
-    await folder.update({Request: req});
-
-    // process saves and deletes
-    for (var i = 0; i < this.files[o].results.length; i++) {
-      var file = this.files[o].results[i];
-      if (file.Delete)
-        await pnp.sp.web.getFileByServerRelativeUrl(path+'/'+file.Name).recycle();
-      else if (file.Data) {
-        let f = await pnp.sp.web.getFolderByServerRelativeUrl(path).files.add(file.FileName, file.Data, false);
-        let i = await f.file.getItem();
-        await i.update({
-          Classification: file.Classification,
-          Request: req
-        });
-      } else if (file.Classification != file.OldClassification || !file.Request) {
-        let i = await pnp.sp.web.getFileByServerRelativeUrl(path+'/'+file.Name).getItem();
-        await i.update({
-          Classification: file.Classification,
-          Request: req
-        });
-      }
-    }
+    await this.util.saveFiles(this.form.Storage.Url, o, req, this.files[o]);
   }
 
   neededStage(stage:string):boolean {
