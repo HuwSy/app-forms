@@ -12,7 +12,8 @@
     "@angular/platform-browser",
     "@angular/platform-browser-dynamic",
     "@azure/msal",
-    "@pnp/pnpjs",
+    "@pnp/sp",
+    "@pnp/logging",
     "ngx-editor",
     "tslib"
   ],
