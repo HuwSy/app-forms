@@ -1,4 +1,12 @@
-import pnp from '@pnp/pnpjs';
+import { spfi, SPFI, SPBrowser } from "@pnp/sp";
+import "@pnp/sp/webs";
+import "@pnp/sp/site-users";
+import "@pnp/sp/lists";
+import "@pnp/sp/items";
+import "@pnp/sp/fields";
+import "@pnp/sp/attachments";
+import "@pnp/sp/files";
+import "@pnp/sp/folders";
 import * as MSAL from "@azure/msal-browser";
 import { Logger, LogLevel } from "@pnp/logging";
 import { PermissionKind } from "@pnp/sp/security";
@@ -11,6 +19,7 @@ import { App } from './App';
 export class SharepointChoiceUtils {
     // context can be read and updated
     public context?:string = '';
+    public sp:SPFI;
 
     // attempt to establish correct context url for the site from one of the available sources then setup logging for this class
     constructor(
@@ -19,28 +28,49 @@ export class SharepointChoiceUtils {
       this.context = context;
       let w:any = window;
       if ((this.context || "") == "")
-        this.context = typeof w['_spPageContextInfo'] == "object" ? w['_spPageContextInfo']['webAbsoluteUrl'] : undefined;
+        this.context = w._spPageContextInfo ? w._spPageContextInfo.webAbsoluteUrl : undefined;
       if ((this.context || "") == "")
         this.context = document.location.href.split('?')[0].split('#')[0].split('/_layouts/')[0].split('/Lists/')[0].split('/Pages/')[0].split('/SitePages/')[0];
 
       this.context = this.context?.replace(/\/$/,'');
 
-      pnp.sp.setup({sp:{baseUrl:this.context}});
+      this.sp = spfi().using(SPBrowser({ baseUrl: this.context }));
+
       Logger.subscribe(new PnPLogging());
       Logger.activeLogLevel = LogLevel.Warning;
+
+      this.mockClassicContext();
+    }
+
+    private async mockClassicContext() {
+      let w:any = window;
+      // no classic sp context then mock one up
+      if (typeof w._spPageContextInfo == "undefined")
+        w._spPageContextInfo = {};
+      // no user in context or a different web then mock it in
+      if (typeof w._spPageContextInfo.userLoginName == "undefined" || w._spPageContextInfo.webAbsoluteUrl != this.context) {
+        var user = await this.sp.web.currentUser();
+        w._spPageContextInfo = {
+          userLoginName: user.LoginName,
+          userDisplayName: user.Title,
+          userEmail: user.Email,
+          userId: user.Id,
+          webAbsoluteUrl: this.context,
+        };
+      }
     }
 
     // get the current user and permissions to a flat object for easier use in [disabled]="permission['']" etc
     // NOTE: this will only detect direct assignments or users added to a mail enabled global security group
     public async permissions():Promise<any> {
-        var p:any = {}, u = 0;
+        var p:any = {};
+        let w:any = window;
 
         try {
-          var user = await pnp.sp.web.currentUser.get();
-          u = user.Id;
-          var web = await pnp.sp.web.get();
+          await this.mockClassicContext();
+          var web = await this.sp.web();
           var webTitle = web.Title;
-          var perm = await pnp.sp.web.currentUser.groups.get();
+          var perm = await this.sp.web.currentUser.groups();
           perm.forEach(x => {
             p[x.LoginName] = true;
             if (x.LoginName.startsWith(`${webTitle} `))
@@ -50,7 +80,7 @@ export class SharepointChoiceUtils {
           p = {Error: true};
         }
 
-        return {userId: u, perms: p}
+        return {userId: w._spPageContextInfo.userId, perms: p}
     }
 
     // check permission against object
@@ -58,7 +88,7 @@ export class SharepointChoiceUtils {
       try {
         var perm = await object.getCurrentUserEffectivePermissions();
         for (var p in permissions) {
-          if (pnp.sp.web.hasPermissions(perm, permissions[p]))
+          if (this.sp.web.hasPermissions(perm, permissions[p]))
             return true;
         }
       } catch (e) {}
@@ -67,16 +97,17 @@ export class SharepointChoiceUtils {
     
     // get list fields in the appropriate format for use in <sharepoint-choice spec=""> attributes
     public async fields(listTitle:string):Promise<any> {
-        var spec:any = {'odata.metadata': this.context};
+        var spec:any = {'odata.context': this.sp};
 
         try {
-            var arr = await pnp.sp.web.lists.getByTitle(listTitle).fields.get();
-            arr.forEach(x => {
-                spec[x.InternalName] = x;
-                spec[x.InternalName].Context = this.context;
-            });
+          var arr = await this.sp.web.lists.getByTitle(listTitle).fields();
+          arr.forEach(x => {
+            spec[x.InternalName] = x;
+            // used for people searches only as pnp doesnt have a suitable endpoint yet
+            spec[x.InternalName].Context = this.context;
+          });
         } catch (e) {
-            spec['Title'] = {TypeAsString:'Text',MaxLength:16,Description:'Tooltip'};
+          spec['Title'] = {TypeAsString:'Text',MaxLength:16,Description:'Tooltip'};
         }
 
         return spec;
@@ -87,7 +118,7 @@ export class SharepointChoiceUtils {
         var d:any = {};
 
         try {
-          d = await pnp.sp.web.lists.getByTitle(listTitle).items.getById(id).get();
+          d = await this.sp.web.lists.getByTitle(listTitle).items.getById(id)();
           for (var key in d) {
             // people fields return twice
             if (key.endsWith('StringId') && (d[key.replace(/StringId$/,'Id')] || d[key.replace(/StringId$/,'Id')] === null))
@@ -96,24 +127,20 @@ export class SharepointChoiceUtils {
             // if there are attachments start loading
             if (key == 'Attachments') {
               if (d[key] === true)
-                d[key] = { results: await pnp.sp.web.lists.getByTitle(listTitle).items.getById(id).attachmentFiles() };
+                d[key] = { results: await this.sp.web.lists.getByTitle(listTitle).items.getById(id).attachmentFiles() };
               else
                 d[key] = { results:[] };
             }
 
-            // extract metadata for save
-            if (key == 'odata.type')
-              d['__metadata'] = {type:d[key]};
-
             // remove odata. prefixed
-            if (key.startsWith('odata.'))
+            if (key.startsWith('odata.') || key == '__metadata')
               delete d[key];
 
             // dont process nulls
             if (!d[key] || d[key] === null)
               continue;
               
-            // return arrays back to results, fix pnpjs not behaving as expected
+            // return multifields to results, old behaviour for old people fields and to prevent json paring clashing
             if (typeof d[key] == "object" && !d[key].results && d[key].length > 0) {
               d[key] = {
                 results: d[key],
@@ -164,7 +191,7 @@ export class SharepointChoiceUtils {
       return i;
     }
   
-    // calls an api more generically
+    // calls an api generically
     public async callApi(tenancyOnMicrosoft: string, clientId: string, permissionScope: string, apiUrl?: string, httpMethod?: string, jsonPostData?: any):Promise<any> {
       // client settings
       var config = {
@@ -240,7 +267,7 @@ export class SharepointChoiceUtils {
           delete save["$$hashKey"];
 
           for (var key in save) {
-            if ((save[key] === null && uned[key] !== null) || key == "Id" || key == "__metadata")
+            if ((save[key] === null && uned[key] !== null) || key == "Id")
               continue;
             
             // remove and unedited, including internal fields
@@ -259,17 +286,17 @@ export class SharepointChoiceUtils {
             if (typeof save[key] == "object" && !save[key].results && !save[key].Url)
               save[key] = JSON.stringify(save[key]);
             
-            // ensure no nulls selected, should never occur but does on some browsers?
+            // convert back to direct array and ensure no nulls selected, should never occur but does on some browsers?
             if (typeof save[key] == "object" && save[key].results)
-              save[key].results = save[key].results.filter((i:any) => i !== null && i !== undefined);
+              save[key] = save[key].results.filter((i:any) => i !== null && i !== undefined);
           }
           
           // save/update the item
           if (typeof save.Id == "undefined" || save.Id < 1) {
-            var saving = await pnp.sp.web.lists.getByTitle(listTitle).items.add(save);
-            save.Id = saving.data.Id;
+            var saving = await this.sp.web.lists.getByTitle(listTitle).items.add(save);
+            save.Id = saving.Id;
           } else {
-            await pnp.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).update(save);
+            await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).update(save);
           }
     
           // process attachments as deletes then uploads
@@ -281,7 +308,7 @@ export class SharepointChoiceUtils {
             });
 
             for (var i = 0; i < deletes.length; i++)
-              await pnp.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).attachmentFiles.getByName(deletes[i]).delete();
+              await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).attachmentFiles.getByName(deletes[i]).delete();
     
             var adds = form.Attachments.results.filter((a:any) => {
               return !a.Deleted && !a.ServerRelativeUrl
@@ -292,8 +319,9 @@ export class SharepointChoiceUtils {
               };
             });
 
-            if (adds.length > 0)
-              await pnp.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).attachmentFiles.addMultiple(adds);
+            for (var a = 0; a < adds.length; a++) {
+              await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).attachmentFiles.add(adds[a].name, adds[a].content);
+            }
           }
         } catch (e) {
           alert('Error saving');
@@ -307,6 +335,88 @@ export class SharepointChoiceUtils {
     public param(parameterToReturn:string):string|undefined {
         var rx = new RegExp(`[?&]${parameterToReturn}=([^&]+).*$`);
         var returnVal = document.location.search.match(rx);
-        return returnVal === null ? undefined : returnVal[1];
+        return returnVal === null ? undefined : decodeURIComponent(returnVal[1]).replace(/\+/g, ' ');
+    }
+
+    public async ensurePath(path: string, start: number): Promise<void> {
+      if (path.indexOf("://") >= 0)
+        path = path.substring(path.indexOf('/', 9));
+
+      var p = path.split('/').slice(0, start + 1).join('/');
+      var folder = this.sp.web.getFolderByServerRelativePath(p);
+      try {
+        var f = await folder();
+        if (!f.Exists)
+          await this.sp.web.getFolderByServerRelativePath(path.split('/').slice(0,start).join('/')).addSubFolderUsingPath(path.split('/').slice(start)[0]);
+      } catch (e) {
+        await this.sp.web.getFolderByServerRelativePath(path.split('/').slice(0,start).join('/')).addSubFolderUsingPath(path.split('/').slice(start)[0]);
+      }
+      if (p != path)
+        await this.ensurePath(path, start + 1);
+    }
+
+    public async getRoot(list:string): Promise<string> {
+      let root = await this.sp.web.lists.getByTitle(list).rootFolder();
+      return root.ServerRelativeUrl;
+    }
+
+    public async getFiles(serverRelative:string, additional:string|undefined): Promise<any> {
+      if (serverRelative.indexOf("://") >= 0)
+        serverRelative = serverRelative.substring(serverRelative.indexOf('/', 9));
+
+      var files = await this.sp.web.getFolderByServerRelativePath(serverRelative.replace(/\/$/, '') + (additional ? '/'+additional : '')).files.expand('ListItemAllFields')();
+      
+      var ret = [];
+      files.forEach(file => {
+        ret.push({
+          Name: file.Name,
+          FileName: file.Name,
+          TimeCreated: file.TimeCreated,
+          Classification: file['ListItemAllFields'].Classification,
+          OldClassification: file['ListItemAllFields'].Classification,
+          Request: file['ListItemAllFields'].Request,
+          ServerRelativeUrl: file.ServerRelativeUrl,
+          // everything else
+          ListItemAllFields: file['ListItemAllFields']
+        })
+      });
+
+      return ret;
+    }
+
+    public async saveFiles(path:string, additional:string|undefined, url:any, files): Promise<void> {
+      if (path.indexOf("://") >= 0)
+        path = path.substring(path.indexOf('/', 9));
+      
+      var folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
+      await folder.update({Request: url});
+  
+      // subfolders for these
+      if (additional && additional != '') {
+        path += '/' + additional;
+        folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
+        await folder.update({Request: url});
+      }
+  
+      // process saves and deletes
+      for (var i = 0; i < files.results.length; i++) {
+        var file = files.results[i];
+        if (file.Delete)
+          await this.sp.web.getFolderByServerRelativePath(path+'/'+file.Name).recycle();
+        else if (file.Data) {
+          await this.sp.web.getFolderByServerRelativePath(path).files.addUsingPath(file.FileName, file.Data, {Overwrite: true});
+          let i = await this.sp.web.getFolderByServerRelativePath(path).files.getByUrl(file.FileName).getItem();
+          await i.update({
+            Classification: file.Classification,
+            Request: url
+          });
+        } else if (file.Classification != file.OldClassification || !file.Request) {
+          let i = await this.sp.web.getFolderByServerRelativePath(path+'/'+file.Name).getItem();
+          await i.update({
+            Classification: file.Classification,
+            Request: url
+          });
+        }
+      }
     }
 }
