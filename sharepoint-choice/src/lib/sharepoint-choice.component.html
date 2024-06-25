@@ -1,4 +1,4 @@
-<div layout="column" class="choice">
+<div layout="column" class="choice" [ngClass]="{noTitle: (get('Title') || '') == ''}">
     <label *ngIf="get('TypeAsString') == 'Boolean'">
         <input style="width: auto; height: auto;" flex [disabled]="disabled" type="checkbox" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_Y" (change)="change($event)">
         <span style="font-size: inherit;">{{get('Title')}}</span>
