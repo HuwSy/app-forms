@@ -180,6 +180,16 @@
     }
 }
 
+.noTitle {
+    margin: 0;
+    > span {
+        display: none;
+    }
+    > div {
+        padding-top: 0;
+    }
+}
+
 @keyframes spinner {
     0% {
         transform: translate3d(-50%, -50%, 0) rotate(0deg);
