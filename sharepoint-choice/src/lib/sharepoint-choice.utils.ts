@@ -410,6 +410,12 @@ export class SharepointChoiceUtils {
             Classification: file.Classification,
             Request: url
           });
+          file.Name = file.FileName;
+          file.TimeCreated = new Date():
+          file.OldClassification = file.Classification;
+          file.Request = url;
+          file.ServerRelativeUrl = path+'/'+file.FileName;
+          delete file.Data:
         } else if (file.Classification != file.OldClassification || !file.Request) {
           let i = await this.sp.web.getFolderByServerRelativePath(path+'/'+file.Name).getItem();
           await i.update({
