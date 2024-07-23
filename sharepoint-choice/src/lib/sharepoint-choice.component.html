@@ -4,10 +4,10 @@
         <span style="font-size: inherit;">{{get('Title')}}</span>
     </label>
     <span *ngIf="get('TypeAsString') != 'Boolean' && get('UploadOnly') != true">{{get('Title')}}</span>
-    <span *ngIf="get('Required')" class="Required">*</span>
     
     <i *ngIf="(get('Description') || '') != ''" title="{{get('Description')}}" (mouseenter)="tooltip = true" (mouseleave)="tooltip = false">(i)</i>
     <div class="ToolTip" [hidden]="!tooltip">{{get('Description')}}</div>
+    <span *ngIf="get('Required')" class="Required">*</span>
 
     <div layout="column" *ngIf="get('TypeAsString') == 'MultiChoice'">
         <input placeholder="Filter or search the choices below" *ngIf="!disabled" [(ngModel)]="filterMulti"><br>
@@ -22,9 +22,9 @@
             <option *ngFor="let i of choices()" [value]="i">{{i}}</option>
             <option *ngIf="other || get('FillInChoice')" [value]="!form[field] || !notInChoices() ? 'Please select...' : form[field]">{{other || 'Other'}}, please specify...</option>
         </select>
-        <span *ngIf="get('TypeAsString') == 'Choice' && (form[field] == '' || notInChoices()) && form[field] != '-'">
+        <div *ngIf="get('TypeAsString') == 'Choice' && (form[field] == '' || notInChoices()) && form[field] != '-'" style="padding:0">
             <input [disabled]="disabled" type="text" flex [(ngModel)]="form[field]" [required]="required()" name="{{field}}_1" maxlength="250" onclick="this.select();" (change)="change($event)">
-        </span>
+        </div>
     </div>
     
     <div layout="row" *ngIf="get('TypeAsString') == 'Choice' && get('Format') == 'RadioButtons'">
