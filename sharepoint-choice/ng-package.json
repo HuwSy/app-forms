@@ -17,6 +17,9 @@
     "ngx-editor",
     "tslib"
   ],
+  "assets": [
+    "src/styles.scss"
+  ],
   "lib": {
     "entryFile": "src/public-api.ts"
   }
