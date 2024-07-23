@@ -8,7 +8,7 @@ div[data-automation-id="CanvasControl"] {
   max-width: 100vw !important;
 }
 
-[ng-version], app-choice {
+[ng-version], .choice {
   input,
   select,
   textarea {
@@ -84,585 +84,585 @@ div[data-automation-id="CanvasControl"] {
     background-color: transparent !important;
     box-shadow: none;
   }
+}
 
-  .ng-invalid.ng-touched {
-    border-bottom-color: red !important;
+.ng-invalid.ng-touched {
+  border-bottom-color: red !important;
+}
+
+a.fc-event {
+  padding: 3px;
+}
+
+.click {
+  cursor: pointer;
+}
+
+.red {
+  color: red;
+}
+
+.choice {
+  margin: 12px 0 0 0;
+  position: relative;
+
+  span {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 100%;
+    display: inline-block;
   }
-  
-  a.fc-event {
-    padding: 3px;
+
+  label {
+    font-size: 12px;
   }
-  
-  .click {
-    cursor: pointer;
+
+  input,
+  select,
+  textarea {
+    width: 100%;
   }
-  
-  .red {
-    color: red;
+
+  select.multismall {
+    height: 100px !important;
   }
-  
-  .choice {
-    margin: 12px 0 0 0;
+
+  select.multilarge {
+    height: 200px !important;
+  }
+
+  div {
+    padding-top: 6px;
     position: relative;
 
-    span {
-      font-size: 12px;
-      white-space: nowrap;
-      overflow: hidden;
-      max-width: 100%;
-      display: inline-block;
-    }
-
     label {
-      font-size: 12px;
+      display: block;
+      margin-right: 15px;
     }
 
-    input,
-    select,
-    textarea {
-      width: 100%;
-    }
-
-    select.multismall {
-      height: 100px !important;
-    }
-
-    select.multilarge {
-      height: 200px !important;
-    }
-
-    div {
-      padding-top: 6px;
-      position: relative;
-
-      label {
-        display: block;
-        margin-right: 15px;
-      }
-
-      div span {
-        display: inline-block;
-        padding: 4px;
-        border: 1px solid #eee;
-      }
-    }
-
-    button {
-      font-size: 11px;
-    }
-  
-    table {
-      width: 100%;
-    }
-
-    ul {
-      padding-left: 20px;
-      list-style: none;
-
-      li {
-        padding: 4px;
-
-        a,
-        span {
-          font-size: smaller;
-          vertical-align: bottom;
-        }
-      }
+    div span {
+      display: inline-block;
+      padding: 4px;
+      border: 1px solid #eee;
     }
   }
 
-  .AutoComplete,
-  .ToolTip {
-    position: absolute !important;
-    z-index: 10000;
-    background: white;
-    padding: 4px;
-    border: 1px solid #ddd;
+  button {
+    font-size: 11px;
   }
 
-  .ToolTip {
-    box-shadow: 2px 2px 2px #ddd;
-    max-width: 350px;
-    top: -20px;
-    left: -20px;
-  }
-
-  .AutoComplete {
-    box-shadow: 0 2px 7px rgb(0 0 0 / 20%);
-    width: 350px;
-    top: 0;
-    border-radius: 0 0 4px 4px;
-
-    ul {
-      padding: 0;
-      margin: 0;
-      list-style: none;
-
-      li {
-        padding: 8px;
-        cursor: pointer;
-      }
-
-      li:hover {
-        background-color: rgba(0, 0, 0, .04);
-      }
-    }
-  }
-
-  .MaxLength {
-    font-size: 10px;
-    color: red;
-  }
-
-  .FilesOver {
-    animation: shake 0.82s cubic-bezier(.36, .07, .19, .97) both;
-    animation-iteration-count: infinite;
-
-    @keyframes shake {
-      10%,
-      90% {
-        transform: translate3d(-1px, 0, 0);
-      }
-
-      20%,
-      80% {
-        transform: translate3d(2px, 0, 0);
-      }
-
-      30%,
-      50%,
-      70% {
-        transform: translate3d(-4px, 0, 0);
-      }
-
-      40%,
-      60% {
-        transform: translate3d(4px, 0, 0);
-      }
-    }
-  }
-
-  .noTitle {
-    margin: 0;
-
-    >span {
-      display: none;
-    }
-
-    >div {
-      padding-top: 0;
-    }
-  }
-
-  .table {
-    border: none;
+  table {
     width: 100%;
-
-    tr:nth-child(odd) {
-      background-color: #f5f5f5;
-    }
-
-    tr:hover {
-      background-color: #ddd !important;
-    }
-
-    tr {
-      th {
-        font-weight: bold;
-        background-color: #f7f7f7;
-        vertical-align: top;
-        padding: 7px 10px;
-      }
-
-      th.Subs {
-        background-color: #ddd;
-      }
-
-      td {
-        padding: 7px 10px;
-      }
-
-      .Tasks {
-        a {
-          text-decoration: none;
-          font-size: 22px;
-        }
-      }
-    }
-
-    tr.top {
-      position: sticky;
-      top: 0;
-    }
-
-    tr.sub {
-      position: sticky;
-      top: 35px;
-    }
-
-    tr.wiz {
-      position: sticky;
-      top: 54px;
-      z-index: 1;
-    }
-
-    tr.foot {
-      position: sticky;
-      bottom: 0px;
-    }
   }
 
-  .files {
-    margin-top: 20px;
-    border: none;
-    width: 100%;
-
-    td,
-    th {
-      padding: 8px;
-    }
-
-    tr {
-      th {
-        font-weight: bold;
-        vertical-align: top;
-        background-color: #f7f7f7;
-        white-space: nowrap;
-      }
-
-      td:first-child,
-      td:last-child {
-        width: 0;
-        white-space: nowrap;
-      }
-    }
-  }
-
-  .Tabs {
+  ul {
+    padding-left: 20px;
     list-style: none;
-    margin: 0;
+
+    li {
+      padding: 4px;
+
+      a,
+      span {
+        font-size: smaller;
+        vertical-align: bottom;
+      }
+    }
+  }
+}
+
+.AutoComplete,
+.ToolTip {
+  position: absolute !important;
+  z-index: 10000;
+  background: white;
+  padding: 4px;
+  border: 1px solid #ddd;
+}
+
+.ToolTip {
+  box-shadow: 2px 2px 2px #ddd;
+  max-width: 350px;
+  top: -20px;
+  left: -20px;
+}
+
+.AutoComplete {
+  box-shadow: 0 2px 7px rgb(0 0 0 / 20%);
+  width: 350px;
+  top: 0;
+  border-radius: 0 0 4px 4px;
+
+  ul {
     padding: 0;
-    border-bottom: 1px solid #20476b;
-    margin-top: 12px;
+    margin: 0;
+    list-style: none;
 
     li {
-      color: #20476b;
-      display: inline-block;
-      padding: 7px 10px;
-      border: 1px solid #20476b;
-      border-radius: 4px 4px 0 0;
-      margin-left: 0;
-      margin-bottom: -1px;
+      padding: 8px;
       cursor: pointer;
     }
 
-    li[hidden] {
-      display: none;
-    }
-
-    li.Active,
     li:hover {
-      background-color: #16314a;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, .24);
-      color: white;
-      border-bottom: 1px solid white
-    }
-
-    li.Right {
-      float: right;
-      border-radius: 0 0 4px 4px;
-    }
-
-    li.Right.Active,
-    li.Right:hover {
-      border: 1px solid #20476b;
-      border-top: 1px solid white
+      background-color: rgba(0, 0, 0, .04);
     }
   }
+}
 
-  .Tasks {
-    list-style: none;
-    padding: 0 8px 8px;
-    position: sticky;
-    top: 0;
-    background: white;
-    z-index: 3;
-    margin: 0;
-    max-height: 46px;
-    overflow: hidden;
-    transition: max-height 1s;
+.MaxLength {
+  font-size: 10px;
+  color: red;
+}
 
-    li {
-      color: #20476b;
-      display: inline-block;
-      padding: 10px;
-      border: 1px solid #20476b;
-      border-radius: 4px 0 0 4px;
-      position: relative;
-      height: 20px;
-      margin: 2px 1px 2px 18px;
-      opacity: 0.5;
-      max-width: 0;
-      transition: max-width 1s;
+.FilesOver {
+  animation: shake 0.82s cubic-bezier(.36, .07, .19, .97) both;
+  animation-iteration-count: infinite;
 
-      div {
-        overflow: hidden;
-        white-space: nowrap;
+  @keyframes shake {
+    10%,
+    90% {
+      transform: translate3d(-1px, 0, 0);
+    }
+
+    20%,
+    80% {
+      transform: translate3d(2px, 0, 0);
+    }
+
+    30%,
+    50%,
+    70% {
+      transform: translate3d(-4px, 0, 0);
+    }
+
+    40%,
+    60% {
+      transform: translate3d(4px, 0, 0);
+    }
+  }
+}
+
+.noTitle {
+  margin: 0;
+
+  >span {
+    display: none;
+  }
+
+  >div {
+    padding-top: 0;
+  }
+}
+
+.table {
+  border: none;
+  width: 100%;
+
+  tr:nth-child(odd) {
+    background-color: #f5f5f5;
+  }
+
+  tr:hover {
+    background-color: #ddd !important;
+  }
+
+  tr {
+    th {
+      font-weight: bold;
+      background-color: #f7f7f7;
+      vertical-align: top;
+      padding: 7px 10px;
+    }
+
+    th.Subs {
+      background-color: #ddd;
+    }
+
+    td {
+      padding: 7px 10px;
+    }
+
+    .Tasks {
+      a {
+        text-decoration: none;
+        font-size: 22px;
       }
     }
-
-    li.Open,
-    li:hover {
-      max-width: 350px;
-    }
-
-    li[hidden] {
-      display: none;
-    }
-
-    li:first-child {
-      margin-left: 0;
-    }
-
-    li:last-child {
-      border-radius: 4px;
-    }
-
-    li:after {
-      content: "";
-      position: absolute;
-      height: 0;
-      width: 0;
-      left: 100%;
-      top: -1px;
-      border: 21px solid transparent;
-      border-left: 21px solid #20476b;
-    }
-
-    li:last-child:after {
-      border: none !important;
-    }
-
-    li.Enabled {
-      opacity: 1;
-    }
-
-    li.Enabled.Active,
-    li.Enabled:hover {
-      background-color: #16314a;
-      color: white;
-      cursor: pointer;
-    }
-
-    li.Enabled.Active:after,
-    li.Enabled:hover:after {
-      border-left-color: #16314a;
-    }
   }
 
-  .Tasks:hover {
-    max-height: 360px;
-  }
-
-  .Tabs div {
-    transition: opacity .15s linear;
-  }
-
-  .Actions {
-    margin: 12px 0;
-    padding: 8px;
+  tr.top {
     position: sticky;
-    bottom: 0;
-    background: white;
-    z-index: 4;
-    margin: 8px 0 0;
-  }
-
-  .Required {
-    color: red;
-    margin-left: 4px;
-    position: absolute;
-  }
-
-  .Alert {
-    p {
-      text-align: center;
-      padding: 8px;
-      border-radius: 4px;
-      font-weight: bold;
-      color: white;
-    }
-
-    .Warning {
-      background: orange;
-    }
-
-    .Error {
-      background: orangered;
-    }
-  }
-
-  @keyframes spinner {
-    0% {
-      transform: translate3d(-50%, -50%, 0) rotate(0deg);
-    }
-
-    100% {
-      transform: translate3d(-50%, -50%, 0) rotate(360deg);
-    }
-  }
-
-  .spin::before {
-    animation: 1.5s linear infinite spinner;
-    animation-play-state: inherit;
-    border: solid 5px #cfd0d1;
-    border-bottom-color: #ED8727;
-    border-radius: 50%;
-    content: "";
-    height: 40px;
-    width: 40px;
-    position: absolute;
-    top: 10%;
-    left: 10%;
-    transform: translate3d(-50%, -50%, 0);
-    will-change: transform;
-  }
-
-  .Tabs .spin::before {
-    height: 20px;
-    width: 20px;
-    top: 16px;
-    left: 16px;
-  }
-
-  .Saving {
-    position: fixed;
     top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 999;
-    background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  tr.sub {
+    position: sticky;
+    top: 35px;
+  }
+
+  tr.wiz {
+    position: sticky;
+    top: 54px;
+    z-index: 1;
+  }
+
+  tr.foot {
+    position: sticky;
+    bottom: 0px;
+  }
+}
+
+.files {
+  margin-top: 20px;
+  border: none;
+  width: 100%;
+
+  td,
+  th {
+    padding: 8px;
+  }
+
+  tr {
+    th {
+      font-weight: bold;
+      vertical-align: top;
+      background-color: #f7f7f7;
+      white-space: nowrap;
+    }
+
+    td:first-child,
+    td:last-child {
+      width: 0;
+      white-space: nowrap;
+    }
+  }
+}
+
+.Tabs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid #20476b;
+  margin-top: 12px;
+
+  li {
+    color: #20476b;
+    display: inline-block;
+    padding: 7px 10px;
+    border: 1px solid #20476b;
+    border-radius: 4px 4px 0 0;
+    margin-left: 0;
+    margin-bottom: -1px;
+    cursor: pointer;
+  }
+
+  li[hidden] {
+    display: none;
+  }
+
+  li.Active,
+  li:hover {
+    background-color: #16314a;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .24);
+    color: white;
+    border-bottom: 1px solid white
+  }
+
+  li.Right {
+    float: right;
+    border-radius: 0 0 4px 4px;
+  }
+
+  li.Right.Active,
+  li.Right:hover {
+    border: 1px solid #20476b;
+    border-top: 1px solid white
+  }
+}
+
+.Tasks {
+  list-style: none;
+  padding: 0 8px 8px;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 3;
+  margin: 0;
+  max-height: 46px;
+  overflow: hidden;
+  transition: max-height 1s;
+
+  li {
+    color: #20476b;
+    display: inline-block;
+    padding: 10px;
+    border: 1px solid #20476b;
+    border-radius: 4px 0 0 4px;
+    position: relative;
+    height: 20px;
+    margin: 2px 1px 2px 18px;
+    opacity: 0.5;
+    max-width: 0;
+    transition: max-width 1s;
 
     div {
-      margin: auto;
-      background: white;
-      width: 200px;
-      position: relative;
-      top: 40%;
-      border-radius: 8px;
-      box-shadow: 8px 8px #555;
-      text-align: center;
-      padding: 40px;
+      overflow: hidden;
+      white-space: nowrap;
     }
   }
 
-  .SLA15 {
-    background-color: palegoldenrod;
+  li.Open,
+  li:hover {
+    max-width: 350px;
   }
 
-  .SLA30 {
-    background-color: palevioletred;
+  li[hidden] {
+    display: none;
   }
 
-  .Accent1 {
-    background-color: #ED8727;
-    color: black;
+  li:first-child {
+    margin-left: 0;
   }
 
-  .Accent2 {
-    background-color: #20476B;
+  li:last-child {
+    border-radius: 4px;
+  }
+
+  li:after {
+    content: "";
+    position: absolute;
+    height: 0;
+    width: 0;
+    left: 100%;
+    top: -1px;
+    border: 21px solid transparent;
+    border-left: 21px solid #20476b;
+  }
+
+  li:last-child:after {
+    border: none !important;
+  }
+
+  li.Enabled {
+    opacity: 1;
+  }
+
+  li.Enabled.Active,
+  li.Enabled:hover {
+    background-color: #16314a;
+    color: white;
+    cursor: pointer;
+  }
+
+  li.Enabled.Active:after,
+  li.Enabled:hover:after {
+    border-left-color: #16314a;
+  }
+}
+
+.Tasks:hover {
+  max-height: 360px;
+}
+
+.Tabs div {
+  transition: opacity .15s linear;
+}
+
+.Actions {
+  margin: 12px 0;
+  padding: 8px;
+  position: sticky;
+  bottom: 0;
+  background: white;
+  z-index: 4;
+  margin: 8px 0 0;
+}
+
+.Required {
+  color: red;
+  margin-left: 4px;
+  position: absolute;
+}
+
+.Alert {
+  p {
+    text-align: center;
+    padding: 8px;
+    border-radius: 4px;
+    font-weight: bold;
     color: white;
   }
 
-  .Accent3 {
-    background-color: #089CB0;
-    color: white;
+  .Warning {
+    background: orange;
   }
 
-  .Accent4 {
-    background-color: #676769;
-    color: white;
+  .Error {
+    background: orangered;
+  }
+}
+
+@keyframes spinner {
+  0% {
+    transform: translate3d(-50%, -50%, 0) rotate(0deg);
   }
 
-  .Accent5 {
-    background-color: #FDB914;
-    color: black;
+  100% {
+    transform: translate3d(-50%, -50%, 0) rotate(360deg);
   }
+}
 
-  .Accent6 {
-    background-color: #9CC1E6;
-    color: black;
+.spin::before {
+  animation: 1.5s linear infinite spinner;
+  animation-play-state: inherit;
+  border: solid 5px #cfd0d1;
+  border-bottom-color: #ED8727;
+  border-radius: 50%;
+  content: "";
+  height: 40px;
+  width: 40px;
+  position: absolute;
+  top: 10%;
+  left: 10%;
+  transform: translate3d(-50%, -50%, 0);
+  will-change: transform;
+}
+
+.Tabs .spin::before {
+  height: 20px;
+  width: 20px;
+  top: 16px;
+  left: 16px;
+}
+
+.Saving {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999;
+  background-color: rgba(0, 0, 0, 0.5);
+
+  div {
+    margin: auto;
+    background: white;
+    width: 200px;
+    position: relative;
+    top: 40%;
+    border-radius: 8px;
+    box-shadow: 8px 8px #555;
+    text-align: center;
+    padding: 40px;
   }
+}
 
-  .Accent7 {
-    background-color: #20476B;
-    color: white;
-  }
+.SLA15 {
+  background-color: palegoldenrod;
+}
 
-  .Accent8 {
-    background-color: #4795CB;
-    color: white;
-  }
+.SLA30 {
+  background-color: palevioletred;
+}
 
-  .Accent9 {
-    background-color: #E99923;
-    color: black;
-  }
+.Accent1 {
+  background-color: #ED8727;
+  color: black;
+}
 
-  .Accent0 {
-    background-color: #556B82;
-    color: white;
-  }
+.Accent2 {
+  background-color: #20476B;
+  color: white;
+}
 
-  ins {
-    text-decoration: none;
-    background-color: #d4fcbc;
-  }
+.Accent3 {
+  background-color: #089CB0;
+  color: white;
+}
 
-  del {
-    text-decoration: line-through;
-    background-color: #fbb6c2;
-    color: #555;
-  }
+.Accent4 {
+  background-color: #676769;
+  color: white;
+}
 
-  .Overlay {
-    position: fixed;
-    top: 0px;
-    left: 0px;
-    bottom: 0px;
-    right: 0px;
-    z-index: 10000;
-    background: rgba(0, 0, 0, 0.6);
+.Accent5 {
+  background-color: #FDB914;
+  color: black;
+}
 
-    .Modal {
-      margin: 10vh auto;
-      background: white;
-      border-radius: 4px;
-      padding: 30px;
-      overflow-x: auto;
+.Accent6 {
+  background-color: #9CC1E6;
+  color: black;
+}
 
-      max-height: 75vh;
-      min-width: 30vw;
-      width: 500px;
-      max-width: 90vw;
+.Accent7 {
+  background-color: #20476B;
+  color: white;
+}
 
-      .Close {
-        float: right;
+.Accent8 {
+  background-color: #4795CB;
+  color: white;
+}
 
-        * {
-          font-weight: bold;
-        }
+.Accent9 {
+  background-color: #E99923;
+  color: black;
+}
+
+.Accent0 {
+  background-color: #556B82;
+  color: white;
+}
+
+ins {
+  text-decoration: none;
+  background-color: #d4fcbc;
+}
+
+del {
+  text-decoration: line-through;
+  background-color: #fbb6c2;
+  color: #555;
+}
+
+.Overlay {
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  bottom: 0px;
+  right: 0px;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.6);
+
+  .Modal {
+    margin: 10vh auto;
+    background: white;
+    border-radius: 4px;
+    padding: 30px;
+    overflow-x: auto;
+
+    max-height: 75vh;
+    min-width: 30vw;
+    width: 500px;
+    max-width: 90vw;
+
+    .Close {
+      float: right;
+
+      * {
+        font-weight: bold;
       }
+    }
 
-      .Buttons {
-        * {
-          display: inline-block;
-          margin: 16px 4px;
-          padding: 8px;
-          border: 1px solid #ddd;
-          border-radius: 4px
-        }
+    .Buttons {
+      * {
+        display: inline-block;
+        margin: 16px 4px;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px
       }
     }
   }
