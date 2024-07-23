@@ -10,7 +10,7 @@ import { Editor, Toolbar } from 'ngx-editor';
 @Component({
   selector: 'app-choice',
   templateUrl: './sharepoint-choice.component.html',
-  styleUrls: ['./sharepoint-choice.component.scss'],
+  styleUrls: ['../styles.scss'],
   encapsulation: ViewEncapsulation.Emulated
 })
 export class SharepointChoiceComponent implements OnInit, OnDestroy {
