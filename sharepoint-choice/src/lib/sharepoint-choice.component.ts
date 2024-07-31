@@ -185,7 +185,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       if ( e.target.parentNode )
         scrollTop = e.target.parentNode.scrollTop;
   
-      var v = e.target.innerHTML;
+      var v = e.target.innerText;
       // ensure object type is correct
       if (!this.form[this.field] || !this.form[this.field].__metadata)
         this.form[this.field] = {
