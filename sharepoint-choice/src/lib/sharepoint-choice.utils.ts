@@ -383,46 +383,52 @@ export class SharepointChoiceUtils {
 
       return ret;
     }
-
-    public async saveFiles(path:string, additional:string|undefined, url:any, files): Promise<void> {
+    
+    public async saveFiles(path:string, additional:string|undefined, url:any|undefined, files:any, metadata:any|undefined): Promise<void> {
       if (path.indexOf("://") >= 0)
         path = path.substring(path.indexOf('/', 9));
-      
+
+      // common metadata for folder and each file, unless overridden at a file level
+      var commonmeta = metadata ? JSON.parse(JSON.stringify(metadata)) : url ? {Request: url} : {};
+
       var folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
-      await folder.update({Request: url});
+      await folder.update(commonmeta);
   
       // subfolders for these
       if (additional && additional != '') {
         path += '/' + additional;
         folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
-        await folder.update({Request: url});
+        await folder.update(commonmeta);
       }
   
       // process saves and deletes
       for (var i = 0; i < files.results.length; i++) {
         var file = files.results[i];
+        // clone common metadata for file overrides
+        var meta = JSON.parse(JSON.stringify(commonmeta));
+        if (file.metadata) {
+          for (var m in file.metadata)
+            meta[m] = file.metadata[m];
+        } else if (file.Classification) {
+          meta['Classification'] = file.Classification;
+        }
         if (file.Delete)
           await this.sp.web.getFolderByServerRelativePath(path+'/'+file.Name).recycle();
         else if (file.Data) {
           await this.sp.web.getFolderByServerRelativePath(path).files.addUsingPath(file.FileName, file.Data, {Overwrite: true});
           let i = await this.sp.web.getFolderByServerRelativePath(path).files.getByUrl(file.FileName).getItem();
-          await i.update({
-            Classification: file.Classification,
-            Request: url
-          });
-          // mock the data back in so submitting again doesnt fail
+          await i.update(meta);
+          // mock the data back in so submit again doesnt fail
           file.Name = file.FileName;
           file.TimeCreated = new Date();
-          file.OldClassification = file.Classification;
-          file.Request = url;
           file.ServerRelativeUrl = path+'/'+file.FileName;
+          file.Request = url;
+          file.OldClassification = file.Classification;
+          file.ListItemAllFields = meta;
           delete file.Data;
         } else if (file.Classification != file.OldClassification || !file.Request) {
           let i = await this.sp.web.getFolderByServerRelativePath(path+'/'+file.Name).getItem();
-          await i.update({
-            Classification: file.Classification,
-            Request: url
-          });
+          await i.update(meta);
         }
       }
     }
