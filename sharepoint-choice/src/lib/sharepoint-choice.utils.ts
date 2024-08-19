@@ -366,8 +366,8 @@ export class SharepointChoiceUtils {
 
       var files = await this.sp.web.getFolderByServerRelativePath(serverRelative.replace(/\/$/, '') + (additional ? '/'+additional : '')).files.expand('ListItemAllFields')();
       
-      var ret = [];
-      files.forEach(file => {
+      var ret:Array<any> = [];
+      files.forEach((file:any) => {
         ret.push({
           Name: file.Name,
           FileName: file.Name,
