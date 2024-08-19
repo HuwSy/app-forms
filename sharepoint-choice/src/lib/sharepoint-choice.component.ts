@@ -43,7 +43,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     private elRef: ElementRef
   ) {
     if (!this.pattern)
-      this.pattern = null;
+      this.pattern = '.*';
 
     // rich text field
     this.editor = new Editor();
@@ -133,8 +133,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // gets the required field properties and/or any overrides to determine which field type etc to display
   //declare overrode: any[string];
-  get(t:string) {
-    var p = null;
+  get(t:string):any {
+    var p:any = null;
     var overrode = this.override ? (typeof this.override == "string" ? JSON.parse(this.override) : this.override) : {};
     if (overrode && overrode[t] != null)
       p = overrode[t];
@@ -510,7 +510,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (this.loading.indexOf(user) < 0 && typeof user == "number" && user > 0) {
       this.loading.push(user);
       // load the user
-      this.spec['odata.context'].web.getUserById(user)().then(u => {
+      this.spec['odata.context'].web.getUserById(user)().then((u:any) => {
         // update the display table
         this.display.push({
           DisplayText: u.Title,
