@@ -69,13 +69,27 @@ export class SharepointChoiceUtils {
         try {
           await this.mockClassicContext();
           var web = await this.sp.web();
-          var webTitle = web.Title;
+          
+          // get any directly assigned groups
+          // this doesnt work well with ad and aad groups assignments
           var perm = await this.sp.web.currentUser.groups();
           perm.forEach(x => {
             p[x.LoginName] = true;
-            if (x.LoginName.startsWith(`${webTitle} `))
-              p[x.LoginName.replace(`${webTitle} `,'')] = true;
-          })
+            if (x.LoginName.startsWith(`${web.Title} `))
+              p[x.LoginName.replace(`${web.Title} `,'')] = true;
+          });
+          
+          // ad and aad groups within sp groups dont always expose groups above
+          // this depends on hidden, no crawl list with specific permissions assigned to the same list item title and created by SHAREPOINT\System Account
+          try {
+            var sec = await this.sp.web.lists.getByTitle('Security')();
+            if (sec.Hidden && sec.IsApplicationList) {
+              var per = await this.sp.web.lists.getByTitle('Security').items.select("Title").top(5000)();
+              per.forEach(s => {
+                p[s.Title] = true;
+              })
+            }
+          } catch (e) {}
         } catch (e) {
           p = {Error: true};
         }
