@@ -172,6 +172,12 @@ a.fc-event {
   }
 }
 
+.gui-structure-header.gui-header-top {
+  position: sticky;
+  top: 0px;
+  z-index: 1;
+}
+
 .AutoComplete,
 .ToolTip {
   position: absolute !important;
