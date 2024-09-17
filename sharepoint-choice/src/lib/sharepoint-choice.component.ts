@@ -306,11 +306,19 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         return f.FileName.toLowerCase() != n.FileName.toLowerCase()
       })
     }
+    
+    // if on change passed in
+    if (typeof this.onchange == "function")
+      this.onchange();
   }
 
   // unmark a file as deleting from the array
   undelete(a:any[string]) {
     a.Deleted = null;
+    
+    // if on change passed in
+    if (typeof this.onchange == "function")
+      this.onchange();
   }
 
   // add attachment to array
@@ -360,6 +368,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         });
 
         setTimeout(() => file.value = null, 10);
+            
+        // if on change passed in
+        if (typeof ths.onchange == "function")
+          ths.onchange();
       }
       reader.onerror = function () {
         alert('File read error: ' + f.name);
@@ -489,6 +501,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // clear search fields
     this.name = '';
     this.users = [];
+    
+    // if on change passed in
+    if (typeof this.onchange == "function")
+      this.onchange();
   }
 
   // load list data only has IDs so expand the object
@@ -540,6 +556,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.display = this.display.filter((x:any) => {
       return x.Id != usr
     })
+    
+    // if on change passed in
+    if (typeof this.onchange == "function")
+      this.onchange();
   }
 
   // trigger user search
