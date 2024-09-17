@@ -93,7 +93,7 @@
     </div>
     
     <div layout="column" *ngIf="get('TypeAsString') == 'Attachments' && get('UploadOnly') == true">
-        <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A" (change)="change($event)">
+        <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A">
         <div [hidden]="disabled" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}" style="width: 175px; text-align: center;">
             <b style="font-size: 48px;">&#8613;</b><br>
             Drag and drop files here<br>
@@ -104,7 +104,7 @@
     </div>
     
     <div layout="column" *ngIf="get('TypeAsString') == 'Attachments' && get('UploadOnly') != true" style="position: relative;">
-        <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A" (change)="change($event)">
+        <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A">
         <ul>
             <li [hidden]="attachments().length > 0">No attachments</li>
             <li *ngFor="let a of attachments()">
@@ -136,7 +136,7 @@
     </div>
 
     <div layout="column" *ngIf="['User','UserMulti'].indexOf(get('TypeAsString')) >= 0">
-        <input hidden type="text" [required]="required()" [value]="people()" name="{{field}}_P" (change)="change($event)">
+        <input hidden type="text" [required]="required()" [value]="people()" name="{{field}}_P">
         <div *ngIf="form[field + 'Id'] && form[field + 'Id'].results">
             <span *ngFor="let user of form[field + 'Id'].results" style="padding: 8px;">{{displayUser(user)}} <a (click)="removeUser(user)" style="color: red;" [hidden]="disabled">X</a></span>
         </div>
