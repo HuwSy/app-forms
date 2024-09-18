@@ -424,7 +424,8 @@ export class SharepointChoiceUtils {
         if (file.metadata) {
           for (var m in file.metadata)
             meta[m] = file.metadata[m];
-        } else if (file.Classification) {
+        }
+        if (file.Classification) {
           meta['Classification'] = file.Classification;
         }
         if (file.Delete) {
