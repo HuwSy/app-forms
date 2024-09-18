@@ -387,7 +387,6 @@ export class SharepointChoiceUtils {
           FileName: file.Name,
           TimeCreated: file.TimeCreated,
           Classification: file['ListItemAllFields'].Classification,
-          OldClassification: file['ListItemAllFields'].Classification,
           Request: file['ListItemAllFields'].Request,
           ServerRelativeUrl: file.ServerRelativeUrl,
           // everything else
@@ -403,7 +402,9 @@ export class SharepointChoiceUtils {
         path = path.substring(path.indexOf('/', 9));
 
       // common metadata for folder and each file, unless overridden at a file level
-      var commonmeta = metadata ? JSON.parse(JSON.stringify(metadata)) : url ? {Request: url} : {};
+      var commonmeta = metadata ? JSON.parse(JSON.stringify(metadata)) : {};
+      if (url)
+        commonmeta['Request'] = url;
 
       var folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
       await folder.update(commonmeta);
@@ -426,9 +427,11 @@ export class SharepointChoiceUtils {
         } else if (file.Classification) {
           meta['Classification'] = file.Classification;
         }
-        if (file.Delete)
+        if (file.Delete) {
+          // file to delete
           await this.sp.web.getFolderByServerRelativePath(path+'/'+file.Name).recycle();
-        else if (file.Data) {
+        } else if (file.Data) {
+          // file to upload
           await this.sp.web.getFolderByServerRelativePath(path).files.addUsingPath(file.FileName, file.Data, {Overwrite: true});
           let i = await this.sp.web.getFolderByServerRelativePath(path).files.getByUrl(file.FileName).getItem();
           await i.update(meta);
@@ -440,9 +443,23 @@ export class SharepointChoiceUtils {
           file.OldClassification = file.Classification;
           file.ListItemAllFields = meta;
           delete file.Data;
-        } else if (file.Classification != file.OldClassification || !file.Request) {
-          let i = await this.sp.web.getFolderByServerRelativePath(path+'/'+file.Name).getItem();
-          await i.update(meta);
+        } else {
+          // no file to upload but may need changes
+          let needsSave = file.ListItemAllFields == null;
+          for (var m in meta) {
+            if (needsSave)
+              break;
+            try {
+              if (JSON.stringify(meta[m] || null) != JSON.stringify(file.ListItemAllFields[m] || null))
+                needsSave = true;
+            } catch {
+              needsSave = true;
+            }
+          }
+          if (needsSave) {
+            let i = await this.sp.web.getFolderByServerRelativePath(path+'/'+file.Name).getItem();
+            await i.update(meta);
+          }
         }
       }
     }
