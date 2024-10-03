@@ -69,7 +69,7 @@ export class SharepointChoiceUtils {
         try {
           await this.mockClassicContext();
           var web = await this.sp.web();
-          
+
           // get any directly assigned groups
           // this doesnt work well with ad and aad groups assignments
           var perm = await this.sp.web.currentUser.groups();
@@ -78,7 +78,7 @@ export class SharepointChoiceUtils {
             if (x.LoginName.startsWith(`${web.Title} `))
               p[x.LoginName.replace(`${web.Title} `,'')] = true;
           });
-          
+
           // ad and aad groups within sp groups dont always expose groups above
           // this depends on hidden, no crawl list with specific permissions assigned to the same list item title and created by SHAREPOINT\System Account
           try {
@@ -127,59 +127,63 @@ export class SharepointChoiceUtils {
         return spec;
     }
 
+    private async cleanLoadKeys(d:any, listTitle?:string, id?:number) {
+      for (var key in d) {
+        // people fields return twice
+        if (key.endsWith('StringId') && (d[key.replace(/StringId$/,'Id')] || d[key.replace(/StringId$/,'Id')] === null))
+          delete d[key];
+
+        // if there are attachments start loading
+        if (key == 'Attachments' && listTitle && id) {
+          if (d[key] === true)
+            d[key] = { results: await this.sp.web.lists.getByTitle(listTitle).items.getById(id).attachmentFiles() };
+          else
+            d[key] = { results: [] };
+        }
+
+        // remove odata. prefixed
+        if (key.startsWith('odata.') || key == '__metadata')
+          delete d[key];
+
+        // dont process nulls
+        if (!d[key] || d[key] === null)
+          continue;
+        
+        // return multifields to results, old behaviour for old people fields and to prevent json paring clashing
+        if (typeof d[key] == "object" && !d[key].results && d[key].length > 0) {
+          d[key] = {
+            results: d[key],
+            __metadata: {type: (typeof d[key][0] == "number" ? "Collection(Edm.Int32)" : "Collection(Edm.String)")}
+          }
+        }
+
+        // parse objects within text fields for looped data
+        try {
+          let f = d[key].toString().trim().substring(0,1);
+          if ((f == '{' || f == '[') && d[key].toString().trim().endsWith(f == '{' ? '}' : ']')) {
+            d[key] = JSON.parse(d[key]);
+            d[key] = this.parseLoop(d[key]);
+            continue;
+          }
+        } catch (e) {}
+
+        // dates and date times
+        let i = d[key].toString();
+        if (i.match(/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9]:*[0-9]*\.*[0-9]*Z*$/) != null
+          || i.match(/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]$/) != null) {
+          d[key] = new Date(d[key]);
+          continue;
+        }
+      }
+    }
+
     // load list item data and parse any data types appropriate for use in <sharepoint-choice ngModel=""> attributes
     public async data(id:number, listTitle:string):Promise<any> {
         var d:any = {};
 
         try {
           d = await this.sp.web.lists.getByTitle(listTitle).items.getById(id)();
-          for (var key in d) {
-            // people fields return twice
-            if (key.endsWith('StringId') && (d[key.replace(/StringId$/,'Id')] || d[key.replace(/StringId$/,'Id')] === null))
-              delete d[key];
-
-            // if there are attachments start loading
-            if (key == 'Attachments') {
-              if (d[key] === true)
-                d[key] = { results: await this.sp.web.lists.getByTitle(listTitle).items.getById(id).attachmentFiles() };
-              else
-                d[key] = { results:[] };
-            }
-
-            // remove odata. prefixed
-            if (key.startsWith('odata.') || key == '__metadata')
-              delete d[key];
-
-            // dont process nulls
-            if (!d[key] || d[key] === null)
-              continue;
-              
-            // return multifields to results, old behaviour for old people fields and to prevent json paring clashing
-            if (typeof d[key] == "object" && !d[key].results && d[key].length > 0) {
-              d[key] = {
-                results: d[key],
-                __metadata: {type: (typeof d[key][0] == "number" ? "Collection(Edm.Int32)" : "Collection(Edm.String)")}
-              }
-            }
-
-            // parse objects within text fields for looped data
-            try {
-              let f = d[key].toString().trim().substring(0,1);
-              if ((f == '{' || f == '[') && d[key].toString().trim().endsWith(f == '{' ? '}' : ']')) {
-                d[key] = JSON.parse(d[key]);
-                d[key] = this.parseLoop(d[key]);
-                continue;
-              }
-            } catch (e) {}
-
-            // dates and date times
-            let i = d[key].toString();
-            if (i.match(/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9]:*[0-9]*\.*[0-9]*Z*$/) != null
-              || i.match(/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]$/) != null) {
-              d[key] = new Date(d[key]);
-              continue;
-            }
-          }
+          await this.cleanLoadKeys(d, listTitle, id);
         } catch (e) {
           alert('Error loading');
           throw e;
@@ -205,7 +209,7 @@ export class SharepointChoiceUtils {
       return i;
     }
   
-    // calls an api generically
+    // calls an api more generically
     public async callApi(tenancyOnMicrosoft: string, clientId: string, permissionScope: string, apiUrl?: string, httpMethod?: string, jsonPostData?: any):Promise<any> {
       // client settings
       var config = {
@@ -270,41 +274,48 @@ export class SharepointChoiceUtils {
       }
     }
 
+    private cleanSaveKeys(save:any, uned:any):any {
+      if (!uned || uned == null)
+        uned = {};
+
+      for (var key in save) {
+        if ((save[key] === null && uned[key] !== null) || key == "Id")
+          continue;
+        
+        // remove and unedited, including internal fields
+        if (key == "Attachments" || (typeof uned[key] != "undefined" && JSON.stringify(uned[key]) == JSON.stringify(save[key]))) {
+          delete save[key];
+          continue;
+        }
+
+        // prevent errors on nulls
+        if (save[key] == null)
+          continue;
+
+        // convert dates
+        if (typeof save[key].toJSON != "undefined") {
+          save[key] = save[key].toJSON();
+          continue;
+        }
+
+        // convert JSON
+        if (typeof save[key] == "object" && !save[key].results && !save[key].Url)
+          save[key] = JSON.stringify(save[key]);
+        
+        // convert back to direct array and ensure no nulls selected, should never occur but does on some browsers?
+        if (typeof save[key] == "object" && save[key].results)
+          save[key] = save[key].results.filter((i:any) => i !== null && i !== undefined);
+      }
+    }
+
     // patch save list item data and parse any data types appropriate for use in <sharepoint-choice ngModel=""> attributes
     public async save(formDataIncIdToUpdate: any, uneditedDataToBuildPatch: any, listTitle: string):Promise<number> {
-        let form = formDataIncIdToUpdate, uned = uneditedDataToBuildPatch;
-        var save = JSON.parse(JSON.stringify(form));
-        if (!uned || uned == null)
-          uned = {};
-
+        var save = JSON.parse(JSON.stringify(formDataIncIdToUpdate));
         try {
           delete save["$$hashKey"];
 
-          for (var key in save) {
-            if ((save[key] === null && uned[key] !== null) || key == "Id")
-              continue;
-            
-            // remove and unedited, including internal fields
-            if (key == "Attachments" || ((uned[key] || uned[key] === null) && JSON.stringify(uned[key]) == JSON.stringify(save[key]))) {
-              delete save[key];
-              continue;
-            }
+          this.cleanSaveKeys(save, uneditedDataToBuildPatch);
 
-            // convert dates
-            if (typeof save[key].toJSON != "undefined") {
-              save[key] = save[key].toJSON();
-              continue;
-            }
-
-            // convert JSON
-            if (typeof save[key] == "object" && !save[key].results && !save[key].Url)
-              save[key] = JSON.stringify(save[key]);
-            
-            // convert back to direct array and ensure no nulls selected, should never occur but does on some browsers?
-            if (typeof save[key] == "object" && save[key].results)
-              save[key] = save[key].results.filter((i:any) => i !== null && i !== undefined);
-          }
-          
           // save/update the item
           if (typeof save.Id == "undefined" || save.Id < 1) {
             var saving = await this.sp.web.lists.getByTitle(listTitle).items.add(save);
@@ -314,8 +325,8 @@ export class SharepointChoiceUtils {
           }
     
           // process attachments as deletes then uploads
-          if (form.Attachments && form.Attachments.results && form.Attachments.results.length > 0) {
-            var deletes = form.Attachments.results.filter((a:any) => {
+          if (formDataIncIdToUpdate.Attachments && formDataIncIdToUpdate.Attachments.results && formDataIncIdToUpdate.Attachments.results.length > 0) {
+            var deletes = formDataIncIdToUpdate.Attachments.results.filter((a:any) => {
               return a.Deleted
             }).map((a:any) => {
               return a.FileName;
@@ -324,7 +335,7 @@ export class SharepointChoiceUtils {
             for (var i = 0; i < deletes.length; i++)
               await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).attachmentFiles.getByName(deletes[i]).delete();
     
-            var adds = form.Attachments.results.filter((a:any) => {
+            var adds = formDataIncIdToUpdate.Attachments.results.filter((a:any) => {
               return !a.Deleted && !a.ServerRelativeUrl
             }).map((a:any) => {
               return {
@@ -381,22 +392,21 @@ export class SharepointChoiceUtils {
       var files = await this.sp.web.getFolderByServerRelativePath(serverRelative.replace(/\/$/, '') + (additional ? '/'+additional : '')).files.expand('ListItemAllFields')();
       
       var ret:Array<any> = [];
-      files.forEach((file:any) => {
+      files.forEach(async (file:any) => {
+        await this.cleanLoadKeys(file['ListItemAllFields']);
+
         ret.push({
-          Name: file.Name,
           FileName: file.Name,
           TimeCreated: file.TimeCreated,
-          Classification: file['ListItemAllFields'].Classification,
-          Request: file['ListItemAllFields'].Request,
           ServerRelativeUrl: file.ServerRelativeUrl,
-          // everything else
-          ListItemAllFields: file['ListItemAllFields']
+          ListItemAllFields: file['ListItemAllFields'],
+          OldListItemAllFields: JSON.parse(JSON.stringify(file['ListItemAllFields']))
         })
       });
 
       return ret;
     }
-    
+
     public async saveFiles(path:string, additional:string|undefined, url:any|undefined, files:any, metadata:any|undefined): Promise<void> {
       if (path.indexOf("://") >= 0)
         path = path.substring(path.indexOf('/', 9));
@@ -406,62 +416,56 @@ export class SharepointChoiceUtils {
       if (url)
         commonmeta['Request'] = url;
 
-      var folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
-      await folder.update(commonmeta);
-  
-      // subfolders for these
-      if (additional && additional != '') {
-        path += '/' + additional;
-        folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
+      try {
+        var folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
         await folder.update(commonmeta);
-      }
-  
-      // process saves and deletes
-      for (var i = 0; i < files.results.length; i++) {
-        var file = files.results[i];
-        // clone common metadata for file overrides
-        var meta = JSON.parse(JSON.stringify(commonmeta));
-        if (file.metadata) {
-          for (var m in file.metadata)
-            meta[m] = file.metadata[m];
+    
+        // subfolders for these
+        if (additional && additional != '') {
+          path += '/' + additional;
+          folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
+          await folder.update(commonmeta);
         }
-        if (file.Classification) {
-          meta['Classification'] = file.Classification;
-        }
-        if (file.Delete) {
-          // file to delete
-          await this.sp.web.getFolderByServerRelativePath(path+'/'+file.Name).recycle();
-        } else if (file.Data) {
-          // file to upload
-          await this.sp.web.getFolderByServerRelativePath(path).files.addUsingPath(file.FileName, file.Data, {Overwrite: true});
-          let i = await this.sp.web.getFolderByServerRelativePath(path).files.getByUrl(file.FileName).getItem();
-          await i.update(meta);
-          // mock the data back in so submit again doesnt fail
-          file.Name = file.FileName;
-          file.TimeCreated = new Date();
-          file.ServerRelativeUrl = path+'/'+file.FileName;
-          file.Request = url;
-          file.OldClassification = file.Classification;
-          file.ListItemAllFields = meta;
-          delete file.Data;
-        } else {
-          // no file to upload but may need changes
-          let needsSave = file.ListItemAllFields == null;
-          for (var m in meta) {
-            if (needsSave)
-              break;
-            try {
-              if (JSON.stringify(meta[m] || null) != JSON.stringify(file.ListItemAllFields[m] || null))
-                needsSave = true;
-            } catch {
-              needsSave = true;
-            }
+
+        // process saves and deletes
+        for (var i = 0; i < files.results.length; i++) {
+          var file = files.results[i];
+          if (!file.ListItemAllFields)
+            file.ListItemAllFields = {};
+
+          // clone common metadata for files
+          for (var m in commonmeta) {
+            file.ListItemAllFields[m] = commonmeta[m];
           }
-          if (needsSave) {
-            let i = await this.sp.web.getFolderByServerRelativePath(path+'/'+file.Name).getItem();
-            await i.update(meta);
+
+          // basic list item fields cleanup
+          delete file.ListItemAllFields["$$hashKey"];
+          delete file.ListItemAllFields["Id"];
+          delete file.ListItemAllFields["ID"];
+
+          this.cleanSaveKeys(file.ListItemAllFields, file.OldListItemAllFields);
+          
+          if (file.Deleted) {
+            // file to delete
+            await this.sp.web.getFolderByServerRelativePath(path+'/'+file.FileName).recycle();
+          } else if (file.Data) {
+            // file to upload
+            await this.sp.web.getFolderByServerRelativePath(path).files.addUsingPath(file.FileName, file.Data, {Overwrite: true});
+            let i = await this.sp.web.getFolderByServerRelativePath(path).files.getByUrl(file.FileName).getItem();
+            await i.update(file.ListItemAllFields);
+            // mock the data back in so submit again doesnt fail
+            file.TimeCreated = new Date();
+            file.ServerRelativeUrl = path+'/'+file.FileName;
+            delete file.Data;
+          } else if (JSON.stringify(file.ListItemAllFields) != '{}') {
+            // get current item and check for changes
+            let i = await this.sp.web.getFolderByServerRelativePath(path+'/'+file.FileName).getItem();
+            await i.update(file.ListItemAllFields);
           }
         }
+      } catch (e) {
+        alert('Error saving files');
+        throw e;
       }
     }
 }
