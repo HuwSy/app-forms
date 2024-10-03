@@ -1,11 +1,10 @@
 import { Component, OnInit, OnDestroy, Input, ElementRef, ViewEncapsulation } from '@angular/core';
 import { UserQuery, User } from "./Models";
-import { spfi, SPFI } from "@pnp/sp";
 import "@pnp/sp/webs";
 import { Logger, LogLevel } from "@pnp/logging";
-import { PnPLogging } from './PnPLogging';
-import { App } from './App'
 import { Editor, Toolbar } from 'ngx-editor';
+import * as MsgReader from '@sharpenednoodles/msg.reader-ts';
+import * as zip from "@zip.js/zip.js";
 
 @Component({
   selector: 'app-choice',
@@ -14,36 +13,59 @@ import { Editor, Toolbar } from 'ngx-editor';
   encapsulation: ViewEncapsulation.Emulated
 })
 export class SharepointChoiceComponent implements OnInit, OnDestroy {
-  @Input() form!: any[string]; // form containing field
-  @Input() spec!: any[any[string]]; // spec of field loaded from list
+  @Input() form!: Array<string>; // form containing field
   @Input() field!: string; // internal field name on form object, used for push back and against spec
-  @Input() override!: string; // override any spec above. sent as string as passing object kills large form performance
 
-  @Input() none!: string; // none option text instead of null
-  @Input() other!: string; // Other fill-in option text, will override to allow other
-  @Input() filter!: Function; // filter choices by a function
-  @Input() onchange!: Function; // onchange trigger a function, to supliment (change)= only needed for some use cases i.e. rich text fields
-  @Input() pattern!: string; // html regex pattern
+  @Input() spec!: Array<Array<string>>; // spec of field loaded from list
+  @Input() override!: string; // manually override any spec above. sent as string as passing object kills large form performance
 
-  @Input() disabled!: boolean;
+  @Input() disabled!: boolean; // get disabled state from outside
+  @Input() onchange!: Function; // onchange trigger a function(this)
+
+  @Input() text!: { // override text for field
+    pattern?:string // regex pattern for validation
+  };
+
+  @Input() select!: { // override select for field
+    none?: string, // none option text instead of null
+    other?: string, // Other fill-in option text, will override to allow other
+    filter?: Function // filter choices by a function
+  };
+  
+  @Input() file!: { // override file for field
+    extract?: boolean, // extract files from zip and email
+    primary?: string, // primary field name
+    doctypes?: Array<string>, // document types
+    doctype?: string, // document type field name
+    notes?: string, // notes field name
+    archive?: string, // archive field name
+    view?: number, // view type
+    accept?: string, // accept file types attribute
+    download?: boolean, // force download of files
+    uploadonly?: boolean // only upload files
+  };
 
   declare editor: Editor;
   declare toolbar: Toolbar;
   declare tooltip: boolean;
   declare filesOver: boolean;
   declare name: string;
-  declare users: User[];
+  declare users: Array<User>;
   declare display: any;
-  declare loading:any[number];
+  declare loading: Array<number>;
   declare UserQuery: UserQuery;
-  declare filterMulti:string;
-  declare unused:string;
+  declare filterMulti: string;
+  declare unused: string;
 
   constructor(
     private elRef: ElementRef
   ) {
-    if (!this.pattern)
-      this.pattern = '.*';
+    if (!this.text)
+      this.text = { };
+    if (!this.select)
+      this.select = { };
+    if (!this.file)
+      this.file = { };
 
     // rich text field
     this.editor = new Editor();
@@ -212,7 +234,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this.form[this.field] = e.target ? e.target.value : e;
     // if on change passed in
     if (typeof this.onchange == "function")
-      this.onchange();
+      this.onchange(this);
   }
   
   /* 
@@ -229,10 +251,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // get choices from list
     let choices = this.get('Choices');
     // use any provided filter
-    if (typeof this.filter == "function")
-      choices = choices.filter((c:any, i:number, a:any) => this.filter(c,i,a,this));
+    if (typeof this.select.filter == "function")
+      choices = choices.filter((c:any, i:number, a:any) => this.select.filter ? this.select.filter(c,i,a,this) : true);
     // common filters
-    var other = this.other;
+    var other = this.select.other;
     return choices.filter((x:string) => {
       if (!x || x == '')
         return false;
@@ -252,7 +274,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // selected field option not in available choices, i.e. other
   notInChoices(): boolean {
-    if (!this.form[this.field] || (this.form[this.field] == '-' && this.none))
+    if (!this.form[this.field] || (this.form[this.field] == '-' && this.select.none))
       return false;
     var choices = this.choices();
     if (!choices)
@@ -286,92 +308,102 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   attachments(): any[string] {
     if (!this.form[this.field] || !this.form[this.field].results)
       return [];
-    this.form[this.field].results.forEach((r:any) => {
-      r.Prefix = r.Prefix || (~r.FileName.indexOf('-') ? r.FileName.split('-')[0] : '');
+    var v = this.file.view ?? 0;
+    return this.form[this.field].results.filter((f:any) => {
+      if (v == 0 || !this.file.archive)
+        return true;
+      if (v == 1 && !f.ListItemAllFields[this.file.archive])
+          return true;
+      if (v == -1 && f.ListItemAllFields[this.file.archive])
+          return true;
+      return false;
     });
-    var prefix:any = this.get('Prefix') || '';
-    return this.form[this.field].results.filter((r:any[string]) => {
-      return prefix == ''
-        || typeof prefix == "object"
-        || r.Prefix.toLowerCase() == prefix.toLowerCase()
-    })
   }
 
-  // delete or mark as deleting attachment from array
-  delete(n:any[string]) {
-    if (n.ServerRelativeUrl != null) {
-      n.Deleted = true;
-    } else {
-      this.form[this.field].results = this.form[this.field].results.filter((f:any[string]) => {
-        return f.FileName.toLowerCase() != n.FileName.toLowerCase()
-      })
+  setPrimary(f:any, e:any) {
+    // remove primry from all
+    this.form[this.field].results.forEach(r => {
+      r.Primary = false;
+      if (this.file.primary)
+        r.ListItemAllFields[this.file.primary] = false;
+    });
+
+    // if unchecked then return
+    if (!(e.target ? e.target['checked'] : e))
+      return;
+
+    // set primary to this
+    f.Primary = true;
+    if (this.file.primary)
+      f.ListItemAllFields[this.file.primary] = true;
+
+    // if it has a doc type, then set primary to all with same doc type
+    if (this.file.doctype) {
+      this.form[this.field].results.forEach(r => {
+        if (!this.file.doctype)
+          return;
+        r.Primary = r.ListItemAllFields[this.file.doctype] == f.ListItemAllFields[this.file.doctype];
+      });
     }
-    
-    // if on change passed in
-    if (typeof this.onchange == "function")
-      this.onchange();
   }
 
-  // unmark a file as deleting from the array
-  undelete(a:any[string]) {
-    a.Deleted = null;
-    
-    // if on change passed in
+  setClass(f: any, e: any) {
+    if (!this.file.doctype)
+      return;
+    f.ListItemAllFields[this.file.doctype] = e.target ? e.target['value'] : e;
+    f.Changed = true;
+  }
+
+  delete(i: number, f?: any, a:boolean = false) {
+    if (!f.ServerRelativeUrl) {
+      // not uploaded then exclude from potential upload
+      this.form[this.field].results.splice(i, 1);
+    } else {
+      // if uploaded already
+      if (!this.file.archive || this.field == 'Attachments') {
+        // no archive flag or its attachments so no archiving, then flag for deletion
+        f.Deleted = !f.Deleted;
+      } else {
+        // toggle archived or delete flag
+        if (f.ListItemAllFields[this.file.archive] && (a || f.Deleted))
+          f.Deleted = a;
+        else
+          f.ListItemAllFields[this.file.archive] = a;
+      }
+    }
+
     if (typeof this.onchange == "function")
-      this.onchange();
+      this.onchange(this);
   }
 
   // add attachment to array
   add(file:any) {
-    var prefix = ((this.get('Prefix') || '') != '' && typeof this.get('Prefix') == "string" ? this.get('Prefix') + '-' : '');
-    var r = new RegExp(`^${prefix}`, 'i');
-    var files:any[any[any]] = [], dup:any[string] = [];
-
-    // ensure the file name doenst already exist as duplicaes are not allowed
-    for (var f = 0; f < file.files.length; f++) {
-      var n = prefix + file.files[f].name.replace(r, '').replace(/[%'#]/g,'-');
-      
-      this.form[this.field].results.forEach((a:any[string]) => {
-        if (!a.Deleted && a.FileName.toLowerCase() == n.toLowerCase()) {
-          dup.push(n);
-        }
-      });
-
-      if (dup.indexOf(n) == -1)
-        files.push(file.files[f]);
-    }
-
-    if (dup.length > 0)
-      alert('File(s) already exist with name(s): ' + dup.join(', '));
-    
-    // read the file into the files array
+    // read the files into the files array
+    var files:any = [];
+    for (var i = file.files.length - 1; i >= 0; i--)
+      files.push(file.files[i]);
+    // copy these outside for reuse in the loop
     var ths = this;
+    var remaining = files.length;
+    // loop the array in forEach for variable isolation
     files.forEach((f:any) => {
       var reader = new window.FileReader();
-      reader.onload = function (event:any) {
-        var data = '';
-        var bytes = new window.Uint8Array(event.target.result);
-        var len = bytes.byteLength;
-        for (var i = 0; i < len; i++) {
-          data += String.fromCharCode(bytes[i]);
+      reader.onload = async function (event:any) {
+        ths.appendFile(f.name, event.target.result, ths.form[ths.field].results, false);
+
+        if (ths.file.extract) {
+          if (~f.name.toLowerCase().indexOf(".zip"))
+            await ths.zips(event.target.result, ths.form[ths.field].results);
+          else if (~f.name.toLowerCase().indexOf(".msg"))
+            await ths.emails(event.target.result, ths.form[ths.field].results);
         }
-
-        var n = prefix + f.name.replace(r, '').replace(/[%'#]/g,'-');
         
-        ths.form[ths.field].results.push({
-          FileName: n,
-          ServerRelativeUrl: null,
-          Data: event.target.result, //data,
-          Length: len,
-          Prefix: prefix,
-          UploadName: n
-        });
-
-        setTimeout(() => file.value = null, 10);
-            
-        // if on change passed in
         if (typeof ths.onchange == "function")
-          ths.onchange();
+          ths.onchange(this);
+
+        remaining--;
+        if (remaining == 0)
+          setTimeout(() => file.value = null, 10);
       }
       reader.onerror = function () {
         alert('File read error: ' + f.name);
@@ -384,42 +416,69 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     })
   }
 
-  // prefix passed is array use as drop down
-  prefixes(): boolean {
-    return this.get('Prefix') != null && typeof this.get('Prefix') == "object" && this.get('Prefix').length > 0
+  appendFile(fileName:string, data:any, results:any, skip:boolean) {
+    // skip small images
+    if (~fileName.toString().toLowerCase().indexOf(".png")
+      || ~fileName.toString().toLowerCase().indexOf(".jpg")
+      || ~fileName.toString().toLowerCase().indexOf(".gif"))
+      if (skip && data.length < 8096)
+        return;
+
+      // cleanup the name
+      var n = fileName.replace(/[%'#]/g,'-');
+      // get the extension
+      var e = n.substring(n.lastIndexOf('.')+1);
+      // get the first part of the name
+      var f = n.substring(0, n.lastIndexOf('.'));
+      // get the title
+      var t = f.length > 255 ? f.substring(0, 255) : f;
+      // get shortened file name
+      var s = f.length > 100 ? f.substring(0, 100) : f;
+
+      // find the next available name by appending a number
+      var i = 1, newName = `${s}.${e}`;
+      while (results.filter(f => f.FileName == newName).length > 0) {
+        newName = `${s} (${i++}).${e}`;
+      }
+      
+      results.push({
+        FileName: newName,
+        Data: data['buffer'] || data,
+        Length: data.length || data.byteLength,
+        ListItemAllFields: { Title: t }
+    });
   }
 
-  // on change prefix drop down
-  prefix(a:any, p:any) {
-    // clean up file name of all previous prefixes
-    var rem = a.FileName;
-    this.get('Prefix').forEach((x:any) => {
-      var n = ((x || '') != '' ? x + '-' : '');
-      var r = new RegExp(`^${n}`, 'i');
-      rem = rem.replace(r, '');
-    });
+  // extract zip files and append to results
+  async zips(data:any, results:any) {
+    try {
+      var entries = await (new zip.ZipReader(new zip.BlobReader(data))).getEntries({});
+      if (!entries || entries.length == 0)
+        return;
 
-    // sufix new prefix value
-    rem = (p.value ? p.value + '-' : '') + rem;
-    
-    // check for duplicates after rename
-    var dup:any[string] = [];
-    this.form[this.field].results.forEach((a:any[string]) => {
-      if (!a.Deleted && a.FileName.toLowerCase() == rem.toLowerCase()) {
-        dup.push(rem);
+      entries.forEach((entry:any) => {
+        if (entry.directory)
+          return;
+        entry.getData(new zip.BlobWriter(), (blob:any) => {
+          this.appendFile(entry.filename, blob, results, true);
+        });
+      });
+    } catch (e) { }
+  }
+
+  // extract and append email attachments to results
+  async emails(data:any, results:any) {
+    try {
+      var msgReader = new MsgReader.MSGReader(data);
+      // needs to be triggered to get the parser
+      msgReader.getFileData();
+      var i = 0;
+      // keep going until error because the part of this module that gives the count isnt mapped in typescript
+      while (true) {
+        var file = msgReader.getAttachment(i++);
+        this.appendFile(file.fileName, file.content, results, true);
       }
-    });
-
-    if (dup.length == 0) {
-      // if no duplicates set new file name
-      a.FileName = rem;
-      a.Prefix = p.value;
-    } else {
-      // return to last prefix
-      p.value = a.Prefix;
-      // inform user
-      alert('File(s) already exist with name(s): ' + dup.join(', '));
-    }
+    } catch (e) { }
   }
 
   // dragging and dropping, hover
@@ -502,9 +561,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.name = '';
     this.users = [];
     
-    // if on change passed in
     if (typeof this.onchange == "function")
-      this.onchange();
+      this.onchange(this);
   }
 
   // load list data only has IDs so expand the object
@@ -556,10 +614,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.display = this.display.filter((x:any) => {
       return x.Id != usr
     })
-    
-    // if on change passed in
+
     if (typeof this.onchange == "function")
-      this.onchange();
+      this.onchange(this);
   }
 
   // trigger user search
