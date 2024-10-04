@@ -132,10 +132,10 @@
             </tr>
             <tr *ngFor="let f of attachments();let i = index">
                 <td *ngIf="file.primary || file.doctype">
-                  <input type="checkbox" [disabled]="disabled" [checked]="(file.primary && f.ListItemAllFields[file.primary]) || f.Primary" (click)="setPrimary(f, $event)" name="FilePrimary_{{i}}">
+                  <input type="checkbox" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" [checked]="(file.primary && f.ListItemAllFields[file.primary]) || f.Primary" (click)="setPrimary(f, $event)" name="FilePrimary_{{i}}">
                 </td>
                 <td *ngIf="file.doctype">
-                  <select (change)="setClass(f,$event)" [disabled]="disabled" name="FileCat_{{i}}">
+                  <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" name="FileCat_{{i}}">
                     <option *ngIf="f.ListItemAllFields[file.doctype] && !f.Changed" value="{{f.ListItemAllFields[file.doctype]}}" selected>{{f.ListItemAllFields[file.doctype]}}</option>
                     <option *ngIf="!f.ListItemAllFields[file.doctype]" value=""></option>
                     <option *ngFor="let v of file.doctypes" value="{{v}}">{{v}}</option>
@@ -162,7 +162,7 @@
                 </td>
 
                 <td *ngIf="file.notes">
-                  <input [(ngModel)]="f.ListItemAllFields[file.notes]" [disabled]="disabled" style="width: 95%;" name="FileDesc_{{i}}">
+                  <input [(ngModel)]="f.ListItemAllFields[file.notes]" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" style="width: 95%;" name="FileDesc_{{i}}">
                 </td>
                 <td>
                   {{!f.ServerRelativeUrl ? 'Pending submission' : f.TimeCreated | date:'dd MMM yyyy HH:mm'}}
