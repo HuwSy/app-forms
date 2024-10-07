@@ -362,12 +362,16 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       // if uploaded already
       if (!this.file.archive || this.field == 'Attachments') {
         // no archive flag or its attachments so no archiving, then flag for deletion
+        if (a && !confirm('Are you sure you wish to delete this file?'))
+          return;
         f.Deleted = !f.Deleted;
       } else {
         // toggle archived or delete flag
-        if (f.ListItemAllFields[this.file.archive] && (a || f.Deleted))
+        if (f.ListItemAllFields[this.file.archive] && (a || f.Deleted)) {
+          if (a && !confirm('Are you sure you wish to delete this file?'))
+            return;
           f.Deleted = a;
-        else
+        } else
           f.ListItemAllFields[this.file.archive] = a;
       }
     }
