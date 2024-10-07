@@ -389,7 +389,7 @@ export class SharepointChoiceUtils {
       if (serverRelative.indexOf("://") >= 0)
         serverRelative = serverRelative.substring(serverRelative.indexOf('/', 9));
 
-      var files = await this.sp.web.getFolderByServerRelativePath(serverRelative.replace(/\/$/, '') + (additional ? '/'+additional : '')).files.expand('ListItemAllFields')();
+      var files = await this.sp.web.getFolderByServerRelativePath(serverRelative.replace(/\/$/, '') + (additional ? '/'+additional : '')).files.orderBy('Created').expand('ListItemAllFields')();
       
       var ret:Array<any> = [];
       files.forEach(async (file:any) => {
