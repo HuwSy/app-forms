@@ -364,7 +364,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         // no archive flag or its attachments so no archiving, then flag for deletion
         if (a && !confirm('Are you sure you wish to delete this file?'))
           return;
-        f.Deleted = !f.Deleted;
+        f.Deleted = a;
       } else {
         // toggle archived or delete flag
         if (f.ListItemAllFields[this.file.archive] && (a || f.Deleted)) {
