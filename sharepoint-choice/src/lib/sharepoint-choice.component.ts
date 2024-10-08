@@ -354,6 +354,15 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     f.Changed = true;
   }
 
+  width(): string {
+    var w = 2;
+    this.file.doctypes?.forEach(d => {
+      if (d.length > w)
+        w = d.length;
+    });
+    return `width: ${w}ch`;
+  }
+
   delete(i: number, f?: any, a:boolean = false) {
     if (!f.ServerRelativeUrl) {
       // not uploaded then exclude from potential upload
