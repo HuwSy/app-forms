@@ -135,7 +135,7 @@
                   <input type="checkbox" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" [checked]="(file.primary && f.ListItemAllFields[file.primary]) || f.Primary" (click)="setPrimary(f, $event)" name="FilePrimary_{{i}}">
                 </td>
                 <td *ngIf="file.doctype">
-                  <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" name="FileCat_{{i}}">
+                  <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" name="FileCat_{{i}}" [style]="width()">
                     <option *ngIf="f.ListItemAllFields[file.doctype] && !f.Changed" value="{{f.ListItemAllFields[file.doctype]}}" selected>{{f.ListItemAllFields[file.doctype]}}</option>
                     <option *ngIf="!f.ListItemAllFields[file.doctype]" value=""></option>
                     <option *ngFor="let v of file.doctypes" value="{{v}}">{{v}}</option>
