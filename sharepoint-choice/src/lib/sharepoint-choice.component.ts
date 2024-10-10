@@ -5,6 +5,8 @@ import { Logger, LogLevel } from "@pnp/logging";
 import { Editor, Toolbar } from 'ngx-editor';
 import * as MsgReader from '@sharpenednoodles/msg.reader-ts';
 import * as zip from "@zip.js/zip.js";
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
   selector: 'app-choice',
@@ -23,13 +25,19 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   @Input() onchange!: Function; // onchange trigger a function(this)
 
   @Input() text!: { // override text for field
-    pattern?:string // regex pattern for validation
+    pattern?:string, // regex pattern for validation
+
+    search?:Function, // search via api for drop down options
+    select?:Function, // upon selection in drop down call back function
+    parent?:any // parent object that the control belongs to for call backs
   };
 
   @Input() select!: { // override select for field
     none?: string, // none option text instead of null
     other?: string, // Other fill-in option text, will override to allow other
+
     filter?: Function // filter choices by a function
+    parent?:any // parent object that the control belongs to for call backs
   };
   
   @Input() file!: { // override file for field
@@ -56,6 +64,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   declare UserQuery: UserQuery;
   declare filterMulti: string;
   declare unused: string;
+  declare results: any[any];
+  declare pos: number;
+
+  public textKey: Subject<string> = new Subject<string>();
+  public userKey: Subject<string> = new Subject<string>();
 
   constructor(
     private elRef: ElementRef
@@ -82,6 +95,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // field must be model bound even if not is use
     this.unused = '';
     
+    this.results = [];
+    this.pos = -1;
+    
     // user(s)
     this.users = [];
     this.display = [];
@@ -98,6 +114,16 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         SharePointGroupID: 0
       }
     };
+    
+    this.textKey.pipe(
+      debounceTime(250),
+      distinctUntilChanged()
+    ).subscribe((key) => this.onUpTextSearch(key));
+    
+    this.userKey.pipe(
+      debounceTime(250),
+      distinctUntilChanged()
+    ).subscribe((key) => this.onUpUserSearch(key));
   }
 
   // on init, destroy
@@ -238,6 +264,56 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
   
   /* 
+  Common parts between text fields
+  */
+
+  async onUpText(key): Promise<void> {
+    if (!this.text.search)
+      return;
+
+    if (key == "ArrowDown") {
+      if (this.pos < this.results.length - 1)
+        this.pos++;
+    } else if (key == "ArrowUp") {
+      if (this.pos > 0)
+        this.pos--;
+    } else if (key == "Enter") {
+      await this.selectedText(this.results[this.pos]);
+    } else {
+      if (!this.form[this.field])
+        this.results = [];
+      else
+        this.textKey.next(this.form[this.field]);
+    }
+  }
+
+  async onUpTextSearch(text:string): Promise<void> {
+    if (!this.text.search)
+      return;
+
+    this.text.search(this.form[this.field], this.text.parent || this).then((res:any) => {
+      this.results = res;
+      this.pos = -1;
+    });
+  }
+
+  async selectedText(res:any): Promise<void> {
+    if (!this.text.search)
+      return;
+
+    if (!res) {
+      this.form[this.field] = null;
+      this.results = [];
+      return;
+    }
+
+    this.form[this.field] = res[this.field];
+    if (this.text.select)
+      await this.text.select(res, this.text.parent || this);
+    this.results = [];
+  }
+
+  /* 
   Common parts between choice fields
   */
 
@@ -252,7 +328,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     let choices = this.get('Choices');
     // use any provided filter
     if (typeof this.select.filter == "function")
-      choices = choices.filter((c:any, i:number, a:any) => this.select.filter ? this.select.filter(c,i,a,this) : true);
+      choices = choices.filter((c:any, i:number, a:any) => this.select.filter ? this.select.filter(c,i,a,this.select.parent || this) : true);
     // common filters
     var other = this.select.other;
     return choices.filter((x:string) => {
@@ -356,7 +432,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   width(): string {
     var w = 2;
-    this.file.doctypes?.forEach(d => {
+    this.file.doctypes?.forEach((d) => {
       if (d.length > w)
         w = d.length;
     });
@@ -633,17 +709,35 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // trigger user search
-  async onUp(): Promise<void> {
-    if (this.name.length < 3) {
-      this.users = [];
-      return;
+  async onUpUser(key): Promise<void> {
+    if (key == "ArrowDown") {
+      if (this.pos < this.results.length - 1)
+        this.pos++;
+    } else if (key == "ArrowUp") {
+      if (this.pos > 0)
+        this.pos--;
+    } else if (key == "Enter") {
+      this.selectedUser(this.users[this.pos]);
+    } else {
+      if (!this.name || this.name.length < 3)
+        this.users = [];
+      else
+        this.userKey.next(this.name);
     }
+  }
+
+  async onUpUserSearch(text:string): Promise<void> {
+    if (!this.spec['odata.context'])
+      return;
+
+    var url = (await this.spec['odata.context'].web()).ServerRelativeUrl;
+
     // set the user partial being searched
     this.UserQuery.queryParams.QueryString = this.name;
     // set group each query to adapt to changes
     this.UserQuery.queryParams.SharePointGroupID = parseInt(this.get('SelectionGroup') || 0);
     // ensure up to date digest for http posting
-    var token:any = await fetch(this.get('Context') + '/_api/contextinfo', {
+    var token:any = await fetch(url + '/_api/contextinfo', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -652,7 +746,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     });
     let digest = await token.json();
     // query users api, no pnp endpoint for this
-    var search:any = await fetch(this.get('Context') + '/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.ClientPeoplePickerSearchUser', {
+    var search:any = await fetch(url + '/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.ClientPeoplePickerSearchUser', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
