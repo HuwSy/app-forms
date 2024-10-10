@@ -117,8 +117,6 @@ export class SharepointChoiceUtils {
           var arr = await this.sp.web.lists.getByTitle(listTitle).fields();
           arr.forEach(x => {
             spec[x.InternalName] = x;
-            // used for people searches only as pnp doesnt have a suitable endpoint yet
-            spec[x.InternalName].Context = this.context;
           });
         } catch (e) {
           spec['Title'] = {TypeAsString:'Text',MaxLength:16,Description:'Tooltip'};
