@@ -51,8 +51,22 @@
     </div>
     
     <div layout="column" *ngIf="get('TypeAsString') == 'Text'">
-        <input flex [disabled]="disabled" type="text" [pattern]="text.pattern || '.*'" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_T" [maxlength]="get('MaxLength')" (change)="change($event)">
+        <input flex [disabled]="disabled" type="text" [pattern]="text.pattern || '.*'" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_T" [maxlength]="get('MaxLength')" (change)="change($event)"
+            (keyup)="onUpText($event.key)" (click)="onUpText(undefined)">
         <div class="MaxLength" [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
+
+        <div style="position: relative; padding: 0;" [hidden]="disabled">
+          <div class="AutoComplete" *ngIf="results.length > 0">
+            <ul>
+              <li *ngFor="let result of results; let i = index" (click)="selectedText(result)" [hidden]="result.hide" [style]="(pos == i ? 'background-color: rgba(0, 0, 0, 0.04);' : '')">
+                {{result[field]}}
+              </li>
+              <li style="text-align: right;" (click)="selectedText(null)">
+                Cancel
+              </li>
+            </ul>
+          </div>
+        </div>
     </div>
     
     <div layout="column" *ngIf="!disabled && get('TypeAsString') == 'Note' && !get('RichText') && !get('AppendOnly')">
@@ -188,11 +202,12 @@
         <div *ngIf="form[field + 'Id'] && !form[field + 'Id'].results">
             <span style="padding: 8px;">{{displayUser(form[field + 'Id'])}} <a (click)="removeUser(null)" style="color: red;" [hidden]="disabled">X</a></span>
         </div>
-        <input type="text" [(ngModel)]="name" name="name" (keyup)="onUp()" [hidden]="disabled">
-        <div style="position: relative; padding: 0;">
-            <div class="AutoComplete" *ngIf="users.length > 0 && name && name.length >= 3">
-                <ul *ngFor="let user of users">
-                    <li (click)="selectedUser(user)">
+        <input type="text" [(ngModel)]="name" name="name" (keyup)="onUpUser($event.key)" (click)="onUpUser(undefined)" [hidden]="disabled || (get('TypeAsString') == 'User' && form[field + 'Id'])">
+
+        <div style="position: relative; padding: 0;" [hidden]="disabled">
+            <div class="AutoComplete" *ngIf="users.length > 0">
+                <ul>
+                    <li *ngFor="let user of users; let i = index" (click)="selectedUser(user)" [style]="(pos == i ? 'background-color: rgba(0, 0, 0, 0.04);' : '')">
                         {{user.DisplayText}}
                     </li>
                 </ul>
@@ -210,7 +225,8 @@
     </div>
     
     <div layout="column" *ngIf="['Lookup','LookupMulti','TaxonomyFieldType','TaxonomyFieldTypeMulti','AllDayEvent','Calculated','Computed','ContentTypeId','Counter','CrossProjectLink','Currency','File','GridChoice','Guid','ModStat','MultiColumn','PageSeparator','Recurrence','ThreadIndex','Threading','WorkflowEventType','WorkflowStatus','FieldLocation'].indexOf(get('TypeAsString')) >= 0">
-        <div style="opacity:0.85">Error, field type not yet available...</div>
+        {{form[field] && form[field].results ? form[field].results.join(', ') : form[field]}}
+        <div style="opacity:0.85">Error, field type not yet editable...</div>
     </div>
     
     <span style="display:none !important" id="DebugValue_{{field}}">{{form[field]}}</span>
