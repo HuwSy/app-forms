@@ -21,7 +21,6 @@ import { AngularLogging } from './App';
   imports: [
     BrowserModule,
     FormsModule,
-    HttpClientModule,
     BrowserAnimationsModule,
     SharepointChoiceModule
   ],
