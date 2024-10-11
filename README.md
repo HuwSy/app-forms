@@ -2,12 +2,12 @@
 
 A simple Angular framework for rapid development originally in AngularJS/JavaScript and progressed to Angular18 within an SPFx wrapper giving controls which can use this.spec to determin the field details and manipulate this.form
 
-Requires node 22, nvm can be used effectively
+Requires node 20, nvm can be used effectively
 npm install @angular/cli@18
 
 npm run ng new --commit=false --routing=false --style=scss --directory .\ <solution>
 
-New web parts
+New web parts/components
 ```
 npm run ng generate component --style=scss <webpart>
 ```
@@ -15,6 +15,7 @@ npm run ng generate component --style=scss <webpart>
 To be added to app module
 ```
 import { SharepointChoiceModule } from 'sharepoint-choice';
+import { AngularLogging } from './App';
 ```
 ```
   imports: [
@@ -25,6 +26,15 @@ import { SharepointChoiceModule } from 'sharepoint-choice';
     SharepointChoiceModule
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  providers: [{
+    provide: ErrorHandler,
+    useClass: AngularLogging
+  }]
+```
+```
+  ngDoBootstrap() {
+    customElements.define('app-COMPONENT', createCustomElement(COMPONENT, { injector: this.injector }));
+  }
 ```
 
 To be added to html templates
@@ -38,7 +48,7 @@ import { SharepointChoiceUtils } from 'sharepoint-choice';
 ```
 ```
 // register the utils
-this.util = new SharepointChoiceUtils(this.context);
+this.util = new SharepointChoiceUtils(this.context || null);
 
 // load user and permission details
 this.util.permissions().then(r => {
@@ -62,7 +72,7 @@ this.util.history(id, this.list).then(d => {
     this.versions = d
 });
 
-// save the form
+// save the form and any attachments on the form object
 this.util.save(this.form, this.uned, this.list).then(id => {
     this.form.Id = id;
 });
@@ -109,7 +119,6 @@ Dependencies
 
 To be added to tsconfig.json to avoid some errors
 ```
-  "strict": false,
   "skipLibCheck": true,
 ```
 
@@ -131,7 +140,7 @@ Make the index.html multi webpart
 
 .vscode/launch.json
 ```
-  "url": "https://.sharepoint.com/sites/DEV-<site name>"
+  "url": "https://.sharepoint.com/sites/<site name>"
 ```
 
 To generate SSL certs for debugging within localhost and SPFx wrapper
@@ -146,8 +155,7 @@ Which will need this to be added to angular.json "serve":
     "browserTarget": "<solution>:build:development",
     "publicHost": "localhost",
     "port": 443,
-    "ssl": true,
-    "disableHostCheck": true
+    "ssl": true
   }
 },
 "options": {
