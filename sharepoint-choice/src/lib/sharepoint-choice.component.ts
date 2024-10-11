@@ -711,7 +711,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // trigger user search
   async onUpUser(key): Promise<void> {
     if (key == "ArrowDown") {
-      if (this.pos < this.results.length - 1)
+      if (this.pos < this.users.length - 1)
         this.pos++;
     } else if (key == "ArrowUp") {
       if (this.pos > 0)
