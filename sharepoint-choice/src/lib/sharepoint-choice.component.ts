@@ -4,9 +4,12 @@ import "@pnp/sp/webs";
 import { Logger, LogLevel } from "@pnp/logging";
 import { Editor, Toolbar } from 'ngx-editor';
 import * as MsgReader from '@sharpenednoodles/msg.reader-ts';
-import * as zip from "@zip.js/zip.js";
+import { readEml } from 'eml-parse-js';
+import * as JSZip from 'jszip';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { SharepointChoiceUtils } from './sharepoint-choice.utils';
+import { App } from './App';
 
 @Component({
   selector: 'app-choice',
@@ -478,24 +481,21 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     files.forEach((f:any) => {
       var reader = new window.FileReader();
       reader.onload = async function (event:any) {
-        ths.appendFile(f.name, event.target.result, ths.form[ths.field].results, false);
+        try {
+          await ths.appendFile(f.name, event.target.result, ths.form[ths.field].results, false);
+          
+          if (typeof ths.onchange == "function")
+            ths.onchange(this);
 
-        if (ths.file.extract) {
-          if (~f.name.toLowerCase().indexOf(".zip"))
-            await ths.zips(event.target.result, ths.form[ths.field].results);
-          else if (~f.name.toLowerCase().indexOf(".msg"))
-            await ths.emails(event.target.result, ths.form[ths.field].results);
+          remaining--;
+          if (remaining == 0)
+            setTimeout(() => file.value = null, 10);
+        } catch (e) {
+          alert(`File read error: ${f.name} - ${e}`);
         }
-        
-        if (typeof ths.onchange == "function")
-          ths.onchange(this);
-
-        remaining--;
-        if (remaining == 0)
-          setTimeout(() => file.value = null, 10);
       }
-      reader.onerror = function () {
-        alert('File read error: ' + f.name);
+      reader.onerror = function (e) {
+        alert(`File read error: ${f.name} - ${e}`);
         Logger.log({
           message: `Inside - add(${f.name})`,
           level: LogLevel.Error,
@@ -505,58 +505,125 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     })
   }
 
-  appendFile(fileName:string, data:any, results:any, skip:boolean) {
+  async outlook (transfer:any) {
+    var spc = new SharepointChoiceUtils();
+
+    function mailType(transfer:any, type:string) {
+      var item = transfer.getData(type);
+      if (item == '')
+        return null;
+      return JSON.parse(item)
+    }
+
+    let maillistrow = mailType(transfer, 'multimaillistmessagerows') || mailType(transfer, 'maillistrow');
+    if (maillistrow && maillistrow.mailboxInfos.length > 0) {
+      for (var i = 0; i < maillistrow.mailboxInfos.length; i++) {
+        var fileName = maillistrow.subjects[i] + ".eml";
+        
+        try {
+          // must double url encode any / in the message id
+          var fileContent:string = await spc.callApi(
+            App.Tenancy,
+            App.GraphClient,
+            undefined,
+            `https://graph.microsoft.com/v1.0/users/${maillistrow.mailboxInfos[i].mailboxSmtpAddress}/messages/${maillistrow.latestItemIds[i].replace(/\//g, '%252F')}/$value`,
+            'GET',
+            undefined,
+            true
+          );
+          
+          this.appendFile(fileName, new TextEncoder().encode(fileContent).buffer, this.form[this.field].results, false);
+        } catch (e) {
+          alert(`Email read error: ${fileName} - ${e}`);
+        }
+      }
+    }
+
+    let attachment = mailType(transfer, 'attachment');
+    if (attachment) {
+      let fileName = attachment.attachmentFile.name;
+
+      // truncate the attachment id 28 chars and = from the end to get the parent message id
+      let mail = attachment.attachmentFile.attachmentItemId.substring(0, attachment.attachmentFile.attachmentItemId.length - 29) + "=";
+
+      try {
+        // must double url encode any / in the message id and attachment id
+        var getAttachment:string = (await spc.callApi(
+          App.Tenancy,
+          App.GraphClient,
+          undefined,
+          `https://graph.microsoft.com/v1.0/users/${attachment.mailboxInfo.mailboxSmtpAddress}/messages/${mail.replace(/\//g, '%252F')}/attachments/${attachment.attachmentFile.attachmentItemId.replace(/\//g, '%252F')}`
+        )).contentBytes;
+
+        this.appendFile(fileName, Uint8Array.from(atob(getAttachment), c => c.charCodeAt(0)).buffer, this.form[this.field].results, false);
+      } catch (e) {
+        alert(`Attachment read error: ${fileName} - ${e}`);
+      }
+    }
+  }
+
+  async appendFile(fileName:string, data:ArrayBuffer, results:any, skip:boolean) {
     // skip small images
     if (~fileName.toString().toLowerCase().indexOf(".png")
       || ~fileName.toString().toLowerCase().indexOf(".jpg")
       || ~fileName.toString().toLowerCase().indexOf(".gif"))
-      if (skip && data.length < 8096)
+      if (skip && data.byteLength < 8096)
         return;
 
-      // cleanup the name
-      var n = fileName.replace(/[%'#]/g,'-');
-      // get the extension
-      var e = n.substring(n.lastIndexOf('.')+1);
-      // get the first part of the name
-      var f = n.substring(0, n.lastIndexOf('.'));
-      // get the title
-      var t = f.length > 255 ? f.substring(0, 255) : f;
-      // get shortened file name
-      var s = f.length > 100 ? f.substring(0, 100) : f;
+    // cleanup the name, more agressive as it may not be from a windows file system
+    var n = fileName.trim().replace(/[\\/:*?"%'#<>|]/g,'-');
+    // get the extension
+    var e = n.substring(n.lastIndexOf('.')+1);
+    // get the first part of the name
+    var f = n.substring(0, n.lastIndexOf('.'));
+    // get the title
+    var t = f.length > 255 ? f.substring(0, 255) : f;
+    // get shortened file name
+    var s = f.length > 100 ? f.substring(0, 100) : f;
 
-      // find the next available name by appending a number
-      var i = 1, newName = `${s}.${e}`;
-      while (results.filter(f => f.FileName == newName).length > 0) {
-        newName = `${s} (${i++}).${e}`;
-      }
-      
-      results.push({
-        FileName: newName,
-        Data: data['buffer'] || data,
-        Length: data.length || data.byteLength,
-        ListItemAllFields: { Title: t }
+    // find the next available name by appending a number
+    var i = 1, newName = `${s}.${e}`;
+    while (results.filter(f => f.FileName == newName).length > 0) {
+      newName = `${s} (${i++}).${e}`;
+    }
+    
+    results.push({
+      FileName: newName,
+      Data: data,
+      Length: data.byteLength,
+      ListItemAllFields: { Title: t }
     });
+    
+    if (!this.file.extract)
+      return;
+
+    if (fileName.toLowerCase().endsWith(".zip"))
+      await this.zips(data, results);
+    if (fileName.toLowerCase().endsWith(".msg"))
+      await this.msgs(data, results);
+    if (fileName.toLowerCase().endsWith(".eml"))
+      await this.emls(data, results);
   }
 
   // extract zip files and append to results
-  async zips(data:any, results:any) {
+  async zips(data:ArrayBuffer, results:Array<any>) {
     try {
-      var entries = await (new zip.ZipReader(new zip.BlobReader(data))).getEntries({});
-      if (!entries || entries.length == 0)
-        return;
-
-      entries.forEach((entry:any) => {
-        if (entry.directory)
-          return;
-        entry.getData(new zip.BlobWriter(), (blob:any) => {
-          this.appendFile(entry.filename, blob, results, true);
-        });
+      var zip = await JSZip.loadAsync(data);
+      var files = Object.keys(zip.files);
+      files.forEach(async (file) => {
+        try {
+          var buffer:ArrayBuffer|undefined = await zip.file(file)?.async('arraybuffer');
+          if (buffer)
+            await this.appendFile(file, buffer, results, false);
+        } catch (e) { }
       });
-    } catch (e) { }
+    } catch (e) {
+      // zip is uploaded so any extracted elements are only nice to have
+    }
   }
 
-  // extract and append email attachments to results
-  async emails(data:any, results:any) {
+  // extract and append msg email attachments to results
+  async msgs(data:ArrayBuffer, results:Array<any>) {
     try {
       var msgReader = new MsgReader.MSGReader(data);
       // needs to be triggered to get the parser
@@ -565,9 +632,32 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       // keep going until error because the part of this module that gives the count isnt mapped in typescript
       while (true) {
         var file = msgReader.getAttachment(i++);
-        this.appendFile(file.fileName, file.content, results, true);
+        try {
+          // square brackets for buffer here as file.content is a Uint8Array but the typing shows it as string
+          await this.appendFile(file.fileName, file.content['buffer'], results, true);
+        } catch (e) { }
       }
-    } catch (e) { }
+    } catch (e) {
+      // msg is uploaded so any extracted elements are only nice to have
+    }
+  }
+
+  // extract and append eml email attachments to results
+  async emls(data:ArrayBuffer, results:Array<any>) {
+    try {
+      // reads the email string data into a json object
+      readEml(new TextDecoder().decode(data), (err, ReadEmlJson) => {
+        if (err || !ReadEmlJson || !ReadEmlJson.attachments)
+          return;
+        ReadEmlJson.attachments.forEach(async (attachment:any) => {
+          try {
+            await this.appendFile(attachment.name, Uint8Array.from(atob(attachment.data64), c => c.charCodeAt(0)).buffer, results, true);
+          } catch (e) { }
+        });
+      });
+    } catch (e) {
+      // eml is uploaded so any extracted elements are only nice to have
+    }
   }
 
   // dragging and dropping, hover
@@ -588,8 +678,19 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   drop(evt:any) {
     evt.preventDefault();
     evt.stopPropagation();
-    this.add(evt.dataTransfer);
+    if (evt.dataTransfer?.files?.length > 0)
+      this.add(evt.dataTransfer);
+    if (evt.dataTransfer?.items?.length > 0)
+      this.outlook(evt.dataTransfer);
     this.filesOver = false;
+
+    // if no transfer on drop and not chromium based add the meta tag to allow the drop next time
+    if (!evt.dataTransfer && !window['chrome']) {
+      var m = document.createElement("meta");
+      m.httpEquiv = "X-UA-Compatible";
+      m.content = "chrome=1";
+      document.head.appendChild(m);
+    }
   }
 
   /* 
