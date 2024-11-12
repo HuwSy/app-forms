@@ -159,7 +159,7 @@
                 <td *ngIf="!f.Deleted && (!file.archive || !f.ListItemAllFields[file.archive])" style="position: relative;">
                   <a [hidden]="!file.download" download="{{f.FileName}}" href="{{f.ServerRelativeUrl}}" target="_blank" *ngIf="f.ServerRelativeUrl">{{f.ListItemAllFields?.Title || f.FileName}}</a>
                   <a [hidden]="file.download" href="{{f.ServerRelativeUrl}}" target="_blank" *ngIf="f.ServerRelativeUrl">{{f.ListItemAllFields?.Title || f.FileName}}</a>
-                  <input [disabled]="disabled" [hidden]="f.ServerRelativeUrl" [(ngModel)]="f.ListItemAllFields.Title" style="width: 95%;" name="FileName_{{i}}" [title]="f.FileName">
+                  <input [disabled]="disabled" [hidden]="f.ServerRelativeUrl" [(ngModel)]="f.ListItemAllFields.Title" style="width: 95%;" name="FileName_{{i}}" [title]="f.FileName + ' - ' + f.Length">
 
                   <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;" (click)="delete(i, f, true)" title="Delete" [hidden]="disabled">x</a>
                 </td>
