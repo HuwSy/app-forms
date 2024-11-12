@@ -208,7 +208,7 @@ export class SharepointChoiceUtils {
     }
   
     // calls an api more generically
-    public async callApi(tenancyOnMicrosoft: string, clientId: string, permissionScope: string, apiUrl?: string, httpMethod?: string, jsonPostData?: any):Promise<any> {
+    public async callApi(tenancyOnMicrosoft: string, clientId: string, permissionScope?: string, apiUrl?: string, httpMethod?: string, jsonPostData?: any, rawData: boolean = false):Promise<any> {
       // client settings
       var config = {
         auth: {
@@ -229,7 +229,7 @@ export class SharepointChoiceUtils {
       
       // permission settings
       var params = {
-        scopes: [permissionScope],
+        scopes: permissionScope ? [permissionScope] : [],
         account: msal.getAllAccounts()[0]
       };
 
@@ -264,8 +264,9 @@ export class SharepointChoiceUtils {
           });
       
         // return formatted data for 2xx, 4xx and 5xx will not return
-        if (r.status == 204)
-          return null;
+        if (r.status == 204) return null;
+        if (r.status != 200) throw 'Exception';
+        if (rawData) return await r?.text();
         return await r.clone().json();
       } catch (e) {
         throw `Exception getting API data with status ${r?.status} response ${await r?.text()}`;
