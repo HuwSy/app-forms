@@ -265,7 +265,7 @@ export class SharepointChoiceUtils {
       
         // return formatted data for 2xx, 4xx and 5xx will not return
         if (r.status == 204) return null;
-        if (r.status != 200) throw 'Exception';
+        if (r.status < 200 || r.status > 299) throw 'Exception';
         if (rawData) return await r?.text();
         return await r.clone().json();
       } catch (e) {
