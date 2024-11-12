@@ -8,5 +8,6 @@ export const App = {
         : ~document.location.href.toLowerCase().indexOf('/sit-') ? 'SIT' 
         : 'DEV',
     Token: '',
-    Tenancy: ''
+    Tenancy: '',
+    GraphClient: ''
 }
