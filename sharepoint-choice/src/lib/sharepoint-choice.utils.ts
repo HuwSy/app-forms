@@ -51,7 +51,7 @@ export class SharepointChoiceUtils {
       } catch (e) {
         // if in an iframe then assume its an office addin and needs the scripts loaded
         var s = document.createElement('script');
-        s.src = 'https://appsforoffice.microsoft.com/lib/1/hosted/office.js';
+        s.src = 'https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js';
         document.head.appendChild(s);
         s.addEventListener('load', () => {
           // only if office.js loaded
