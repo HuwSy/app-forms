@@ -1,4 +1,4 @@
-<div layout="column" class="choice" [ngClass]="{noTitle: (get('Title') || '') == ''}">
+<div layout="column" class="choice" [ngClass]="{noTitle: (get('Title') || '') == ''}" title="{{get('Title')}}">
     <label *ngIf="get('TypeAsString') == 'Boolean'">
         <input style="width: auto; height: auto;" flex [disabled]="disabled" type="checkbox" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_Y" (change)="change($event)">
         <span style="font-size: inherit;">{{get('Title')}}</span>
@@ -106,8 +106,8 @@
         <input flex="50" [disabled]="disabled" [(ngModel)]="form[field].Description" name="{{field}}_UD" maxlength="250" (change)="change($event)">
     </div>
     
-    <div layout="column" *ngIf="get('TypeAsString') == 'Attachments'" style="position: relative;">
-        <table class="files" *ngIf="field == 'Attachments' && !file.uploadonly">
+    <div layout="column" *ngIf="get('TypeAsString') == 'Attachments'" style="position: relative;overflow-x: auto;">
+        <table class="files" *ngIf="field == 'Attachments' && !file.uploadonly" cellspacing="0">
             <tr>
               <th>File Name</th>
               <th style="width: 0;"></th>
@@ -127,14 +127,14 @@
 
                   <a style="color: green; padding-left: 8px;cursor: pointer;" (click)="delete(i, f, false)" title="Undelete" [hidden]="disabled">+</a>
                 </td>
-                <td>
+                <td class="desktop">
                   {{!f.ServerRelativeUrl ? 'Pending submission' : ''}}
                 </td>
             </tr>
         </table>
 
-        <table class="files" *ngIf="field != 'Attachments' && !file.uploadonly">
-            <tr>
+        <table class="files" *ngIf="field != 'Attachments' && !file.uploadonly" cellspacing="0">
+            <tr class="desktop">
               <th style="width: 0; white-space: nowrap;" *ngIf="file.primary || file.doctype"></th>
               <th style="width: 0; white-space: nowrap;" *ngIf="file.doctype">File Type</th>
               <th>File Name</th>
@@ -145,10 +145,10 @@
                 <td colspan="5">No attachments</td>
             </tr>
             <tr *ngFor="let f of attachments();let i = index">
-                <td *ngIf="file.primary || file.doctype">
+                <td *ngIf="file.primary || file.doctype" class="desktop">
                   <input type="checkbox" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" [checked]="(file.primary && f.ListItemAllFields[file.primary]) || f.Primary" (click)="setPrimary(f, $event)" name="FilePrimary_{{i}}">
                 </td>
-                <td *ngIf="file.doctype">
+                <td *ngIf="file.doctype" class="desktop">
                   <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" name="FileCat_{{i}}" [style]="width()">
                     <option *ngIf="f.ListItemAllFields[file.doctype] && !f.Changed" value="{{f.ListItemAllFields[file.doctype]}}" selected>{{f.ListItemAllFields[file.doctype]}}</option>
                     <option *ngIf="!f.ListItemAllFields[file.doctype]" value=""></option>
@@ -162,6 +162,19 @@
                   <input [disabled]="disabled" [hidden]="f.ServerRelativeUrl" [(ngModel)]="f.ListItemAllFields.Title" style="width: 95%;" name="FileName_{{i}}" [title]="f.FileName + ' - ' + f.Length">
 
                   <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;" (click)="delete(i, f, true)" title="Delete" [hidden]="disabled">x</a>
+
+                  <div class="mobile" *ngIf="file.doctype">
+                    <input type="checkbox" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" [checked]="(file.primary && f.ListItemAllFields[file.primary]) || f.Primary" (click)="setPrimary(f, $event)" name="FilePrimaryM_{{i}}" style="width:16px">
+
+                    <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" name="FileCatM_{{i}}" style="width:calc(100% - 24px)">
+                      <option *ngIf="f.ListItemAllFields[file.doctype] && !f.Changed" value="{{f.ListItemAllFields[file.doctype]}}" selected>{{f.ListItemAllFields[file.doctype]}}</option>
+                      <option *ngIf="!f.ListItemAllFields[file.doctype]" value=""></option>
+                      <option *ngFor="let v of file.doctypes" value="{{v}}">{{v}}</option>
+                    </select>
+                  </div>
+                  <div class="mobile" *ngIf="file.notes">
+                    <input [(ngModel)]="f.ListItemAllFields[file.notes]" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" style="width: 100%;" name="FileDescM_{{i}}" placeholder="Notes...">
+                  </div>
                 </td>
                 <td *ngIf="!f.Deleted && file.archive && f.ListItemAllFields[file.archive]">
                   <span style="text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
@@ -175,14 +188,20 @@
                   <a style="color: green; padding-left: 8px;cursor: pointer;" (click)="delete(i, f, false)" title="Undelete" [hidden]="disabled">+</a>
                 </td>
 
-                <td *ngIf="file.notes">
+                <td *ngIf="file.notes" class="desktop">
                   <input [(ngModel)]="f.ListItemAllFields[file.notes]" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" style="width: 95%;" name="FileDesc_{{i}}">
                 </td>
-                <td>
+                <td class="desktop">
                   {{!f.ServerRelativeUrl ? 'Pending submission' : f.TimeCreated | date:'dd MMM yyyy HH:mm'}}
                 </td>
             </tr>
         </table>
+    </div>
+
+    <div layout="column" *ngIf="get('TypeAsString') == 'Attachments'" style="position: relative;">
+        <div *ngIf="hasOffice()">
+          <button (click)="importOffice()">Import office file(s)</button>
+        </div>
 
         <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A">
         <div [hidden]="disabled" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}" style="width: 175px; text-align: center;">
