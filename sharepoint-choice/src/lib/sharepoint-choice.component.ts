@@ -145,7 +145,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // .toLocaleString() will only retain 3 decimal places therefore split and do dp manually
     // if no dp then no decimal dot either
     // if dp only get 1st, should never be 2 i.e. 0.1.2
-    return !this.form[this.field] ? '' : this.form[this.field].toLocaleString().split('.')[0] + (this.form[this.field].toString().split('.').length == 1 ? '' : '.' + this.form[this.field].toString().split('.')[1].replace(/0*$/,''));
+    if (!this.form[this.field])
+      return '';
+    var s = this.form[this.field].toLocaleString().split('.');
+    return s[0] + (s.length == 1 ? '' : '.' + s[1].replace(/0*$/,''));
   }
 
   numberSet(e:string|undefined):void {
@@ -178,7 +181,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (!m && this.get('TypeAsString') == 'Text')
       m = 255;
     if (!m)
-      return 15;
+      return 255;
     return m - (this.form[this.field] || '').length;
   }
 
@@ -359,9 +362,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (!choices)
       return false;
     var ths = this;
-    return choices.filter((x:string) => {
-        return x == ths.form[ths.field];
-      }).length == 0;
+    return choices.indexOf(ths.form[ths.field]) < 0;
   }
 
   // on single selection change
@@ -434,12 +435,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   width(): string {
-    var w = 2;
-    this.file.doctypes?.forEach((d) => {
-      if (d.length > w)
-        w = d.length;
-    });
-    return `width: ${w}ch`;
+    var l = this.file.doctypes?.sort((a, b) => b.length - a.length);
+    if (!l || l.length == 0)
+      return '';
+    return `width: ${l[0].length}ch`;
   }
 
   delete(i: number, f?: any, a:boolean = false) {
@@ -469,7 +468,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // add attachment to array
-  add(file:any) {
+  async add(file:any) {
     // read the files into the files array
     var files:any = [];
     for (var i = file.files.length - 1; i >= 0; i--)
@@ -482,7 +481,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       var reader = new window.FileReader();
       reader.onload = async function (event:any) {
         try {
-          await ths.appendFile(f.name, event.target.result, ths.form[ths.field].results, false);
+          await ths.appendFile(f.name, event.target.result, ths.form[ths.field].results);
           
           if (typeof ths.onchange == "function")
             ths.onchange(this);
@@ -501,10 +500,12 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           level: LogLevel.Error,
         });
       };
+      // may need to consider how to await these each until all done if extractions start getting timely
       reader.readAsArrayBuffer(f);
     })
   }
 
+  // gets a drag and drop new outlook item which includes ids not file data and adds to the files array
   async outlook (transfer:any) {
     var spc = new SharepointChoiceUtils();
 
@@ -515,10 +516,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       return JSON.parse(item)
     }
 
+    // one or more email messages dropped
     let maillistrow = mailType(transfer, 'multimaillistmessagerows') || mailType(transfer, 'maillistrow');
-    if (maillistrow && maillistrow.mailboxInfos.length > 0) {
+    if (maillistrow) {
       for (var i = 0; i < maillistrow.mailboxInfos.length; i++) {
-        var fileName = maillistrow.subjects[i] + ".eml";
+        var fileName = maillistrow.subjects[i].trim() + ".eml";
         
         try {
           // must double url encode any / in the message id
@@ -532,13 +534,14 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             true
           );
           
-          this.appendFile(fileName, new TextEncoder().encode(fileContent).buffer, this.form[this.field].results, false);
+          await this.appendFile(fileName, new TextEncoder().encode(fileContent).buffer, this.form[this.field].results);
         } catch (e) {
           alert(`Email read error: ${fileName} - ${e}`);
         }
       }
     }
 
+    // an attachment dropped
     let attachment = mailType(transfer, 'attachment');
     if (attachment) {
       let fileName = attachment.attachmentFile.name;
@@ -548,28 +551,126 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
       try {
         // must double url encode any / in the message id and attachment id
-        var getAttachment:string = (await spc.callApi(
+        var getAttachment:any = await spc.callApi(
           App.Tenancy,
           App.GraphClient,
           undefined,
           `https://graph.microsoft.com/v1.0/users/${attachment.mailboxInfo.mailboxSmtpAddress}/messages/${mail.replace(/\//g, '%252F')}/attachments/${attachment.attachmentFile.attachmentItemId.replace(/\//g, '%252F')}`
-        )).contentBytes;
+        );
 
-        this.appendFile(fileName, Uint8Array.from(atob(getAttachment), c => c.charCodeAt(0)).buffer, this.form[this.field].results, false);
+        await this.appendFile(fileName, Uint8Array.from(atob(getAttachment.contentBytes), c => c.charCodeAt(0)).buffer, this.form[this.field].results, `Sent: ${new Date(getAttachment.lastModifiedDateTime)}`);
       } catch (e) {
         alert(`Attachment read error: ${fileName} - ${e}`);
       }
     }
   }
 
-  async appendFile(fileName:string, data:ArrayBuffer, results:any, skip:boolean) {
-    // skip small images
-    if (~fileName.toString().toLowerCase().indexOf(".png")
-      || ~fileName.toString().toLowerCase().indexOf(".jpg")
-      || ~fileName.toString().toLowerCase().indexOf(".gif"))
-      if (skip && data.byteLength < 8096)
-        return;
+  // if my office control type has loaded then we are in office addin and know the type
+  hasOffice() {
+    return 'OfficeType' in window;
+  }
 
+  // import from office addin selection or document panel
+  importOffice() {
+    var Office:any = window['Office'];
+
+    if (window['OfficeType'] == "Outlook") {
+      // if the adding type is outlook then get the selected email(s)
+      var spc = new SharepointChoiceUtils();
+
+      Office.context.mailbox.getSelectedItemsAsync((asyncResult:any) => {
+        if (asyncResult.status === Office.AsyncResultStatus.Failed)
+          return;
+
+        asyncResult.value.forEach(async (message) => {
+          // must double url encode any / in the message id
+          var fileContent:string = await spc.callApi(
+            App.Tenancy,
+            App.GraphClient,
+            undefined,
+            `https://graph.microsoft.com/v1.0/me/messages/${message.itemId.replace(/\//g, '%252F')}/$value`,
+            'GET',
+            undefined,
+            true
+          );
+
+          await this.appendFile(`${message.subject.trim()}.eml`, new TextEncoder().encode(fileContent).buffer, this.form[this.field].results);
+        });
+      });
+    } else {
+      // if the adding type is word or excel then get the current document
+      var docDataSlices:any = [];
+      var slicesReceived = 0;
+      var file:any;
+      var ths = this;
+
+      // get the file in 64k slices until complete
+      Office.context.document.getFileAsync(Office.FileType.Compressed, { sliceSize: 65536 }, (asyncResult:any) => {
+        if (asyncResult.status === Office.AsyncResultStatus.Failed)
+          return;
+
+        file = asyncResult.value;
+        try {
+          file.getSliceAsync(0, processSlice);
+        } finally {
+          file.closeAsync();
+        }
+      });
+
+      // process the slice and append to the files once it reaches the last slice
+      async function processSlice(sliceResult:any) {
+        if (sliceResult.status === Office.AsyncResultStatus.Failed)
+          throw sliceResult.error.message;
+
+        docDataSlices[sliceResult.value.index] = sliceResult.value.data;
+        if (++slicesReceived == file.sliceCount) {
+          let docData = [];
+          for (let i = 0; i < docDataSlices.length; i++)
+            docData = docData.concat(docDataSlices[i]);
+  
+          let fileContent = new String();
+          for (let j = 0; j < docData.length; j++)
+            fileContent += String.fromCharCode(docData[j]);
+
+          var fileName = Office.context.document.url?.split('/').pop();
+          if (!fileName) {
+            fileName = prompt("Please enter a file name:");
+            if (!fileName || fileName == '')
+              fileName = `OfficeAddin-${new Date().toISOString().replace(/:/g, '-')}`;
+
+            switch (window['OfficeType']) {
+              case "Word":
+                fileName += ".docx";
+                break;
+              case "Excel":
+                fileName += ".xlsx";
+                break;
+              case "PowerPoint":
+                fileName += ".pptx";
+                break;
+              case "OneNote":
+                fileName += ".one";
+                break;
+              case "Project":
+                fileName += ".mpp";
+                break;
+              case "Visio":
+                fileName += ".vsdx";
+                break;
+              default:
+                alert("Unknown Office type");
+                return;
+            }
+          }
+
+          await ths.appendFile(`${fileName}`, Uint8Array.from(atob(fileContent.toString()), c => c.charCodeAt(0)).buffer, ths.form[ths.field].results);
+        } else
+          file.getSliceAsync(slicesReceived, processSlice);
+      }
+    }
+  }
+
+  async appendFile(fileName:string, data:ArrayBuffer, results:any, desc?:string) {
     // cleanup the name, more agressive as it may not be from a windows file system
     var n = fileName.trim().replace(/[\\/:*?"%'#<>|]/g,'-');
     // get the extension
@@ -587,12 +688,17 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       newName = `${s} (${i++}).${e}`;
     }
     
-    results.push({
+    var file = {
       FileName: newName,
       Data: data,
       Length: data.byteLength,
       ListItemAllFields: { Title: t }
-    });
+    };
+
+    if (this.file.notes && desc)
+      file.ListItemAllFields[this.file.notes] = desc;
+
+    results.push(file);
     
     if (!this.file.extract)
       return;
@@ -613,8 +719,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       files.forEach(async (file) => {
         try {
           var buffer:ArrayBuffer|undefined = await zip.file(file)?.async('arraybuffer');
-          if (buffer)
-            await this.appendFile(file, buffer, results, false);
+          if (buffer) {
+            await this.appendFile(file, buffer, results, `Date: ${zip.files[file].date}`);
+          }
         } catch (e) { }
       });
     } catch (e) {
@@ -626,17 +733,24 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   async msgs(data:ArrayBuffer, results:Array<any>) {
     try {
       var msgReader = new MsgReader.MSGReader(data);
-      // needs to be triggered to get the parser
-      msgReader.getFileData();
-      var i = 0;
-      // keep going until error because the part of this module that gives the count isnt mapped in typescript
-      while (true) {
-        var file = msgReader.getAttachment(i++);
+      // triggered the parser
+      var fileData = msgReader.getFileData();
+      // if no sender name then its not an email
+      if (!('senderName' in fileData))
+        return;
+      // get the email date
+      var h = fileData.headers.split('\n').filter((x:string) => x.startsWith('Date: '));
+      var received = h && h.length > 0 ? new Date(h[0].replace('Date: ', '')) : new Date();
+      // get all attachments
+      fileData.attachments.forEach(async (attachment:MsgReader.MSGAttachment) => {
+        if (attachment.pidContentId)
+          return;
         try {
+          var file = msgReader.getAttachment(attachment);
           // square brackets for buffer here as file.content is a Uint8Array but the typing shows it as string
-          await this.appendFile(file.fileName, file.content['buffer'], results, true);
+          await this.appendFile(file.fileName, file.content['buffer'], results, `Sent: ${received}`);
         } catch (e) { }
-      }
+      });
     } catch (e) {
       // msg is uploaded so any extracted elements are only nice to have
     }
@@ -649,9 +763,12 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       readEml(new TextDecoder().decode(data), (err, ReadEmlJson) => {
         if (err || !ReadEmlJson || !ReadEmlJson.attachments)
           return;
+        var received = typeof ReadEmlJson.date == "string" ? new Date(ReadEmlJson.date) : ReadEmlJson.date || new Date();
         ReadEmlJson.attachments.forEach(async (attachment:any) => {
+          if (attachment.inline)
+            return;
           try {
-            await this.appendFile(attachment.name, Uint8Array.from(atob(attachment.data64), c => c.charCodeAt(0)).buffer, results, true);
+            await this.appendFile(attachment.name, Uint8Array.from(atob(attachment.data64), c => c.charCodeAt(0)).buffer, results, `Sent: ${received}`);
           } catch (e) { }
         });
       });
@@ -675,13 +792,16 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
   
   // dragging and dropping, drop
-  drop(evt:any) {
+  async drop(evt:any) {
     evt.preventDefault();
     evt.stopPropagation();
+
     if (evt.dataTransfer?.files?.length > 0)
-      this.add(evt.dataTransfer);
+      await this.add(evt.dataTransfer);
     if (evt.dataTransfer?.items?.length > 0)
-      this.outlook(evt.dataTransfer);
+      await this.outlook(evt.dataTransfer);
+
+    // after files then drop the shake
     this.filesOver = false;
 
     // if no transfer on drop and not chromium based add the meta tag to allow the drop next time
