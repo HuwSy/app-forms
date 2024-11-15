@@ -15,6 +15,7 @@
     "@pnp/sp",
     "@pnp/logging",
     "@sharpenednoodles/msg.reader-ts",
+    "@types/office-js",
     "jszip",
     "eml-parse-js",
     "ngx-editor",
