@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-choice",
-  "version": "6.1.6",
+  "version": "6.1.21",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
@@ -30,6 +30,7 @@
     "@pnp/logging": "^4.6.0",
     "@pnp/sp": "^4.6.0",
     "@sharpenednoodles/msg.reader-ts": "^0.1.2",
+    "@types/office-js": "^1.0.444",
     "eml-parse-js": "^1.1.15",
     "jszip": "^3.10.1",
     "ngx-editor": "^18.0.0",
