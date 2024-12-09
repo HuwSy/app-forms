@@ -233,7 +233,7 @@ export class SharepointChoiceUtils {
     }
   
     // calls an api more generically
-    public async callApi(tenancyOnMicrosoft: string, clientId: string, permissionScope?: string, apiUrl?: string, httpMethod?: string, jsonPostData?: any, rawData: boolean = false):Promise<any> {
+    public async callApi(tenancyOnMicrosoft: string, clientId: string, permissionScope?: string, apiUrl?: string, httpMethod?: string, jsonPostData?: any, dataType: string = 'json'):Promise<any> {
       // client settings
       var config = {
         auth: {
@@ -283,7 +283,7 @@ export class SharepointChoiceUtils {
               method: httpMethod || 'GET',
               headers: {
                   'Authorization': `Bearer ${login.accessToken}`,
-                  'Content-Type': 'application/json'
+                  'Content-Type': dataType == 'json' ? 'application/json' : ''
               },
               body: jsonPostData ? JSON.stringify(jsonPostData) : null,
           });
@@ -291,10 +291,14 @@ export class SharepointChoiceUtils {
         // return formatted data for 2xx, 4xx and 5xx will not return
         if (r.status == 204) return null;
         if (r.status < 200 || r.status > 299) throw 'Exception';
-        if (rawData) return await r?.text();
-        return await r.clone().json();
+        if (dataType == 'json') return await r?.json();
+        if (dataType == 'text') return await r?.text();
+        if (dataType == 'buffer') return await r?.arrayBuffer();
+        if (dataType && dataType != '') return new Blob([await r?.arrayBuffer()], {type: dataType});
+        
+        return r;
       } catch (e) {
-        throw `Exception getting API data with status ${r?.status} response ${await r?.text()}`;
+        throw `Exception getting API data with status ${r?.status} response ${e} body ${r?.body}`;
       }
     }
 
