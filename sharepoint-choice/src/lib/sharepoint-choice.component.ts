@@ -531,7 +531,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             `https://graph.microsoft.com/v1.0/users/${maillistrow.mailboxInfos[i].mailboxSmtpAddress}/messages/${maillistrow.latestItemIds[i].replace(/\//g, '%252F')}/$value`,
             'GET',
             undefined,
-            true
+            'text'
           );
           
           await this.appendFile(fileName, new TextEncoder().encode(fileContent).buffer, this.form[this.field].results);
@@ -591,7 +591,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             `https://graph.microsoft.com/v1.0/me/messages/${message.itemId.replace(/\//g, '%252F')}/$value`,
             'GET',
             undefined,
-            true
+            'text'
           );
 
           await this.appendFile(`${message.subject.trim()}.eml`, new TextEncoder().encode(fileContent).buffer, this.form[this.field].results);
