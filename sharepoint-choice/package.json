@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-choice",
-  "version": "6.1.21",
+  "version": "6.2.0",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
