@@ -53,7 +53,7 @@
     <div layout="column" *ngIf="get('TypeAsString') == 'Text'">
         <input flex [disabled]="disabled" type="text" [pattern]="text.pattern || '.*'" [(ngModel)]="form[field]" [required]="required()" name="{{field}}_T" [maxlength]="get('MaxLength')" (change)="change($event)"
             (keyup)="onUpText($event.key)" (click)="onUpText(undefined)">
-        <div class="MaxLength" [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
+        <div class="MaxLength" [hidden]="remaining() >= 5">Maximum {{remaining()}} characters remaining</div>
 
         <div style="position: relative; padding: 0;" [hidden]="disabled">
           <div class="AutoComplete" *ngIf="results.length > 0">
@@ -128,7 +128,7 @@
                   <a style="color: green; padding-left: 8px;cursor: pointer;" (click)="delete(i, f, false)" title="Undelete" [hidden]="disabled">+</a>
                 </td>
                 <td class="desktop">
-                  {{!f.ServerRelativeUrl ? 'Pending submission' : ''}}
+                  {{!f.ServerRelativeUrl ? 'Pending save' : ''}}
                 </td>
             </tr>
         </table>
