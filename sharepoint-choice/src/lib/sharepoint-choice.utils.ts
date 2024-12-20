@@ -1,6 +1,7 @@
 import { spfi, SPFI, SPBrowser } from "@pnp/sp";
 import "@pnp/sp/webs";
 import "@pnp/sp/site-users";
+import "@pnp/sp/site-groups";
 import "@pnp/sp/lists";
 import "@pnp/sp/items";
 import "@pnp/sp/fields";
@@ -112,6 +113,8 @@ export class SharepointChoiceUtils {
               var per = await this.sp.web.lists.getByTitle('Security').items.select("Title").top(5000)();
               per.forEach(s => {
                 p[s.Title] = true;
+                if (s.Title.startsWith(`${web.Title} `))
+                  p[s.Title.replace(`${web.Title} `,'')] = true;
               })
             }
           } catch (e) {}
@@ -291,14 +294,15 @@ export class SharepointChoiceUtils {
         // return formatted data for 2xx, 4xx and 5xx will not return
         if (r.status == 204) return null;
         if (r.status < 200 || r.status > 299) throw 'Exception';
-        if (dataType == 'json') return await r?.json();
-        if (dataType == 'text') return await r?.text();
-        if (dataType == 'buffer') return await r?.arrayBuffer();
-        if (dataType && dataType != '') return new Blob([await r?.arrayBuffer()], {type: dataType});
-        
+
+        if (dataType == 'json') return await r.json();
+        if (dataType == 'text') return await r.text();
+        if (dataType == 'buffer') return await r.arrayBuffer();
+        if (dataType && dataType != '' && dataType != 'none') return new Blob([await r.arrayBuffer()], {type: dataType});
+
         return r;
       } catch (e) {
-        throw `Exception getting API data with status ${r?.status} response ${e} body ${r?.body}`;
+        throw `Exception getting API data with status ${r?.status} response ${e} and body ${r?.body}`;
       }
     }
 
