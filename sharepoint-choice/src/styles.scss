@@ -527,6 +527,12 @@ a.fc-event {
     margin: 0 2px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
     text-decoration: none;
+    cursor: default;
+  }
+  
+  a:hover {
+    background-color: #16314a;
+    color: white;
   }
 }
 
@@ -542,15 +548,17 @@ a.fc-event {
     padding: 8px;
     border-radius: 4px;
     font-weight: bold;
-    color: white;
+    border: 1px solid #bbb;
   }
 
   .Warning {
     background: orange;
+    color: white;
   }
 
   .Error {
     background: orangered;
+    color: white;
   }
 }
 
