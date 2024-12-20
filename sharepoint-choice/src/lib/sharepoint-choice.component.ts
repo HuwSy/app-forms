@@ -566,20 +566,21 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       }
     }
 
-    // spo and teams
-    let spo = mailType(transfer, 'application/x-item-keys');
+    // a teams file drop, only works for teams libraries not onedrive/chat
+    let spo  = mailType(transfer, 'application/x-item-keys');
     if (spo) {
       for (var i = 0; i < spo.itemKeys.length; i++) {
-        spo.itemKeys[i] = JSON.parse(JSON.stringify(spo.itemKeys[i]));
-        
-        var web = Web(spo.itemKeys[i][1]);
+        // the inner is still JSON encoded from teams
+        spo.itemKeys[i] = JSON.parse(spo.itemKeys[i]);
+
+        var web = Web([spc.sp.web, spo.itemKeys[i][1]]);
         var folder = await web.getFolderByServerRelativePath(spo.itemKeys[i][2].substring(spo.itemKeys[i][2].indexOf('/', 9))).properties();
 
         var list = folder['vti_x005f_listtitle'] || folder['vti_listtitle'] || folder['listtitle'] || folder['title'];
         var item = await web.lists.getByTitle(list).items.getById(spo.itemKeys[i][3]).select('File').expand('File')();
-        var desc = `Created: ${item.File.TimeCreated} - Modified: ${item.File.TimeLastModified}`;
-
-        var buffer = await web.getFileByServerRelativePath(item.File.ServerRelativePath).getBuffer();
+        var desc = `Created: ${new Date(item.File.TimeCreated)} - Modified: ${new Date(item.File.TimeLastModified)}`;
+        
+        var buffer = await web.getFileByServerRelativePath(item.File.ServerRelativeUrl).getBuffer();
         await this.appendFile(item.File.Name, buffer, this.form[this.field].results, desc);
       }
     }
