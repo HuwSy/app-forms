@@ -1,9 +1,9 @@
-import { Component, OnInit, OnDestroy, Input, ElementRef, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, ElementRef, ViewEncapsulation, ErrorHandler } from '@angular/core';
 import { UserQuery, User } from "./Models";
 import "@pnp/sp/webs";
 import { Web } from "@pnp/sp/webs";
 import { Logger, LogLevel } from "@pnp/logging";
-import { Editor, Toolbar } from 'ngx-editor';
+import { Editor, NgxEditorModule, Toolbar } from 'ngx-editor';
 import * as MsgReader from '@sharpenednoodles/msg.reader-ts';
 import { readEml } from 'eml-parse-js';
 import * as JSZip from 'jszip';
@@ -11,12 +11,25 @@ import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { SharepointChoiceUtils } from './sharepoint-choice.utils';
 import { App } from './App';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { AngularLogging } from './AngularLogging';
 
 @Component({
   selector: 'app-choice',
   templateUrl: './sharepoint-choice.component.html',
   styleUrls: ['../styles.scss'],
-  encapsulation: ViewEncapsulation.Emulated
+  encapsulation: ViewEncapsulation.Emulated,
+  standalone: true,
+  imports: [
+      CommonModule,
+      FormsModule,
+      NgxEditorModule
+  ],
+  providers: [{
+    provide: ErrorHandler,
+    useClass: AngularLogging
+  }]
 })
 export class SharepointChoiceComponent implements OnInit, OnDestroy {
   @Input() form!: Array<string>; // form containing field
@@ -46,7 +59,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   
   @Input() file!: { // override file for field
     extract?: boolean, // extract files from zip and email
-    primary?: string, // primary field name
+    primary?: string|boolean, // primary field name or true for primary only file
     doctypes?: Array<string>, // document types
     doctype?: string, // document type field name
     notes?: string, // notes field name
@@ -405,7 +418,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // remove primry from all
     this.form[this.field].results.forEach(r => {
       r.Primary = false;
-      if (this.file.primary)
+      if (this.file.primary && typeof(this.file.primary) == 'string')
         r.ListItemAllFields[this.file.primary] = false;
     });
 
@@ -415,7 +428,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     // set primary to this
     f.Primary = true;
-    if (this.file.primary)
+    if (this.file.primary && typeof(this.file.primary) == 'string')
       f.ListItemAllFields[this.file.primary] = true;
 
     // if it has a doc type, then set primary to all with same doc type
@@ -536,7 +549,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             'text'
           );
           
-          await this.appendFile(fileName, new TextEncoder().encode(fileContent).buffer, this.form[this.field].results);
+          await this.appendFile(fileName, new TextEncoder().encode(fileContent).buffer as ArrayBuffer, this.form[this.field].results);
         } catch (e) {
           alert(`Email read error: ${fileName} - ${e}`);
         }
@@ -615,7 +628,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             'text'
           );
 
-          await this.appendFile(`${message.subject.trim()}.eml`, new TextEncoder().encode(fileContent).buffer, this.form[this.field].results);
+          await this.appendFile(`${message.subject.trim()}.eml`, new TextEncoder().encode(fileContent).buffer as ArrayBuffer, this.form[this.field].results);
         });
       });
     } else {
