@@ -43,7 +43,7 @@ export class HelloWorldWebPartComponent implements OnInit {
 
   constructor() { }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.tabs = [
       {tab: 'New', display: 'Submission', status: 'Draft', owner: 'Visitors'},
       {tab: 'Close', display: 'Close', status: 'Closing', owner: 'Members'},
@@ -107,14 +107,14 @@ export class HelloWorldWebPartComponent implements OnInit {
           this.form = d;
           this.uned = JSON.parse(JSON.stringify(this.form));
       
-          this.util.sp.web.lists.getByTitle(this.list).items.getById(id).versions.top(5000)().then(d => {
+          this._spUtils.sp.web.lists.getByTitle(this.list).items.getById(id).versions.top(5000)().then(d => {
             this.versions = d
           });
 
           var f = await this.getFolder();
           if (f != null)
             for (var o in this.files)
-              this.files[o].results = await this.util.getFiles(f, o);
+              this.files[o].results = await this._spUtils.getFiles(f, o);
         });
       }
     }
@@ -230,14 +230,14 @@ export class HelloWorldWebPartComponent implements OnInit {
 
   // additional choice data via api
   async moreData(): Promise<any> {
-    var results:any[any] = await this._spUtils.msalApi(App.AzureApp,
+    /*var results:any[any] = await this._spUtils.callApi(App.AzureApp,
       'Read',
       `MoreData`,
       App.Release);
 
     results.forEach(d => {
       this.spec.Choices.push(d);
-    });
+    });*/
   }
   
   // add subtract repeating sections
@@ -265,11 +265,11 @@ export class HelloWorldWebPartComponent implements OnInit {
       return this.form.Storage.Url;
     
     try {
-      let root = await this.util.getRoot('Documents');
+      let root = await this._spUtils.getRoot('Documents');
       let path = `${root}/${this.form.Id}`;
 
       if (needsCreating)
-        await this.util.ensurePath(path, this.util.context.length < 2 ? 2 : 4);
+        await this._spUtils.ensurePath(path, this._spUtils.context.length < 2 ? 2 : 4);
 
       return document.location.origin + path;
     } catch (e) {
@@ -285,9 +285,9 @@ export class HelloWorldWebPartComponent implements OnInit {
     
     var req = {Url: `${document.location.href.split('?')[0]}?aid=${this.form.Id}`, Description: `REF ${this.form.Id}`};
 
-    await this.util.ensurePath(this.form.Storage.Url + '/' + o, this.util.context.length < 2 ? 2 : 4);
+    await this._spUtils.ensurePath(this.form.Storage.Url + '/' + o, this._spUtils.context.length < 2 ? 2 : 4);
 
-    await this.util.saveFiles(this.form.Storage.Url, o, req, this.files[o]);
+    await this._spUtils.saveFiles(this.form.Storage.Url, o, req, this.files[o], undefined);
   }
 
   neededStage(stage:string):boolean {
@@ -329,7 +329,7 @@ export class HelloWorldWebPartComponent implements OnInit {
     this.form.Id = await this._spUtils.save(this.form, this.uned, this.list);
 
     // update versions to abuse its user name processing later
-    this.versions = await pnp.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).versions.top(5000).get();
+    //this.versions = await pnp.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).versions.top(5000).get();
 
     // handle approval of task for next stage
     switch (status) {
@@ -365,7 +365,7 @@ export class HelloWorldWebPartComponent implements OnInit {
       // may fail to save on long paths, continue anyway
       this.form.Storage = {Url: await this.getFolder(true), Description: 'here'};
       if (this.form.Storage.Url != null)
-        await pnp.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).update({ Storage: this.form.Storage });
+        await this._spUtils.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).update({ Storage: this.form.Storage });
     }
 
     // save relevant files
