@@ -70,14 +70,16 @@
             },
             "development": {
               "buildTarget": "sample:build:development",
-              "publicHost": "localhost",
               "port": 443,
-              "ssl": true,
-              "disableHostCheck": true
+              "ssl": true
             }
           },
           "defaultConfiguration": "development",
           "options": {
+            "allowedHosts": [
+              "localhost",
+              ".sharepoint.com"
+            ],
             "sslKey": "./localhost.key",
             "sslCert": "./localhost.crt"
           }
