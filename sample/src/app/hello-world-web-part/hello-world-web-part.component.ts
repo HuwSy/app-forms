@@ -230,14 +230,17 @@ export class HelloWorldWebPartComponent implements OnInit {
 
   // additional choice data via api
   async moreData(): Promise<any> {
-    /*var results:any[any] = await this._spUtils.callApi(App.AzureApp,
-      'Read',
-      `MoreData`,
-      App.Release);
+    var results:any[any] = await this._spUtils.callApi('',
+      '',
+      '',
+      '',
+      'GET',
+      null,
+      'json');
 
     results.forEach(d => {
       this.spec.Choices.push(d);
-    });*/
+    });
   }
   
   // add subtract repeating sections
