@@ -1,13 +1,16 @@
 import { Version } from '@microsoft/sp-core-library';
-import { BaseClientSideWebPart,
+import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
+import {
   IPropertyPaneConfiguration,
-  PropertyPaneTextField
-} from '@microsoft/sp-webpart-base';
+  PropertyPaneTextField,
+  PropertyPaneCheckbox
+} from '@microsoft/sp-property-pane';
 
 export interface IAngularWrapperWebPartProps {
   tag: string;
   src: string;
   adt: string;
+  esb: boolean;
 }
 
 export default class AngularWrapperWebPart extends BaseClientSideWebPart<IAngularWrapperWebPartProps> {
@@ -29,18 +32,26 @@ export default class AngularWrapperWebPart extends BaseClientSideWebPart<IAngula
       src = this.context.pageContext.web.absoluteUrl.replace(/\/$/, '') + '/' + src;
     }
 
-    this.requireClientSide(src + '/polyfills.js');
-    this.requireClientSide(src + '/runtime.js');
-    this.requireClientSide(src + '/main.js');
-    this.requireClientSide(src + '/styles.css');
-    
+    if (this.properties.esb) {
+      if (~src.toLowerCase().indexOf('://localhost'))
+        this.requireClientSide(src + '/@vite/client');
+      this.requireClientSide(src + '/styles.css');
+      this.requireClientSide(src + '/polyfills.js');
+      this.requireClientSide(src + '/main.js');
+    } else {
+      this.requireClientSide(src + '/polyfills.js');
+      this.requireClientSide(src + '/runtime.js');
+      this.requireClientSide(src + '/main.js');
+      this.requireClientSide(src + '/styles.css');
+    }
+
     // running ng serve will also need a vendor.js
     if (~this.properties.src.toLowerCase().indexOf('//localhost'))
       this.requireClientSide(src + '/vendor.js');
     
     const tag = this.properties.tag.replace(/^<\//, '').replace(/^</, '').replace(/>$/, '');
     this.domElement.innerHTML = `
-      <${ tag } ${ (this.properties.adt || '').replace(/\>/g, '') } context="${this.context.pageContext.web.absoluteUrl}">Loading app...</${ tag }>
+      <${ tag } ${ (this.properties.adt || '').replace(/>/g, '') } context="${this.context.pageContext.web.absoluteUrl}">Loading app...</${ tag }>
     `;
 
     // suppress gulp serve warning when using this on workbench
@@ -57,6 +68,7 @@ export default class AngularWrapperWebPart extends BaseClientSideWebPart<IAngula
     if (~file.indexOf('.js')) {
       p = document.createElement('script');
       p.src = file;
+      if (this.properties.esb) p.type = 'module';
     } else {
       p = document.createElement('link');
       p.rel = 'stylesheet';
@@ -96,6 +108,10 @@ export default class AngularWrapperWebPart extends BaseClientSideWebPart<IAngula
                   label: "Additional",
                   description: "Additional attributes, i.e. data='test'"
                 }),
+                PropertyPaneCheckbox('esb', {
+                  text: "ESBuild used",
+                  checked: false
+                })
               ]
             }
           ]
