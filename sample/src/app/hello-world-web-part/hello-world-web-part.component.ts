@@ -43,7 +43,7 @@ export class HelloWorldWebPartComponent implements OnInit {
 
   constructor() { }
 
-  async ngOnInit() {
+  ngOnInit() {
     this.tabs = [
       {tab: 'New', display: 'Submission', status: 'Draft', owner: 'Visitors'},
       {tab: 'Close', display: 'Close', status: 'Closing', owner: 'Members'},
@@ -103,7 +103,7 @@ export class HelloWorldWebPartComponent implements OnInit {
     if (!this.dashboard) {
       this.moreData();
       if (id > 0) {
-        this._spUtils.data(id, this.list).then(d => {
+        this._spUtils.data(id, this.list).then(async d => {
           this.form = d;
           this.uned = JSON.parse(JSON.stringify(this.form));
       
