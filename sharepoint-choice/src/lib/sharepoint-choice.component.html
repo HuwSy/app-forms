@@ -135,7 +135,7 @@
 
         <table class="files" *ngIf="field != 'Attachments' && !file.uploadonly" cellspacing="0">
             <tr class="desktop">
-              <th style="width: 0; white-space: nowrap;" *ngIf="file.primary || file.doctype"></th>
+              <th style="width: 0; white-space: nowrap;" *ngIf="file.primary"></th>
               <th style="width: 0; white-space: nowrap;" *ngIf="file.doctype">File Type</th>
               <th>File Name</th>
               <th *ngIf="file.notes">File Description</th>
@@ -145,8 +145,8 @@
                 <td colspan="5">No attachments</td>
             </tr>
             <tr *ngFor="let f of attachments();let i = index">
-                <td *ngIf="file.primary || file.doctype" class="desktop">
-                  <input type="checkbox" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" [checked]="(file.primary && f.ListItemAllFields[file.primary]) || f.Primary" (click)="setPrimary(f, $event)" name="FilePrimary_{{i}}">
+                <td *ngIf="file.primary" class="desktop">
+                  <input type="checkbox" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" [checked]="(file.primary && f.ListItemAllFields[file.primary.toString()]) || f.Primary" (click)="setPrimary(f, $event)" name="FilePrimary_{{i}}">
                 </td>
                 <td *ngIf="file.doctype" class="desktop">
                   <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" name="FileCat_{{i}}" [style]="width()">
@@ -163,10 +163,17 @@
 
                   <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;" (click)="delete(i, f, true)" title="Delete" [hidden]="disabled">x</a>
 
-                  <div class="mobile" *ngIf="file.doctype">
-                    <input type="checkbox" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" [checked]="(file.primary && f.ListItemAllFields[file.primary]) || f.Primary" (click)="setPrimary(f, $event)" name="FilePrimaryM_{{i}}" style="width:16px">
+                  <div class="mobile" *ngIf="file.primary && file.doctype">
+                    <input type="checkbox" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" [checked]="(file.primary && f.ListItemAllFields[file.primary.toString()]) || f.Primary" (click)="setPrimary(f, $event)" name="FilePrimaryM_{{i}}" style="width:16px">
 
                     <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" name="FileCatM_{{i}}" style="width:calc(100% - 24px)">
+                      <option *ngIf="f.ListItemAllFields[file.doctype] && !f.Changed" value="{{f.ListItemAllFields[file.doctype]}}" selected>{{f.ListItemAllFields[file.doctype]}}</option>
+                      <option *ngIf="!f.ListItemAllFields[file.doctype]" value=""></option>
+                      <option *ngFor="let v of file.doctypes" value="{{v}}">{{v}}</option>
+                    </select>
+                  </div>
+                  <div class="mobile" *ngIf="!file.primary && file.doctype">
+                    <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" name="FileCatM_{{i}}">
                       <option *ngIf="f.ListItemAllFields[file.doctype] && !f.Changed" value="{{f.ListItemAllFields[file.doctype]}}" selected>{{f.ListItemAllFields[file.doctype]}}</option>
                       <option *ngIf="!f.ListItemAllFields[file.doctype]" value=""></option>
                       <option *ngFor="let v of file.doctypes" value="{{v}}">{{v}}</option>
