@@ -1,4 +1,5 @@
-div[data-automation-id="pageHeader"], div#spCommandBar {
+div[data-automation-id="pageHeader"],
+div#spCommandBar {
   display: none;
 }
 div[data-automation-id="CanvasControl"] {
@@ -12,7 +13,12 @@ div[data-automation-id="CanvasControl"] {
   display: none;
 }
 @media (max-width: 768px) {
-  section.mainContent,div.CanvasZone {
+  #contentBox {
+    margin: 0;
+    min-width: 0;
+  }
+  section.mainContent,
+  div.CanvasZone {
     margin: 0;padding:0 !important
   }
   div[data-sp-feature-tag="PageTitle web part (Banner)"] div {
@@ -20,7 +26,11 @@ div[data-automation-id="CanvasControl"] {
     padding: 0;
     font-size: 24px !important;
   }
-  #SuiteNavWrapper {
+  #SuiteNavWrapper,
+  #sideNavBox,
+  #s4-titlerow,
+  #s4-ribbonrow,
+  #suiteBarDelta #suiteBarTop > * > * {
       display: none !important;
   }
   .desktop {
