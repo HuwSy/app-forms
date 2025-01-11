@@ -1,0 +1,16 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "version": "1.15.4",
+    "libraryName": "angular-wrapper",
+    "libraryId": "99999999-9999-9999-9999-999999999999",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "angular-wrapper",
+    "solutionShortDescription": "angular-wrapper description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}
