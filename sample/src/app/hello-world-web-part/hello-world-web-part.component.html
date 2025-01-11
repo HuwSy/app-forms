@@ -89,7 +89,7 @@
 
     <app-choice [form]="form" [spec]="spec" [field]="'Attachments'" [disabled]="stage == 'View'" [override]="prefix()"></app-choice>
     
-    <app-choice [form]="form" [spec]="spec" [field]="'CommentHistory'" [override]='{"TypeAsString":"Note","RichText":true,"AppendOnly":true}' [disabled]="stage == 'View'"></app-choice>
+    <app-choice [form]="form" [spec]="spec" [field]="'CommentHistory'" [override]='"{\"TypeAsString\":\"Note\",\"RichText\":true,\"AppendOnly\":true}"' [disabled]="stage == 'View'"></app-choice>
     <div *ngFor="let h of versions" [hidden]="!h.Comments">
       <div style="font-weight: bold;">{{h.Author.LookupValue}} on {{h.Created | date:'dd MMM yyyy HH:mm:ss'}}</div>
       <div [innerHTML]="h.Comments"></div>
