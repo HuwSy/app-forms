@@ -1,6 +1,6 @@
 # app-forms
 
-A simple Angular framework for rapid development originally in AngularJS/JavaScript and progressed to Angular18+ within an SPFx wrapper giving controls which can use this.spec to determin the field details and manipulate this.form, the sample is based on the older Model version 6 whereas newer 7+ is Component as per the details below
+A simple Angular framework for rapid development originally in AngularJS/JavaScript and progressed to Angular18+ within an SPFx wrapper giving controls which can use this.spec to determin the field details and manipulate this.form, the sample is based on the older Module version <= 6 whereas newer >= 7 is made as an angular Component as per the details and usage below
 
 Requires node 20, nvm can be used effectively as can project leve installed angular
 
@@ -19,7 +19,7 @@ npm run new <solution>
 ```
 remove default app.component.* app.config.* styles.scss, app.module.ts and registrations in main.ts
 
-New web parts/components/dashboards/forms etc
+New web parts / components / dashboards / forms etc
 ```
 npm run ng generate component --style=scss <webpart>
 ```
@@ -34,7 +34,7 @@ bootstrapApplication(<webpart>Component)
   .catch((err) => console.error(err));
 ```
 
-To be added to html templates
+To be added to html templates, repeat app-choice as required
 ```
 <form ngNativeValidate #input (keydown.enter)="enterKey($event)">
   <app-choice [form]="form"
@@ -113,7 +113,7 @@ import { AngularLogging } from './App';
   }
 ```
 
-Make the index.html multi webpart, remove app-root and replace with
+Make the index.html multi webpart test compatible, remove app-root and replace with
 ```
   <script>
     let e = 'root';
@@ -124,7 +124,7 @@ Make the index.html multi webpart, remove app-root and replace with
   </script>
 ```
 
-To be added to tsconfig.json to avoid some errors
+To be added to tsconfig.json to avoid some errors with pnp
 ```
   "skipLibCheck": true,
 ```
