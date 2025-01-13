@@ -15,11 +15,11 @@
       "prefix": "app",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:browser",
+          "builder": "@angular-devkit/build-angular:application",
           "options": {
             "outputPath": "dist/sample",
-            "index": "src/index.html",
-            "main": "src/main.ts",
+            "index": { "input": "src/index.html", "preloadInitial": false },
+            "browser": "src/main.ts",
             "polyfills": [
               "zone.js"
             ],
@@ -52,9 +52,6 @@
               "outputHashing": "all"
             },
             "development": {
-              "buildOptimizer": false,
-              "optimization": false,
-              "vendorChunk": true,
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true
