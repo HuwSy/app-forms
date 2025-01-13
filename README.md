@@ -17,21 +17,63 @@ Then
 ```
 npm run new <solution>
 ```
-remove default app.component.* app.config.* styles.scss, app.module.ts and registrations in main.ts
+remove default app.component.* app.config.* styles.scss and registrations in main.ts and app.module.ts  
+
+Component only apps have issues within SharePoint page navigation and SPFx variable injections therefore using NgModule still
+
+src/main.ts
+```
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import { AppModule } from './app/app.module';
+platformBrowserDynamic().bootstrapModule(AppModule).catch(err => console.error(err));
+```
+
+src/app/app.module.ts
+```
+import { NgModule, Injector, ErrorHandler } from '@angular/core';
+import { createCustomElement } from '@angular/elements';
+import { FormsModule } from '@angular/forms';
+import { BrowserModule } from '@angular/platform-browser';
+
+import { SharepointChoiceComponent } from '@qicglobal/sharepoint-choice';
+import { AngularLogging } from '../../App';
+
+import { AgGridAngular } from 'ag-grid-angular';
+import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'; 
+ModuleRegistry.registerModules([AllCommunityModule]);
+
+// repeat this per web part
+import { <webpart>Component } from './<webpart>/<webpart>.component';
+
+@NgModule({
+  declarations: [
+    // repeat this per web part
+    <webpart>Component
+  ],
+  imports: [
+    BrowserModule,
+    FormsModule,
+    SharepointChoiceComponent,
+    AgGridAngular
+  ],
+  providers: [{
+    provide: ErrorHandler,
+    useClass: AngularLogging
+  }]
+})
+export class AppModule {
+  constructor(private injector: Injector) { }
+
+  ngDoBootstrap() {
+    // repeat this per web part
+    customElements.define('app-<webpart>', createCustomElement(<webpart>Component, { injector: this.injector }));
+  }
+}
+```
 
 New web parts / components / dashboards / forms etc
 ```
 npm run ng generate component --style=scss <webpart>
-```
-
-src/main.ts
-```
-import { bootstrapApplication } from '@angular/platform-browser';
-
-// repeat per component
-import { <webpart>Component } from './app/<webpart>/<webpart>.component';
-bootstrapApplication(<webpart>Component)
-  .catch((err) => console.error(err));
 ```
 
 To be added to html templates, repeat app-choice as required
@@ -44,28 +86,16 @@ To be added to html templates, repeat app-choice as required
 </form>
 ```
 
-To be added to the components
+To be added to all web parts
 ```
-import { SharepointChoiceComponent, SharepointChoiceUtils } from 'sharepoint-choice';
-import { AngularLogging } from './App';
-```
-```
-  standalone: true,
-  imports: [
-    CommonModule,             // ngIf, ngFor etc
-    FormsModule,              // Forms on screen
-    SharepointChoiceComponent,// App-Choice fields
-  ],
-  providers: [{
-    provide: ErrorHandler,
-    useClass: AngularLogging
-  }]
+import { SharepointChoiceUtils } from 'sharepoint-choice';
 ```
 ```
-    // allow spfx property to override web used
+    // allow spfx property to override web used or where related pages exist or any other app related deployed params etc
     @Input() context!: string;
+
     // register the utils
-    this.util = new SharepointChoiceUtils(this.context || null);
+    this.util = new SharepointChoiceUtils(this.context ?? null);
 
     // load user and permission details
     this.util.permissions().then(r => {
