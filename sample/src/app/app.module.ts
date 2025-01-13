@@ -1,9 +1,8 @@
 import { BrowserModule } from '@angular/platform-browser';
-import { NgModule, Injector, CUSTOM_ELEMENTS_SCHEMA, ErrorHandler } from '@angular/core';
+import { NgModule, Injector, ErrorHandler } from '@angular/core';
 import { createCustomElement } from '@angular/elements';
-import { SharepointChoiceModule } from 'sharepoint-choice';
+import { SharepointChoiceComponent } from 'sharepoint-choice';
 import { FormsModule } from '@angular/forms';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { App, AngularLogging } from '../../App';
 
 import { HelloWorldWebPartComponent } from './hello-world-web-part/hello-world-web-part.component';
@@ -15,15 +14,12 @@ import { HelloWorldWebPartComponent } from './hello-world-web-part/hello-world-w
   imports: [
     BrowserModule,
     FormsModule,
-    BrowserAnimationsModule,
-    SharepointChoiceModule
+    SharepointChoiceComponent
   ],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   providers: [{
     provide: ErrorHandler,
     useClass: AngularLogging
-  }],
-  bootstrap: []
+  }]
 })
 export class AppModule {
   constructor(private injector: Injector) {}
