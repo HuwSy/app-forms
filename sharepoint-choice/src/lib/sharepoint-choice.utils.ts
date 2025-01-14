@@ -449,9 +449,11 @@ export class SharepointChoiceUtils {
         commonmeta['Request'] = url;
 
       try {
-        var folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
-        await folder.update(commonmeta);
-    
+        if (metadata || url) {
+          var folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
+          await folder.update(commonmeta);
+        }
+        
         // subfolders for these
         if (additional && additional != '') {
           path += '/' + additional;
