@@ -13,6 +13,9 @@ div[data-automation-id="CanvasControl"] {
   display: none;
 }
 @media (max-width: 768px) {
+  #s4-workspace {
+    width: auto !important;
+  }
   #contentBox {
     margin: 0;
     min-width: 0;
