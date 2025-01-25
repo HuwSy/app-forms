@@ -1,26 +1,6 @@
 {
   "$schema": "./node_modules/ng-packagr/ng-package.schema.json",
   "dest": "./dist/sharepoint-choice",
-  "allowedNonPeerDependencies": [
-    "@angular/core",
-    "rxjs",
-    "zone.js",
-    "@angular/animations",
-    "@angular/compiler",
-    "@angular/common",
-    "@angular/forms",
-    "@angular/platform-browser",
-    "@angular/platform-browser-dynamic",
-    "@azure/msal",
-    "@pnp/sp",
-    "@pnp/logging",
-    "@sharpenednoodles/msg.reader-ts",
-    "@types/office-js",
-    "jszip",
-    "eml-parse-js",
-    "ngx-editor",
-    "tslib"
-  ],
   "assets": [
     "src/styles.scss"
   ],
