@@ -206,20 +206,21 @@
     </div>
 
     <div layout="column" *ngIf="get('TypeAsString') == 'Attachments'" style="position: relative;">
-        <div *ngIf="hasOffice()">
-          <button (click)="importOffice()">Import office file(s)</button>
+      <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A">
+      <div [hidden]="disabled" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}" style="max-width: 265px; text-align: center;">
+        <div *ngIf="!office.type">
+          <b style="font-size: 48px;">&#8613;</b><br>
+          Drag and drop files here<br>
+          or<br>
         </div>
+        <button (click)="importOutlook()" [disabled]="office.loading" *ngIf="office.type == 'Outlook'">Import selected email(s)</button>
+        <button (click)="importOffice()" [disabled]="office.loading" *ngIf="office.type && office.type != 'Outlook'">Import open file</button>
 
-        <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A">
-        <div [hidden]="disabled" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}" style="width: 175px; text-align: center;">
-            <b style="font-size: 48px;">&#8613;</b><br>
-            Drag and drop files here<br>
-            or<br>
-            <input accept="{{file.accept}}" type="file" style="display: none !important;" multiple (change)="add($event.target)" />
-            <button onclick="this.previousElementSibling.click()">Browse for file</button>
-        </div>
-    </div>
-    
+        <input accept="{{file.accept}}" type="file" style="display: none !important;" multiple (change)="add($event.target)" />
+        <button onclick="this.previousElementSibling.click()">Browse file</button>
+      </div>
+  </div>
+  
     <div layout="column" *ngIf="['User','UserMulti'].indexOf(get('TypeAsString')) >= 0">
         <input hidden type="text" [required]="required()" [value]="people()" name="{{field}}_P">
         <div *ngIf="form[field + 'Id'] && form[field + 'Id'].results">
