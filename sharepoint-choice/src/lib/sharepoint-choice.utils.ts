@@ -41,31 +41,6 @@ export class SharepointChoiceUtils {
       Logger.activeLogLevel = LogLevel.Warning;
 
       this.mockClassicContext();
-      this.officeAddin();
-    }
-
-    private officeAddin() {
-      try {
-        // detect if its in an iframe or fail as its in an iframe
-        if (window.self !== window.top)
-          throw 'is in iframe';
-      } catch (e) {
-        // if in an iframe then assume its an office addin and needs the scripts loaded
-        var s = document.createElement('script');
-        s.src = 'https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js';
-        document.head.appendChild(s);
-        s.addEventListener('load', () => {
-          // only if office.js loaded
-          if ('Office' in window) {
-            var Office:any = window['Office'];
-            // on ready must be ran soon after office.js is loaded
-            Office.onReady(info => {
-              // capture what office type of addin for later use
-              window['OfficeType'] = info.host.toString();
-            });
-          }
-        }, false);
-      }
     }
 
     private async mockClassicContext() {
@@ -449,8 +424,9 @@ export class SharepointChoiceUtils {
         commonmeta['Request'] = url;
 
       try {
+        var folder;
         if (metadata || url) {
-          var folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
+          folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
           await folder.update(commonmeta);
         }
         
