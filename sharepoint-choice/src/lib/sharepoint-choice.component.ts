@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Input, ElementRef, ViewEncapsulation, ErrorHandler } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, ElementRef, ViewEncapsulation, ErrorHandler, ChangeDetectorRef } from '@angular/core';
 import { UserQuery, User } from "./Models";
 import "@pnp/sp/webs";
 import { Web } from "@pnp/sp/webs";
@@ -83,13 +83,19 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   declare unused: string;
   declare results: any[any];
   declare pos: number;
+  declare office: any;
 
   public textKey: Subject<string> = new Subject<string>();
   public userKey: Subject<string> = new Subject<string>();
 
   constructor(
-    private elRef: ElementRef
+    private elRef: ElementRef,
+    private chRef: ChangeDetectorRef
   ) {
+    this.office = {
+      type: null,
+      loading: false
+    };
     if (!this.text)
       this.text = { };
     if (!this.select)
@@ -228,11 +234,14 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         Description: '',
         URL: this.form[this.field] || ''
       }
-    // if its attachments, ensure the object is the correct type
-    if (t == 'TypeAsString' && p == 'Attachments' && (!this.form[this.field] || !this.form[this.field].results))
-      this.form[this.field] = {
-        results: []
-      }
+    // if its attachments, ensure the object is the correct type and office fired if needed
+    if (t == 'TypeAsString' && p == 'Attachments') {
+      this.officeAddin();
+      if (!this.form[this.field] || !this.form[this.field].results)
+        this.form[this.field] = {
+          results: []
+        }
+    }
     // if no choices return empty array
     if (t == 'Choices' && p == null)
       return [];
@@ -599,108 +608,139 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
   }
 
-  // if my office control type has loaded then we are in office addin and know the type
-  hasOffice() {
-    return 'OfficeType' in window;
+  officeAddin(): void {
+    // dont double load the script
+    if (document.getElementById('officejs') || window['Office'])
+      return;
+    // load the office.js script as web/pwa apps are iframes and full clients are not with no obvious way to detect if its needed
+    var s = document.createElement('script');
+    s.src = 'https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js';
+    s.id = 'officejs';
+    document.head.appendChild(s);
+    // capture the office type for later use along with triggering change detection if needed
+    var ths = this;
+    s.addEventListener('load', () => {
+      // only once office.js loaded
+      if ('Office' in window) {
+        var Office:any = window['Office'];
+        // on ready should be ran soon after office.js is loaded trigger
+        Office.onReady(info => {
+          // capture what office type of addin for later use
+          ths.office.type = info.host;
+          ths.chRef.markForCheck();
+        });
+      }
+    }, false);
+  }
+
+  // import from office addin selection or document panel
+  importOutlook() {
+    this.office.loading = true;
+    var Office:any = window['Office'];
+
+    // if the adding type is outlook then get the selected email(s)
+    var spc = new SharepointChoiceUtils();
+    var ths = this;
+
+    Office.context.mailbox.getSelectedItemsAsync(async (asyncResult:any) => {
+      if (asyncResult.status === Office.AsyncResultStatus.Failed)
+        return;
+
+      for (var m in asyncResult.value) {
+        var message = asyncResult.value[m];
+
+        // must double url encode any / in the message id
+        var fileContent:string = await spc.callApi(
+          App.Tenancy,
+          App.GraphClient,
+          undefined,
+          `https://graph.microsoft.com/v1.0/me/messages/${message.itemId.replace(/\//g, '%252F')}/$value`,
+          'GET',
+          undefined,
+          'text'
+        );
+
+        await ths.appendFile(`${message.subject.trim()}.eml`, new TextEncoder().encode(fileContent).buffer as ArrayBuffer, ths.form[ths.field].results);
+      }
+    });
   }
 
   // import from office addin selection or document panel
   importOffice() {
+    this.office.loading = true;
     var Office:any = window['Office'];
 
-    if (window['OfficeType'] == "Outlook") {
-      // if the adding type is outlook then get the selected email(s)
-      var spc = new SharepointChoiceUtils();
+    // if the adding type is word or excel then get the current document
+    var docDataSlices:any = [];
+    var slicesReceived = 0;
+    var file:any;
+    var ths = this;
 
-      Office.context.mailbox.getSelectedItemsAsync((asyncResult:any) => {
-        if (asyncResult.status === Office.AsyncResultStatus.Failed)
-          return;
+    // get the file in 64k slices until complete
+    Office.context.document.getFileAsync(Office.FileType.Compressed, { sliceSize: 65536 }, (asyncResult:any) => {
+      if (asyncResult.status === Office.AsyncResultStatus.Failed)
+        return;
 
-        asyncResult.value.forEach(async (message) => {
-          // must double url encode any / in the message id
-          var fileContent:string = await spc.callApi(
-            App.Tenancy,
-            App.GraphClient,
-            undefined,
-            `https://graph.microsoft.com/v1.0/me/messages/${message.itemId.replace(/\//g, '%252F')}/$value`,
-            'GET',
-            undefined,
-            'text'
-          );
-
-          await this.appendFile(`${message.subject.trim()}.eml`, new TextEncoder().encode(fileContent).buffer as ArrayBuffer, this.form[this.field].results);
-        });
-      });
-    } else {
-      // if the adding type is word or excel then get the current document
-      var docDataSlices:any = [];
-      var slicesReceived = 0;
-      var file:any;
-      var ths = this;
-
-      // get the file in 64k slices until complete
-      Office.context.document.getFileAsync(Office.FileType.Compressed, { sliceSize: 65536 }, (asyncResult:any) => {
-        if (asyncResult.status === Office.AsyncResultStatus.Failed)
-          return;
-
-        file = asyncResult.value;
-        try {
-          file.getSliceAsync(0, processSlice);
-        } finally {
-          file.closeAsync();
-        }
-      });
-
-      // process the slice and append to the files once it reaches the last slice
-      async function processSlice(sliceResult:any) {
-        if (sliceResult.status === Office.AsyncResultStatus.Failed)
-          throw sliceResult.error.message;
-
-        docDataSlices[sliceResult.value.index] = sliceResult.value.data;
-        if (++slicesReceived == file.sliceCount) {
-          let docData = [];
-          for (let i = 0; i < docDataSlices.length; i++)
-            docData = docData.concat(docDataSlices[i]);
-  
-          let fileContent = new String();
-          for (let j = 0; j < docData.length; j++)
-            fileContent += String.fromCharCode(docData[j]);
-
-          var fileName = Office.context.document.url?.split('/').pop();
-          if (!fileName) {
-            fileName = prompt("Please enter a file name:");
-            if (!fileName || fileName == '')
-              fileName = `OfficeAddin-${new Date().toISOString().replace(/:/g, '-')}`;
-
-            switch (window['OfficeType']) {
-              case "Word":
-                fileName += ".docx";
-                break;
-              case "Excel":
-                fileName += ".xlsx";
-                break;
-              case "PowerPoint":
-                fileName += ".pptx";
-                break;
-              case "OneNote":
-                fileName += ".one";
-                break;
-              case "Project":
-                fileName += ".mpp";
-                break;
-              case "Visio":
-                fileName += ".vsdx";
-                break;
-              default:
-                alert("Unknown Office type");
-                return;
-            }
-          }
-
-          await ths.appendFile(`${fileName}`, Uint8Array.from(atob(fileContent.toString()), c => c.charCodeAt(0)).buffer, ths.form[ths.field].results);
-        } else
-          file.getSliceAsync(slicesReceived, processSlice);
+      file = asyncResult.value;
+      try {
+        file.getSliceAsync(0, processSlice);
+      } finally {
+        file.closeAsync();
       }
+    });
+
+    // process the slice and append until completed
+    function processSlice(sliceResult:any) {
+      if (sliceResult.status === Office.AsyncResultStatus.Failed)
+        throw sliceResult.error.message;
+
+      docDataSlices[sliceResult.value.index] = sliceResult.value.data;
+      if (++slicesReceived == file.sliceCount)
+        saveFile();
+      else
+        file.getSliceAsync(slicesReceived, processSlice);
+    }
+
+    async function saveFile() {
+      // completed getting slices then start patching the file
+      let docData = [];
+      for (let i = 0; i < docDataSlices.length; i++)
+        docData = docData.concat(docDataSlices[i]);
+
+      // convert char codes to string
+      let fileContent = new String();
+      for (let j = 0; j < docData.length; j++)
+        fileContent += String.fromCharCode(docData[j]);
+
+      // try to get a file name from the document
+      var fileName = Office.context.document.url?.split('/').pop().split('\\').pop();
+      if (!fileName || fileName == '') {
+        fileName = `OfficeAddin-${new Date().toISOString().replace(/:/g, '-')}`;
+        switch (ths.office.type) {
+          case "Word":
+            fileName += ".docx";
+            break;
+          case "Excel":
+            fileName += ".xlsx";
+            break;
+          case "PowerPoint":
+            fileName += ".pptx";
+            break;
+          case "OneNote":
+            fileName += ".one";
+            break;
+          case "Project":
+            fileName += ".mpp";
+            break;
+          case "Visio":
+            fileName += ".vsdx";
+            break;
+          default:
+            throw "Unknown Office type, unable to save file";
+        }
+      }
+
+      await ths.appendFile(`${fileName}`, Uint8Array.from(fileContent.toString(), c => c.charCodeAt(0)).buffer, ths.form[ths.field].results);
     }
   }
 
@@ -743,6 +783,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       await this.msgs(data, results);
     if (fileName.toLowerCase().endsWith(".eml"))
       await this.emls(data, results);
+    
+    this.office.loading = false;
+    this.chRef.markForCheck();
   }
 
   // extract zip files and append to results
