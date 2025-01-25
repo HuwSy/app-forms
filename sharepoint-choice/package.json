@@ -1,13 +1,10 @@
 {
   "name": "sharepoint-choice",
-  "version": "7.0.10",
+  "version": "7.0.31",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build sharepoint-choice",
-    "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "build": "ng build sharepoint-choice"
   },
   "private": false,
   "sideEffects": false,
@@ -18,7 +15,7 @@
     }
   ],
   "license": "ISC",
-  "dependencies": {
+  "peerDependencies": {
     "@angular/animations": "^18.2.8",
     "@angular/common": "^18.2.8",
     "@angular/compiler": "^18.2.8",
