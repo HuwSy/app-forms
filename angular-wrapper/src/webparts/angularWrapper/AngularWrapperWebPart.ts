@@ -35,6 +35,7 @@ export default class AngularWrapperWebPart extends BaseClientSideWebPart<IAngula
     if (this.properties.esb) {
       if (~src.toLowerCase().indexOf('://localhost'))
         this.requireClientSide(src + '/@vite/client');
+      
       this.requireClientSide(src + '/styles.css');
       this.requireClientSide(src + '/polyfills.js');
       this.requireClientSide(src + '/main.js');
@@ -43,12 +44,11 @@ export default class AngularWrapperWebPart extends BaseClientSideWebPart<IAngula
       this.requireClientSide(src + '/runtime.js');
       this.requireClientSide(src + '/main.js');
       this.requireClientSide(src + '/styles.css');
+      
+      if (~src.toLowerCase().indexOf('//localhost'))
+        this.requireClientSide(src + '/vendor.js');
     }
 
-    // running ng serve will also need a vendor.js
-    if (~this.properties.src.toLowerCase().indexOf('//localhost'))
-      this.requireClientSide(src + '/vendor.js');
-    
     const tag = this.properties.tag.replace(/^<\//, '').replace(/^</, '').replace(/>$/, '');
     this.domElement.innerHTML = `
       <${ tag } ${ (this.properties.adt || '').replace(/>/g, '') } context="${this.context.pageContext.web.absoluteUrl}">Loading app...</${ tag }>
@@ -65,14 +65,14 @@ export default class AngularWrapperWebPart extends BaseClientSideWebPart<IAngula
 
   private requireClientSide(file:string):void {
     let p;
-    if (~file.indexOf('.js')) {
-      p = document.createElement('script');
-      p.src = file;
-      if (this.properties.esb) p.type = 'module';
-    } else {
+    if (~file.indexOf('.css')) {
       p = document.createElement('link');
       p.rel = 'stylesheet';
       p.href = file;
+    } else {
+      p = document.createElement('script');
+      p.src = file;
+      if (this.properties.esb) p.type = 'module';
     }
     document.head.append(p);
   }
