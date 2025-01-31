@@ -1,12 +1,26 @@
-import { Component, Input, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { SharepointChoiceUtils } from 'sharepoint-choice';
-import { App } from '../../../App';
+import { App, AngularLogging } from '../../../App';
+
+import { ErrorHandler, ElementRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { SharepointChoiceComponent } from 'sharepoint-choice';
 
 @Component({
   selector: 'app-hello-world-web-part',
   templateUrl: './hello-world-web-part.component.html',
   styleUrls: ['./hello-world-web-part.component.scss'],
-  encapsulation: ViewEncapsulation.Emulated
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    SharepointChoiceComponent
+  ],
+  providers: [{
+    provide: ErrorHandler,
+    useClass: AngularLogging
+  }]
 })
 export class HelloWorldWebPartComponent implements OnInit {
   @Input() description!: string;
@@ -41,7 +55,11 @@ export class HelloWorldWebPartComponent implements OnInit {
   declare tabs:any;
   declare files:any;
 
-  constructor() { }
+  constructor(private elRef: ElementRef) {
+    // read attribute as Component bind doesnt trigger @Input
+    this.description = this.description || this.elRef.nativeElement.getAttribute('description');
+    this.context = this.context || this.elRef.nativeElement.getAttribute('context');
+  }
 
   ngOnInit() {
     this.tabs = [
