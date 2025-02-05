@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-choice",
-  "version": "7.0.31",
+  "version": "7.0.53",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
@@ -16,32 +16,26 @@
   ],
   "license": "ISC",
   "peerDependencies": {
-    "@angular/animations": "^18.2.8",
-    "@angular/common": "^18.2.8",
-    "@angular/compiler": "^18.2.8",
-    "@angular/core": "^18.2.8",
-    "@angular/forms": "^18.2.8",
-    "@angular/platform-browser": "^18.2.8",
-    "@angular/platform-browser-dynamic": "^18.2.8",
-    "@azure/msal-browser": "^3.26.1",
-    "@pnp/logging": "^4.6.0",
-    "@pnp/sp": "^4.6.0",
-    "@sharpenednoodles/msg.reader-ts": "^0.1.2",
-    "@types/office-js": "^1.0.444",
+    "@angular/common": "^18.2.13",
+    "@angular/core": "^18.2.13",
+    "@angular/forms": "^18.2.13",
+    "@angular/platform-browser": "^18.2.13",
+    "@azure/msal-browser": "^4.2.0",
+    "@kenjiuno/msgreader": "^1.22.0",
+    "@pnp/logging": "^4.9.0",
+    "@pnp/sp": "^4.9.0",
     "eml-parse-js": "^1.1.15",
     "jszip": "^3.10.1",
     "ngx-editor": "^18.0.0",
-    "rxjs": "~7.8.1",
-    "tslib": "^2.7.0",
-    "zone.js": "~0.14.10"
+    "stacktrace-js": "^2.0.2"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^18.2.8",
-    "@angular/cli": "^18.2.8",
-    "@angular/compiler-cli": "^18.2.8",
-    "@types/jasmine": "~5.1.4",
+    "@angular-devkit/build-angular": "^18.2.14",
+    "@angular/cli": "^18.2.14",
+    "@types/jasmine": "~5.1.5",
+    "@types/office-js": "^1.0.462",
     "jasmine-core": "~5.4.0",
     "ng-packagr": "^18.2.1",
-    "typescript": "5.5.*"
+    "typescript": "~5.5.4"
   }
 }
