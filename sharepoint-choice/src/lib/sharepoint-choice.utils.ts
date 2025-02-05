@@ -8,7 +8,7 @@ import "@pnp/sp/fields";
 import "@pnp/sp/attachments";
 import "@pnp/sp/files";
 import "@pnp/sp/folders";
-import * as MSAL from "@azure/msal-browser";
+import { PublicClientApplication } from "@azure/msal-browser";
 import { Logger, LogLevel } from "@pnp/logging";
 import { PermissionKind } from "@pnp/sp/security";
 import { PnPLogging } from './PnPLogging';
@@ -50,6 +50,7 @@ export class SharepointChoiceUtils {
         w._spPageContextInfo = {};
       // no user in context or a different web then mock it in
       if (typeof w._spPageContextInfo.userLoginName == "undefined" || w._spPageContextInfo.webAbsoluteUrl != this.context) {
+        var web = await this.sp.web();
         var user = await this.sp.web.currentUser();
         w._spPageContextInfo = {
           userLoginName: user.LoginName,
@@ -57,6 +58,7 @@ export class SharepointChoiceUtils {
           userEmail: user.Email,
           userId: user.Id,
           webAbsoluteUrl: this.context,
+          webTitle: web.Title,
         };
       }
     }
@@ -226,7 +228,7 @@ export class SharepointChoiceUtils {
       }
       
       // init client
-      var msal = new MSAL.PublicClientApplication(config);
+      var msal = new PublicClientApplication(config);
 
       await msal.initialize();
       
