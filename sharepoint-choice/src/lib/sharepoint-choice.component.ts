@@ -1,25 +1,24 @@
-import { Component, OnInit, OnDestroy, Input, ElementRef, ViewEncapsulation, ErrorHandler, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, ElementRef, ChangeDetectorRef, ErrorHandler } from '@angular/core';
 import { UserQuery, User } from "./Models";
 import "@pnp/sp/webs";
 import { Web } from "@pnp/sp/webs";
 import { Logger, LogLevel } from "@pnp/logging";
 import { Editor, NgxEditorModule, Toolbar } from 'ngx-editor';
-import * as MsgReader from '@sharpenednoodles/msg.reader-ts';
+import MsgReader from '@kenjiuno/msgreader';
 import { readEml } from 'eml-parse-js';
-import * as JSZip from 'jszip';
+import { loadAsync } from 'jszip';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { SharepointChoiceUtils } from './sharepoint-choice.utils';
 import { App } from './App';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AngularLogging } from './AngularLogging';
+import { SharepointChoiceLogging } from './sharepoint-choice.logging';
 
 @Component({
   selector: 'app-choice',
   templateUrl: './sharepoint-choice.component.html',
   styleUrls: ['../styles.scss'],
-  encapsulation: ViewEncapsulation.Emulated,
   standalone: true,
   imports: [
       CommonModule,
@@ -28,7 +27,7 @@ import { AngularLogging } from './AngularLogging';
   ],
   providers: [{
     provide: ErrorHandler,
-    useClass: AngularLogging
+    useClass: SharepointChoiceLogging
   }]
 })
 export class SharepointChoiceComponent implements OnInit, OnDestroy {
@@ -612,9 +611,22 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // dont double load the script
     if (document.getElementById('officejs') || window['Office'])
       return;
+    // try and determine if we are in an office addin
+    try {
+      if (window.top != window.self) {
+        throw "In an iframe";
+      }
+      if ('IsOfficeURLSchemes' in window) {
+        throw "In an addin";
+      }
+      // unlikely to be an addin
+      return;
+    } catch (e) {
+      // continue as its probably an addin
+    }
     // load the office.js script as web/pwa apps are iframes and full clients are not with no obvious way to detect if its needed
     var s = document.createElement('script');
-    s.src = 'https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js';
+    s.src = 'https://appsforoffice.microsoft.com/lib/1/hosted/office.js';
     s.id = 'officejs';
     document.head.appendChild(s);
     // capture the office type for later use along with triggering change detection if needed
@@ -626,8 +638,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         // on ready should be ran soon after office.js is loaded trigger
         Office.onReady(info => {
           // capture what office type of addin for later use
-          ths.office.type = info.host;
-          ths.chRef.markForCheck();
+          if (ths.office.type != info.host) {
+            ths.office.type = info.host;
+            ths.chRef.detectChanges();
+          }
         });
       }
     }, false);
@@ -745,8 +759,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   async appendFile(fileName:string, data:ArrayBuffer, results:any, desc?:string) {
-    // cleanup the name, more agressive as it may not be from a windows file system
-    var n = fileName.trim().replace(/[\\/:*?"%'#<>|]/g,'-');
+    // only save files that have an extension
+    if (fileName.indexOf('.') < 0)
+      return;
+    // cleanup the name, more agressive as it may not be from a windows file system or have trailing chars from email systems
+    var n = fileName.trim().replace(/[\\/:*?"%'#<>|=]/g,'-').replace(/[^a-zA-Z0-9]*$/g, '');
     // get the extension
     var e = n.substring(n.lastIndexOf('.')+1);
     // get the first part of the name
@@ -785,13 +802,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       await this.emls(data, results);
     
     this.office.loading = false;
-    this.chRef.markForCheck();
+    this.chRef.detectChanges();
   }
 
   // extract zip files and append to results
   async zips(data:ArrayBuffer, results:Array<any>) {
     try {
-      var zip = await JSZip.loadAsync(data);
+      var zip = await loadAsync(data);
       var files = Object.keys(zip.files);
       files.forEach(async (file) => {
         try {
@@ -809,23 +826,23 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // extract and append msg email attachments to results
   async msgs(data:ArrayBuffer, results:Array<any>) {
     try {
-      var msgReader = new MsgReader.MSGReader(data);
+      // new MsgReader(data) doesnt seem to work and .default is not recognised but ['default'] works somehow
+      var msgReader = new MsgReader['default'](data) as MsgReader;
       // triggered the parser
       var fileData = msgReader.getFileData();
       // if no sender name then its not an email
       if (!('senderName' in fileData))
         return;
       // get the email date
-      var h = fileData.headers.split('\n').filter((x:string) => x.startsWith('Date: '));
+      var h = fileData.headers?.split('\n').filter((x:string) => x.startsWith('Date: '));
       var received = h && h.length > 0 ? new Date(h[0].replace('Date: ', '')) : new Date();
       // get all attachments
-      fileData.attachments.forEach(async (attachment:MsgReader.MSGAttachment) => {
+      fileData.attachments?.forEach(async (attachment) => {
         if (attachment.pidContentId)
           return;
         try {
           var file = msgReader.getAttachment(attachment);
-          // square brackets for buffer here as file.content is a Uint8Array but the typing shows it as string
-          await this.appendFile(file.fileName, file.content['buffer'], results, `Sent: ${received}`);
+          await this.appendFile(file.fileName, file.content.buffer as ArrayBuffer, results, `Sent: ${received}`);
         } catch (e) { }
       });
     } catch (e) {
@@ -845,7 +862,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           if (attachment.inline)
             return;
           try {
-            await this.appendFile(attachment.name, Uint8Array.from(atob(attachment.data64), c => c.charCodeAt(0)).buffer, results, `Sent: ${received}`);
+            // work out the name from id which is more consistent across sources, otherwise from name. 
+            var name = (attachment.id?.replace(/^</, '').replace(/>$/, '').split('@')[0] || attachment.name);
+            await this.appendFile(name, Uint8Array.from(atob(attachment.data64), c => c.charCodeAt(0)).buffer, results, `Sent: ${received}`);
           } catch (e) { }
         });
       });
