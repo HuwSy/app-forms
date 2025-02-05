@@ -1,4 +1,5 @@
 import { ILogListener } from "@pnp/logging";
+import { fromError } from 'stacktrace-js';
 import { App } from './App'
 
 export class PnPLogging implements ILogListener {
