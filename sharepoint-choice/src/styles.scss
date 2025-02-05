@@ -214,6 +214,11 @@ a.fc-event {
   top: 0px;
   z-index: 1;
 }
+.ag-cell a {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
 
 .AutoComplete,
 .ToolTip {
@@ -261,6 +266,7 @@ a.fc-event {
 .FilesOver {
   animation: shake 0.82s cubic-bezier(.36, .07, .19, .97) both;
   animation-iteration-count: infinite;
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px;
 
   @keyframes shake {
     10%,
