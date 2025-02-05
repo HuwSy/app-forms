@@ -1,7 +1,7 @@
 import { ErrorHandler } from '@angular/core';
 import { App } from './App'
 
-export class AngularLogging implements ErrorHandler {
+export class SharepointChoiceLogging implements ErrorHandler {
     constructor() {
         // connection here
     }
