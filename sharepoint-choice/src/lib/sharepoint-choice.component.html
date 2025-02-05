@@ -199,7 +199,7 @@
                   <input [(ngModel)]="f.ListItemAllFields[file.notes]" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" style="width: 95%;" name="FileDesc_{{i}}">
                 </td>
                 <td class="desktop">
-                  {{!f.ServerRelativeUrl ? 'Pending submission' : f.TimeCreated | date:'dd MMM yyyy HH:mm'}}
+                  {{!f.ServerRelativeUrl ? 'Awaiting save' : f.TimeCreated | date:'dd MMM yyyy HH:mm'}}
                 </td>
             </tr>
         </table>
@@ -207,7 +207,7 @@
 
     <div layout="column" *ngIf="get('TypeAsString') == 'Attachments'" style="position: relative;">
       <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A">
-      <div [hidden]="disabled" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}" style="max-width: 265px; text-align: center;">
+      <div [hidden]="disabled" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}" style="text-align: center;margin: 4px;">
         <div *ngIf="!office.type">
           <b style="font-size: 48px;">&#8613;</b><br>
           Drag and drop files here<br>
@@ -219,7 +219,7 @@
         <input accept="{{file.accept}}" type="file" style="display: none !important;" multiple (change)="add($event.target)" />
         <button onclick="this.previousElementSibling.click()">Browse file</button>
       </div>
-  </div>
+    </div>
   
     <div layout="column" *ngIf="['User','UserMulti'].indexOf(get('TypeAsString')) >= 0">
         <input hidden type="text" [required]="required()" [value]="people()" name="{{field}}_P">
