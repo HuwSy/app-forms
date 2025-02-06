@@ -213,12 +213,12 @@ export class SharepointChoiceUtils {
     }
   
     // calls an api more generically
-    public async callApi(tenancyOnMicrosoft: string, clientId: string, permissionScope?: string, apiUrl?: string, httpMethod?: string, jsonPostData?: any, dataType: string = 'json'):Promise<any> {
+    public async callApi(tenancyOnMicrosoft?: string, clientId?: string, permissionScope?: string, apiUrl?: string, httpMethod?: string, jsonPostData?: any, dataType: string = 'json'):Promise<any> {
       // client settings
       var config = {
         auth: {
             clientId: clientId,
-            authority: `https://login.microsoftonline.com/${tenancyOnMicrosoft}.onmicrosoft.com`,
+            authority: `https://login.microsoftonline.com/${tenancyOnMicrosoft || App.Tenancy}.onmicrosoft.com`,
             redirectUri: this.context?.replace(/\/$/,'')
         },
         cache: {
