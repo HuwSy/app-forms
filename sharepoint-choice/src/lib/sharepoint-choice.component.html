@@ -106,7 +106,7 @@
         <input flex="50" [disabled]="disabled" [(ngModel)]="form[field].Description" name="{{field}}_UD" maxlength="250" (change)="change($event)">
     </div>
     
-    <div layout="column" *ngIf="get('TypeAsString') == 'Attachments'" style="position: relative;overflow-x: auto;">
+    <div layout="column" *ngIf="get('TypeAsString') == 'Attachments'" style="position: relative;overflow-x: auto;" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}">
         <table class="files" *ngIf="field == 'Attachments' && !file.uploadonly" cellspacing="0">
             <tr>
               <th>File Name</th>
@@ -167,6 +167,7 @@
                     <input type="checkbox" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" [checked]="(file.primary && f.ListItemAllFields[file.primary.toString()]) || f.Primary" (click)="setPrimary(f, $event)" name="FilePrimaryM_{{i}}" style="width:16px">
 
                     <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" name="FileCatM_{{i}}" style="width:calc(100% - 24px)">
+                      <option disabled selected hidden>Please select {{file.doctype}}</option>
                       <option *ngIf="f.ListItemAllFields[file.doctype] && !f.Changed" value="{{f.ListItemAllFields[file.doctype]}}" selected>{{f.ListItemAllFields[file.doctype]}}</option>
                       <option *ngIf="!f.ListItemAllFields[file.doctype]" value=""></option>
                       <option *ngFor="let v of file.doctypes" value="{{v}}">{{v}}</option>
@@ -205,12 +206,12 @@
         </table>
     </div>
 
-    <div layout="column" *ngIf="get('TypeAsString') == 'Attachments'" style="position: relative;">
+    <div layout="column" *ngIf="get('TypeAsString') == 'Attachments'" style="position: relative;" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}">
       <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A">
-      <div [hidden]="disabled" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}" style="text-align: center;margin: 4px;">
-        <div *ngIf="!office.type">
+      <div [hidden]="disabled" style="text-align: center;margin: 4px;">
+        <div>
           <b style="font-size: 48px;">&#8613;</b><br>
-          Drag and drop files here<br>
+          Drag and drop additional files here<br>
           or<br>
         </div>
         <button (click)="importOutlook()" [disabled]="office.loading" *ngIf="office.type == 'Outlook'">Import selected email(s)</button>
