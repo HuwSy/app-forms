@@ -548,8 +548,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         try {
           // must double url encode any / in the message id
           var fileContent:string = await spc.callApi(
-            App.Tenancy,
-            App.GraphClient,
+            undefined,
+            undefined,
             undefined,
             `https://graph.microsoft.com/v1.0/users/${maillistrow.mailboxInfos[i].mailboxSmtpAddress}/messages/${maillistrow.latestItemIds[i].replace(/\//g, '%252F')}/$value`,
             'GET',
@@ -575,8 +575,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       try {
         // must double url encode any / in the message id and attachment id
         var getAttachment:any = await spc.callApi(
-          App.Tenancy,
-          App.GraphClient,
+          undefined,
+          undefined,
           undefined,
           `https://graph.microsoft.com/v1.0/users/${attachment.mailboxInfo.mailboxSmtpAddress}/messages/${mail.replace(/\//g, '%252F')}/attachments/${attachment.attachmentFile.attachmentItemId.replace(/\//g, '%252F')}`
         );
@@ -665,8 +665,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
         // must double url encode any / in the message id
         var fileContent:string = await spc.callApi(
-          App.Tenancy,
-          App.GraphClient,
+          undefined,
+          undefined,
           undefined,
           `https://graph.microsoft.com/v1.0/me/messages/${message.itemId.replace(/\//g, '%252F')}/$value`,
           'GET',
