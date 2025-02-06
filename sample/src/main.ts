@@ -21,11 +21,13 @@ var loadComponents = () => {
 };
 
 // on partial page load trigger bootstrap load
-['navigate','currententrychange'].forEach(evt => 
-  window['navigation'].addEventListener(evt, () => {
-    setTimeout(loadComponents, 2000)
-  }, false)
-);
+setTimeout(() => {
+  ['navigate','currententrychange'].forEach(evt => 
+    window['navigation'].addEventListener(evt, () => {
+      setTimeout(loadComponents, 2000)
+    }, false)
+  );
+}, 2000);
 
 // on page load trigger bootstrap load
 loadComponents();
