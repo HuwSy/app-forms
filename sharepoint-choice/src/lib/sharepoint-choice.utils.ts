@@ -212,12 +212,12 @@ export class SharepointChoiceUtils {
       return i;
     }
   
-    // calls an api more generically
+    // calls an api more generically, or graph api if no parameters passed
     public async callApi(tenancyOnMicrosoft?: string, clientId?: string, permissionScope?: string, apiUrl?: string, httpMethod?: string, jsonPostData?: any, dataType: string = 'json'):Promise<any> {
       // client settings
       var config = {
         auth: {
-            clientId: clientId,
+            clientId: clientId || App.GraphClient,
             authority: `https://login.microsoftonline.com/${tenancyOnMicrosoft || App.Tenancy}.onmicrosoft.com`,
             redirectUri: this.context?.replace(/\/$/,'')
         },
