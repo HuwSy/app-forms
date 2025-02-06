@@ -1,11 +1,10 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { SharepointChoiceUtils } from 'sharepoint-choice';
-import { App, AngularLogging } from '../../../App';
 
 import { ErrorHandler, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SharepointChoiceComponent } from 'sharepoint-choice';
+import { SharepointChoiceComponent, SharepointChoiceLogging } from 'sharepoint-choice';
 
 @Component({
   selector: 'app-hello-world-web-part',
@@ -19,7 +18,7 @@ import { SharepointChoiceComponent } from 'sharepoint-choice';
   ],
   providers: [{
     provide: ErrorHandler,
-    useClass: AngularLogging
+    useClass: SharepointChoiceLogging
   }]
 })
 export class HelloWorldWebPartComponent implements OnInit {
@@ -141,7 +140,7 @@ export class HelloWorldWebPartComponent implements OnInit {
   // Dashboard
   // load data
   async loadData(restart: boolean) {
-    var cur = JSON.parse(localStorage.getItem(`${this._prefix}-${App.AppName}-${App.Release}-${this._spUtils.context}`) || '{}');
+    var cur = JSON.parse(localStorage.getItem(`${this._prefix}-${this._spUtils.context}`) || '{}');
     for(var f in cur) {
       this[f] = cur[f];
     }
@@ -163,9 +162,9 @@ export class HelloWorldWebPartComponent implements OnInit {
 
   // save specific filter field
   saveFilter(f, r) {
-    var cur = JSON.parse(localStorage.getItem(`${this._prefix}-${App.AppName}-${App.Release}-${this._spUtils.context}`) || '{}');
+    var cur = JSON.parse(localStorage.getItem(`${this._prefix}-${this._spUtils.context}`) || '{}');
     cur[f] = this[f];
-    localStorage.setItem(`${this._prefix}-${App.AppName}-${App.Release}-${this._spUtils.context}`, JSON.stringify(cur));
+    localStorage.setItem(`${this._prefix}-${this._spUtils.context}`, JSON.stringify(cur));
 
     if (r) {
       this.selected = null;
