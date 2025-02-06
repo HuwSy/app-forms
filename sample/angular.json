@@ -52,9 +52,7 @@
               "outputHashing": "all"
             },
             "development": {
-              "extractLicenses": false,
-              "sourceMap": true,
-              "namedChunks": true
+              "sourceMap": true
             }
           },
           "defaultConfiguration": "production"
@@ -79,12 +77,6 @@
             ],
             "sslKey": "./localhost.key",
             "sslCert": "./localhost.crt"
-          }
-        },
-        "extract-i18n": {
-          "builder": "@angular-devkit/build-angular:extract-i18n",
-          "options": {
-            "buildTarget": "sample:build"
           }
         }
       }
