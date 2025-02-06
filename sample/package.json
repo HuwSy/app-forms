@@ -11,8 +11,7 @@
   "private": true,
   "sideEffects": false,
   "dependencies": {
-    "@angular/elements": "^18.2.8",
-    "sharepoint-choice": "^7.0.31"
+    "sharepoint-choice": "^7.0.54"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^18.0.1",
