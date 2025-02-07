@@ -206,20 +206,17 @@
         </table>
     </div>
 
-    <div layout="column" *ngIf="get('TypeAsString') == 'Attachments'" style="position: relative;" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}">
+    <div layout="column" *ngIf="get('TypeAsString') == 'Attachments' && !disabled" style="text-align: center;margin: 4px;" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}">
       <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A">
-      <div [hidden]="disabled" style="text-align: center;margin: 4px;">
-        <div>
-          <b style="font-size: 48px;">&#8613;</b><br>
-          Drag and drop additional files here<br>
-          or<br>
-        </div>
-        <button (click)="importOutlook()" [disabled]="office.loading" *ngIf="office.type == 'Outlook'">Import selected email(s)</button>
-        <button (click)="importOffice()" [disabled]="office.loading" *ngIf="office.type && office.type != 'Outlook'">Import open file</button>
+      <b style="font-size: 48px;">&#8613;</b><br>
+      Drag and drop additional files here<br>
+      or<br>
 
-        <input accept="{{file.accept}}" type="file" style="display: none !important;" multiple (change)="add($event.target)" />
-        <button onclick="this.previousElementSibling.click()">Browse file</button>
-      </div>
+      <button (click)="importOutlook()" [disabled]="office.loading" *ngIf="office.type == 'Outlook'">Import selected email(s)</button>
+      <button (click)="importOffice()" [disabled]="office.loading" *ngIf="office.type && office.type != 'Outlook'">Import open file</button>
+
+      <input accept="{{file.accept}}" type="file" style="display: none !important;" multiple (change)="add($event.target)" />
+      <button onclick="this.previousElementSibling.click()">Browse file</button>
     </div>
   
     <div layout="column" *ngIf="['User','UserMulti'].indexOf(get('TypeAsString')) >= 0">
