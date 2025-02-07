@@ -175,6 +175,7 @@
                   </div>
                   <div class="mobile" *ngIf="!file.primary && file.doctype">
                     <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" name="FileCatM_{{i}}">
+                      <option disabled selected hidden>Please select {{file.doctype}}</option>
                       <option *ngIf="f.ListItemAllFields[file.doctype] && !f.Changed" value="{{f.ListItemAllFields[file.doctype]}}" selected>{{f.ListItemAllFields[file.doctype]}}</option>
                       <option *ngIf="!f.ListItemAllFields[file.doctype]" value=""></option>
                       <option *ngFor="let v of file.doctypes" value="{{v}}">{{v}}</option>
