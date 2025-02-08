@@ -207,7 +207,7 @@
         </table>
     </div>
 
-    <div layout="column" *ngIf="get('TypeAsString') == 'Attachments' && !disabled" style="text-align: center;margin: 4px;" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}">
+    <div layout="column" *ngIf="get('TypeAsString') == 'Attachments' && !disabled" style="text-align: center; padding: 4px;" (dragover)="over($event)" (dragleave)="leave($event)" (drop)="drop($event)" [ngClass]="{'FilesOver': filesOver}">
       <input hidden type="text" [required]="required()" [value]="attach()" name="{{field}}_A">
       <b style="font-size: 48px;">&#8613;</b><br>
       Drag and drop additional files here<br>
