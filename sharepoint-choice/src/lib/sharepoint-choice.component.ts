@@ -488,6 +488,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     if (typeof this.onchange == "function")
       this.onchange(this);
+    this.chRef.detectChanges();
   }
 
   // add attachment to array
