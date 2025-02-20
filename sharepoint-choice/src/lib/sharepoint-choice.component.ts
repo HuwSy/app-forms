@@ -863,7 +863,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             return;
           try {
             // work out the name from id which is more consistent across sources, otherwise from name. 
-            var name = (attachment.id?.replace(/^</, '').replace(/>$/, '').split('@')[0] || attachment.name);
+            var name = attachment.id?.replace(/^</, '').replace(/>$/, '').split('@')[0];
+            if (!name || name.indexOf('.') < 0)
+              name = attachment.name;
             await this.appendFile(name, Uint8Array.from(atob(attachment.data64), c => c.charCodeAt(0)).buffer, results, `Sent: ${received}`);
           } catch (e) { }
         });
