@@ -838,7 +838,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       var received = h && h.length > 0 ? new Date(h[0].replace('Date: ', '')) : new Date();
       // get all attachments
       fileData.attachments?.forEach(async (attachment) => {
-        if (attachment.pidContentId)
+        if (attachment.attachmentHidden)
           return;
         try {
           var file = msgReader.getAttachment(attachment);
