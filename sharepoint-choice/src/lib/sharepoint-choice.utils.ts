@@ -222,7 +222,7 @@ export class SharepointChoiceUtils {
             redirectUri: this.context?.replace(/\/$/,'')
         },
         cache: {
-            cacheLocation: "localStorage",
+            cacheLocation: "sessionStorage",
             storeAuthStateInCookie: false
         }
       }
