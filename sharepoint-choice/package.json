@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-choice",
-  "version": "7.0.62",
+  "version": "7.1.0",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
@@ -16,26 +16,24 @@
   ],
   "license": "ISC",
   "peerDependencies": {
-    "@angular/common": "^18.2.13",
-    "@angular/core": "^18.2.13",
-    "@angular/forms": "^18.2.13",
-    "@angular/platform-browser": "^18.2.13",
-    "@azure/msal-browser": "^4.2.0",
+    "@angular/common": "^19.2.1",
+    "@angular/core": "^19.2.1",
+    "@angular/forms": "^19.2.1",
+    "@angular/platform-browser": "^19.2.1",
+    "@azure/msal-browser": "^4.5.1",
     "@kenjiuno/msgreader": "^1.22.0",
-    "@pnp/logging": "^4.9.0",
-    "@pnp/sp": "^4.9.0",
+    "@pnp/logging": "^4.10.0",
+    "@pnp/sp": "^4.10.0",
     "eml-parse-js": "^1.1.15",
     "jszip": "^3.10.1",
     "ngx-editor": "^18.0.0",
     "stacktrace-js": "^2.0.2"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^18.2.14",
-    "@angular/cli": "^18.2.14",
-    "@types/jasmine": "~5.1.5",
-    "@types/office-js": "^1.0.462",
-    "jasmine-core": "~5.4.0",
-    "ng-packagr": "^18.2.1",
-    "typescript": "~5.5.4"
+    "@angular-devkit/build-angular": "^19.2.1",
+    "@angular/cli": "^19.2.1",
+    "@types/office-js": "^1.0.475",
+    "ng-packagr": "^19.2.0",
+    "typescript": "^5.8.0"
   }
 }
