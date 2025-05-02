@@ -1,5 +1,6 @@
 import { bootstrapApplication } from '@angular/platform-browser';
-
+import { ErrorHandler } from '@angular/core';
+import { SharepointChoiceLogging } from 'sharepoint-choice';
 import { HelloWorldWebPartComponent } from './app/hello-world-web-part/hello-world-web-part.component';
 
 // only bootstrap required components
@@ -15,7 +16,11 @@ var loadComponents = () => {
     // flag loaded on this page
     el.setAttribute('loaded', 'true');
     // bootstrap the component
-    bootstrapApplication(component.com)
+    bootstrapApplication(component.com,
+      providers: [{
+        provide: ErrorHandler,
+        useClass: SharepointChoiceLogging
+      }])
       .catch((err) => console.error(err));
   });
 };
