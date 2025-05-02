@@ -1,10 +1,10 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { SharepointChoiceUtils } from 'sharepoint-choice';
 
-import { ErrorHandler, ElementRef } from '@angular/core';
+import { ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SharepointChoiceComponent, SharepointChoiceLogging } from 'sharepoint-choice';
+import { SharepointChoiceComponent } from 'sharepoint-choice';
 
 @Component({
   selector: 'app-hello-world-web-part',
@@ -15,11 +15,7 @@ import { SharepointChoiceComponent, SharepointChoiceLogging } from 'sharepoint-c
     CommonModule,
     FormsModule,
     SharepointChoiceComponent
-  ],
-  providers: [{
-    provide: ErrorHandler,
-    useClass: SharepointChoiceLogging
-  }]
+  ]
 })
 export class HelloWorldWebPartComponent implements OnInit {
   @Input() description!: string;
