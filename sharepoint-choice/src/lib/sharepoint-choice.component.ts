@@ -449,6 +449,16 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       });
   }
 
+  changeSort(field:string) {
+    if (this.sort == '-' + field) {
+      this.sort = '+' + field;
+    } else if (this.sort == '+' + field) {
+      this.sort = '';
+    } else {
+      this.sort = '-' + field;
+    }
+  }
+
   setPrimary(f:any, e:any) {
     // remove primry from all
     this.form[this.field].results.forEach(r => {
