@@ -83,6 +83,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   declare results: any[any];
   declare pos: number;
   declare office: any;
+  declare sort: string;
+  declare filter: string;
 
   public textKey: Subject<string> = new Subject<string>();
   public userKey: Subject<string> = new Subject<string>();
@@ -101,6 +103,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this.select = { };
     if (!this.file)
       this.file = { };
+    if (!this.filter)
+      this.filter = '';
 
     // rich text field
     this.editor = new Editor();
@@ -411,15 +415,38 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (!this.form[this.field] || !this.form[this.field].results)
       return [];
     var v = this.file.view ?? 0;
-    return this.form[this.field].results.filter((f:any) => {
-      if (v == 0 || !this.file.archive)
-        return true;
-      if (v == 1 && !f.ListItemAllFields[this.file.archive])
+    return this.form[this.field].results
+      .filter((f:any) => {
+        if (v == 0 || !this.file.archive)
           return true;
-      if (v == -1 && f.ListItemAllFields[this.file.archive])
+        if (v == 1 && !f.ListItemAllFields[this.file.archive])
+            return true;
+        if (v == -1 && f.ListItemAllFields[this.file.archive])
+            return true;
+        return false;
+      })
+      .filter((f:any) => {
+        if (!this.filter || this.filter == '' || !this.file.doctype)
           return true;
-      return false;
-    });
+        if (!f.ListItemAllFields || !f.ListItemAllFields[this.file.doctype])
+          return true;
+        if (f.ListItemAllFields[this.file.doctype] == this.filter)
+          return true;
+        return false;
+      })
+      .sort((a:any, b:any) => {
+        if (!this.sort || this.sort == '' || this.sort == '-')
+          this.sort = 'Created';
+        var s = this.sort.replace(/^[-\+]/,'');
+        var o = this.sort.startsWith('-') ? -1 : 1;
+        if (!a.ListItemAllFields || !a.ListItemAllFields[s])
+          return -2;
+        if (a.ListItemAllFields[s] < b.ListItemAllFields[s])
+          return o;
+        if (a.ListItemAllFields[s] > b.ListItemAllFields[s])
+          return -o;
+        return 0;
+      });
   }
 
   setPrimary(f:any, e:any) {
