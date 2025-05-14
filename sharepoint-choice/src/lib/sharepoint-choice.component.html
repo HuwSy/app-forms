@@ -136,10 +136,36 @@
         <table class="files" *ngIf="field != 'Attachments' && !file.uploadonly" cellspacing="0">
             <tr class="desktop">
               <th style="width: 0; white-space: nowrap;" *ngIf="file.primary"></th>
-              <th style="width: 0; white-space: nowrap;" *ngIf="file.doctype">File Type</th>
-              <th>File Name</th>
-              <th *ngIf="file.notes">File Description</th>
-              <th style="width: 0; white-space: nowrap;">Date Uploaded</th>
+              <th style="width: 0; white-space: nowrap;" *ngIf="file.doctype">
+                <span style="cursor: pointer;" (click)="changeSort(file.doctype)">
+                  File Type
+                </span>
+                <select style="width:30px;border:none;margin-left:8px;" [(ngModel)]="filter">
+                  <option value>All</option>
+                  <option *ngFor="let v of file.doctypes" value="{{v}}">{{v}}</option>
+                </select>
+                <span *ngIf="sort == '+'+file.doctype">&#9660;</span>
+                <span *ngIf="sort == '-'+file.doctype">&#9650;</span>
+              </th>
+              <th>
+                <span style="cursor: pointer;" (click)="changeSort('Title')">
+                  File Name
+                </span>
+                <span *ngIf="sort == '+Title'">&#9660;</span>
+                <span *ngIf="sort == '-Title'">&#9650;</span>
+              </th>
+              <th *ngIf="file.notes">
+                <span>
+                  File Description
+                </span>
+              </th>
+              <th style="width: 0; white-space: nowrap;">
+                <span style="cursor: pointer;" (click)="changeSort('Created')">
+                  Date Uploaded
+                </span>
+                <span *ngIf="sort == '+Created'">&#9660;</span>
+                <span *ngIf="sort == '-Created'">&#9650;</span>
+              </th>
             </tr>
             <tr [hidden]="attachments().length > 0">
                 <td colspan="5">No attachments</td>
