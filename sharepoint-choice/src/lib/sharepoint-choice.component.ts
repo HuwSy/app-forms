@@ -58,7 +58,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   
   @Input() file!: { // override file for field
     extract?: boolean, // extract files from zip and email
-    primary?: string|boolean, // primary field name or true for primary only file
     doctypes?: Array<string>, // document types
     doctype?: string, // document type field name
     notes?: string, // notes field name
@@ -105,7 +104,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this.file = { };
     if (!this.filter)
       this.filter = '';
-
+    
     // rich text field
     this.editor = new Editor();
     // rtf menu items
@@ -459,38 +458,30 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
   }
 
-  setPrimary(f:any, e:any) {
-    // remove primry from all
-    this.form[this.field].results.forEach(r => {
-      r.Primary = false;
-      if (this.file.primary && typeof(this.file.primary) == 'string')
-        r.ListItemAllFields[this.file.primary] = false;
-    });
-
-    // if unchecked then return
-    if (!(e.target ? e.target['checked'] : e))
-      return;
-
-    // set primary to this
-    f.Primary = true;
-    if (this.file.primary && typeof(this.file.primary) == 'string')
-      f.ListItemAllFields[this.file.primary] = true;
-
-    // if it has a doc type, then set primary to all with same doc type
-    if (this.file.doctype) {
-      this.form[this.field].results.forEach(r => {
-        if (!this.file.doctype)
-          return;
-        r.Primary = r.ListItemAllFields[this.file.doctype] == f.ListItemAllFields[this.file.doctype];
-      });
-    }
-  }
-
   setClass(f: any, e: any) {
     if (!this.file.doctype)
       return;
     f.ListItemAllFields[this.file.doctype] = e.target ? e.target['value'] : e;
     f.Changed = true;
+  }
+
+  usedTypes(): Array<string> {
+    // get initial types
+    var types = this.file.doctypes || [];
+    // get all types used in the attachments
+    if (this.file.doctype && this.form[this.field] && this.form[this.field].results)
+      types = this.form[this.field].results
+        .map((f:any) => f.ListItemAllFields && this.file.doctype && this.file.doctype in f.ListItemAllFields ? f.ListItemAllFields[this.file.doctype] : null)
+        .filter((f:any) => f != null && f != '')
+        .sort();
+    // remove duplicates
+    types = [...new Set(types)];
+    return types;
+  }
+
+  newTab(f, e) {
+    window.open(`${f.ServerRelativeUrl || '#'}?Web=1`, '_blank');
+    e.preventDefault();
   }
 
   width(): string {
