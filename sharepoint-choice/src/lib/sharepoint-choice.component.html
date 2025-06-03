@@ -117,8 +117,9 @@
             </tr>
             <tr *ngFor="let f of attachments();let i = index">
                 <td *ngIf="!f.Deleted" style="position: relative;">
-                  <a [hidden]="!file.download" download="{{f.FileName}}" href="{{f.ServerRelativeUrl || '#'}}" target="_blank">{{f.FileName}}</a>
-                  <a [hidden]="file.download" href="{{f.ServerRelativeUrl || '#'}}" target="_blank">{{f.FileName}}</a>
+                  <a download="{{f.FileName}}" href="{{f.ServerRelativeUrl}}" *ngIf="f.ServerRelativeUrl && file.download">{{f.FileName}}</a>
+                  <a *ngIf="f.ServerRelativeUrl && !file.download" (click)="newTab(f, $event)" style="cursor:pointer">{{f.FileName}}</a>
+                  <a [hidden]="f.ServerRelativeUrl">{{f.FileName}}</a>
 
                   <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;" (click)="delete(i, f, true)" title="Delete" [hidden]="disabled">x</a>
                 </td>
@@ -135,14 +136,13 @@
 
         <table class="files" *ngIf="field != 'Attachments' && !file.uploadonly" cellspacing="0">
             <tr class="desktop">
-              <th style="width: 0; white-space: nowrap;" *ngIf="file.primary"></th>
               <th style="width: 0; white-space: nowrap;" *ngIf="file.doctype">
                 <span style="cursor: pointer;" (click)="changeSort(file.doctype)">
                   File Type
                 </span>
                 <select style="width:30px;border:none;margin-left:8px;" [(ngModel)]="filter">
                   <option value>All</option>
-                  <option *ngFor="let v of file.doctypes" value="{{v}}">{{v}}</option>
+                  <option *ngFor="let v of usedTypes()" value="{{v}}">{{v}}</option>
                 </select>
                 <span *ngIf="sort == '+'+file.doctype">&#9660;</span>
                 <span *ngIf="sort == '-'+file.doctype">&#9650;</span>
@@ -171,11 +171,8 @@
                 <td colspan="5">No attachments</td>
             </tr>
             <tr *ngFor="let f of attachments();let i = index">
-                <td *ngIf="file.primary" class="desktop">
-                  <input type="checkbox" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" [checked]="(file.primary && f.ListItemAllFields[file.primary.toString()]) || f.Primary" (click)="setPrimary(f, $event)" name="FilePrimary_{{i}}">
-                </td>
                 <td *ngIf="file.doctype" class="desktop">
-                  <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" name="FileCat_{{i}}" [style]="width()">
+                  <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402" name="FileCat_{{i}}" [style]="width()">
                     <option *ngIf="f.ListItemAllFields[file.doctype] && !f.Changed" value="{{f.ListItemAllFields[file.doctype]}}" selected>{{f.ListItemAllFields[file.doctype]}}</option>
                     <option *ngIf="!f.ListItemAllFields[file.doctype]" value=""></option>
                     <option *ngFor="let v of file.doctypes" value="{{v}}">{{v}}</option>
@@ -183,24 +180,14 @@
                 </td>
 
                 <td *ngIf="!f.Deleted && (!file.archive || !f.ListItemAllFields[file.archive])" style="position: relative;">
-                  <a [hidden]="!file.download" download="{{f.FileName}}" href="{{f.ServerRelativeUrl}}" target="_blank" *ngIf="f.ServerRelativeUrl">{{f.ListItemAllFields?.Title || f.FileName}}</a>
-                  <a [hidden]="file.download" href="{{f.ServerRelativeUrl}}" target="_blank" *ngIf="f.ServerRelativeUrl">{{f.ListItemAllFields?.Title || f.FileName}}</a>
+                  <a download="{{f.FileName}}" href="{{f.ServerRelativeUrl}}" *ngIf="f.ServerRelativeUrl && file.download">{{f.ListItemAllFields?.Title || f.FileName}}</a>
+                  <a *ngIf="f.ServerRelativeUrl && !file.download" (click)="newTab(f, $event)" style="cursor:pointer">{{f.ListItemAllFields?.Title || f.FileName}}</a>
                   <input [disabled]="disabled" [hidden]="f.ServerRelativeUrl" [(ngModel)]="f.ListItemAllFields.Title" style="width: 95%;" name="FileName_{{i}}" [title]="f.FileName + ' - ' + f.Length">
 
-                  <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;" (click)="delete(i, f, true)" title="Delete" [hidden]="disabled">x</a>
+                  <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;" (click)="delete(i, f, true)" title="Delete" [hidden]="disabled || f.ServerRelativeUrl?.length > 402">x</a>
 
-                  <div class="mobile" *ngIf="file.primary && file.doctype">
-                    <input type="checkbox" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" [checked]="(file.primary && f.ListItemAllFields[file.primary.toString()]) || f.Primary" (click)="setPrimary(f, $event)" name="FilePrimaryM_{{i}}" style="width:16px">
-
-                    <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" name="FileCatM_{{i}}" style="width:calc(100% - 24px)">
-                      <option disabled selected hidden>Please select {{file.doctype}}</option>
-                      <option *ngIf="f.ListItemAllFields[file.doctype] && !f.Changed" value="{{f.ListItemAllFields[file.doctype]}}" selected>{{f.ListItemAllFields[file.doctype]}}</option>
-                      <option *ngIf="!f.ListItemAllFields[file.doctype]" value=""></option>
-                      <option *ngFor="let v of file.doctypes" value="{{v}}">{{v}}</option>
-                    </select>
-                  </div>
-                  <div class="mobile" *ngIf="!file.primary && file.doctype">
-                    <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" name="FileCatM_{{i}}">
+                  <div class="mobile" *ngIf="file.doctype">
+                    <select (change)="setClass(f,$event)" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402" name="FileCatM_{{i}}">
                       <option disabled selected hidden>Please select {{file.doctype}}</option>
                       <option *ngIf="f.ListItemAllFields[file.doctype] && !f.Changed" value="{{f.ListItemAllFields[file.doctype]}}" selected>{{f.ListItemAllFields[file.doctype]}}</option>
                       <option *ngIf="!f.ListItemAllFields[file.doctype]" value=""></option>
@@ -208,23 +195,26 @@
                     </select>
                   </div>
                   <div class="mobile" *ngIf="file.notes">
-                    <input [(ngModel)]="f.ListItemAllFields[file.notes]" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" style="width: 100%;" name="FileDescM_{{i}}" placeholder="Notes...">
+                    <input [(ngModel)]="f.ListItemAllFields[file.notes]" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402" style="width: 100%;" name="FileDescM_{{i}}" placeholder="Notes...">
+                  </div>
+                  <div class="mobile">
+                    {{!f.ServerRelativeUrl ? 'Awaiting save' : f.TimeCreated | date:'dd MMM yyyy HH:mm'}}
                   </div>
                 </td>
                 <td *ngIf="!f.Deleted && file.archive && f.ListItemAllFields[file.archive]">
                   <span style="text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
 
-                  <a style="color: green; padding-left: 8px;cursor: pointer;" (click)="delete(i, f, false)" title="Undelete" [hidden]="disabled">+</a>
-                  <a style="color: red; padding-left: 8px;cursor: pointer;" (click)="delete(i, f, true)" title="Delete" [hidden]="disabled">x</a>
+                  <a style="color: green; padding-left: 8px;cursor: pointer;" (click)="delete(i, f, false)" title="Undelete" [hidden]="disabled || f.ServerRelativeUrl?.length > 402">+</a>
+                  <a style="color: red; padding-left: 8px;cursor: pointer;" (click)="delete(i, f, true)" title="Delete" [hidden]="disabled || f.ServerRelativeUrl?.length > 402">x</a>
                 </td>
                 <td *ngIf="f.Deleted">
                   <span style="color: red; text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
 
-                  <a style="color: green; padding-left: 8px;cursor: pointer;" (click)="delete(i, f, false)" title="Undelete" [hidden]="disabled">+</a>
+                  <a style="color: green; padding-left: 8px;cursor: pointer;" (click)="delete(i, f, false)" title="Undelete" [hidden]="disabled || f.ServerRelativeUrl?.length > 402">+</a>
                 </td>
 
                 <td *ngIf="file.notes" class="desktop">
-                  <input [(ngModel)]="f.ListItemAllFields[file.notes]" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive])" style="width: 95%;" name="FileDesc_{{i}}">
+                  <input [(ngModel)]="f.ListItemAllFields[file.notes]" [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402" style="width: 95%;" name="FileDesc_{{i}}">
                 </td>
                 <td class="desktop">
                   {{!f.ServerRelativeUrl ? 'Awaiting save' : f.TimeCreated | date:'dd MMM yyyy HH:mm'}}
