@@ -481,7 +481,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   newTab(f, e) {
     window.open(`${f.ServerRelativeUrl || '#'}?Web=1`, '_blank');
-    e.preventDefault();
   }
 
   width(): string {
