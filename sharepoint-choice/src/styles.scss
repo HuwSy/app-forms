@@ -1,5 +1,6 @@
 div[data-automation-id="pageHeader"],
-div#spCommandBar {
+div#spCommandBar,
+div[data-automation-id="webPartError"] {
   display: none;
 }
 div[data-automation-id="CanvasControl"] {
