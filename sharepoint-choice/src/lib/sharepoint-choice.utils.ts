@@ -375,6 +375,7 @@ export class SharepointChoiceUtils {
     public async ensurePath(path: string, start: number): Promise<void> {
       if (path.indexOf("://") >= 0)
         path = path.substring(path.indexOf('/', 9));
+      path = decodeURIComponent(path).replace(/\/$/, '');
 
       var p = path.split('/').slice(0, start + 1).join('/');
       var folder = this.sp.web.getFolderByServerRelativePath(p);
@@ -394,11 +395,12 @@ export class SharepointChoiceUtils {
       return root.ServerRelativeUrl;
     }
 
-    public async getFiles(serverRelative:string, additional:string|undefined): Promise<any> {
-      if (serverRelative.indexOf("://") >= 0)
-        serverRelative = serverRelative.substring(serverRelative.indexOf('/', 9));
+    public async getFiles(path:string, additional:string|undefined): Promise<any> {
+      if (path.indexOf("://") >= 0)
+        path = path.substring(path.indexOf('/', 9));
+      path = decodeURIComponent(path).replace(/\/$/, '');
 
-      var files = await this.sp.web.getFolderByServerRelativePath(serverRelative.replace(/\/$/, '') + (additional ? '/'+additional : '')).files.orderBy('TimeCreated').expand('ListItemAllFields')();
+      var files = await this.sp.web.getFolderByServerRelativePath(path + (additional ? '/'+additional : '')).files.orderBy('TimeCreated').expand('ListItemAllFields')();
       
       var ret:Array<any> = [];
       files.forEach(async (file:any) => {
@@ -419,6 +421,7 @@ export class SharepointChoiceUtils {
     public async saveFiles(path:string, additional:string|undefined, url:any|undefined, files:any, metadata:any|undefined): Promise<void> {
       if (path.indexOf("://") >= 0)
         path = path.substring(path.indexOf('/', 9));
+      path = decodeURIComponent(path).replace(/\/$/, '');
 
       // common metadata for folder and each file, unless overridden at a file level
       var commonmeta = metadata ? JSON.parse(JSON.stringify(metadata)) : {};
