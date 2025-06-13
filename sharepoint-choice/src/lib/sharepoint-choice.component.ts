@@ -2,7 +2,6 @@ import { Component, OnInit, OnDestroy, Input, ElementRef, ChangeDetectorRef, Err
 import { UserQuery, User } from "./Models";
 import "@pnp/sp/webs";
 import { Web } from "@pnp/sp/webs";
-import { Logger, LogLevel } from "@pnp/logging";
 import { Editor, NgxEditorModule, Toolbar } from 'ngx-editor';
 import MsgReader from '@kenjiuno/msgreader';
 import { readEml } from 'eml-parse-js';
@@ -10,7 +9,6 @@ import { loadAsync } from 'jszip';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { SharepointChoiceUtils } from './sharepoint-choice.utils';
-import { App } from './App';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SharepointChoiceLogging } from './sharepoint-choice.logging';
@@ -541,15 +539,12 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           if (remaining == 0)
             setTimeout(() => file.value = null, 10);
         } catch (e) {
-          alert(`File read error: ${f.name} - ${e}`);
+          alert(`File onread error: ${f.name} with error ${e}`);
         }
       }
       reader.onerror = function (e) {
-        alert(`File read error: ${f.name} - ${e}`);
-        Logger.log({
-          message: `Inside - add(${f.name})`,
-          level: LogLevel.Error,
-        });
+        alert(`File read onerror: ${f.name} with error ${e}`);
+        throw e;
       };
       // may need to consider how to await these each until all done if extractions start getting timely
       reader.readAsArrayBuffer(f);
@@ -570,6 +565,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // one or more email messages dropped
     let maillistrow = mailType(transfer, 'multimaillistmessagerows') || mailType(transfer, 'maillistrow');
     if (maillistrow) {
+      var errors:Array<string> = [];
       for (var i = 0; i < maillistrow.mailboxInfos.length; i++) {
         var fileName = maillistrow.subjects[i].trim() + ".eml";
         
@@ -587,8 +583,14 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           
           await this.appendFile(fileName, new TextEncoder().encode(fileContent).buffer as ArrayBuffer, this.form[this.field].results);
         } catch (e) {
-          alert(`Email read error: ${fileName} - ${e}`);
+          errors.push(`Email append error: ${fileName} with error ${e}`);
         }
+      }
+
+      if (errors.length > 0) {
+        // if there are errors then alert them
+        alert(`Errors saving emails:\n\n${errors.join('\n')}`);
+        throw errors.join('\n');
       }
     }
 
@@ -611,26 +613,38 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
         await this.appendFile(fileName, Uint8Array.from(atob(getAttachment.contentBytes), c => c.charCodeAt(0)).buffer, this.form[this.field].results, `Sent: ${new Date(getAttachment.lastModifiedDateTime)}`);
       } catch (e) {
-        alert(`Attachment read error: ${fileName} - ${e}`);
+        alert(`Error saving attachment: ${fileName} with error ${e}`);
+        throw e;
       }
     }
 
     // a teams file drop, only works for teams libraries not onedrive/chat
     let spo  = mailType(transfer, 'application/x-item-keys');
     if (spo) {
+      var errors:Array<string> = [];
       for (var i = 0; i < spo.itemKeys.length; i++) {
-        // the inner is still JSON encoded from teams
-        spo.itemKeys[i] = JSON.parse(spo.itemKeys[i]);
+        try {
+          // the inner is still JSON encoded from teams
+          spo.itemKeys[i] = JSON.parse(spo.itemKeys[i]);
 
-        var web = Web([spc.sp.web, spo.itemKeys[i][1]]);
-        var folder = await web.getFolderByServerRelativePath(spo.itemKeys[i][2].substring(spo.itemKeys[i][2].indexOf('/', 9))).properties();
+          var web = Web([spc.sp.web, spo.itemKeys[i][1]]);
+          var folder = await web.getFolderByServerRelativePath(spo.itemKeys[i][2].substring(spo.itemKeys[i][2].indexOf('/', 9))).properties();
 
-        var list = folder['vti_x005f_listtitle'] || folder['vti_listtitle'] || folder['listtitle'] || folder['title'];
-        var item = await web.lists.getByTitle(list).items.getById(spo.itemKeys[i][3]).select('File').expand('File')();
-        var desc = `Created: ${new Date(item.File.TimeCreated)} - Modified: ${new Date(item.File.TimeLastModified)}`;
-        
-        var buffer = await web.getFileByServerRelativePath(item.File.ServerRelativeUrl).getBuffer();
-        await this.appendFile(item.File.Name, buffer, this.form[this.field].results, desc);
+          var list = folder['vti_x005f_listtitle'] || folder['vti_listtitle'] || folder['listtitle'] || folder['title'];
+          var item = await web.lists.getByTitle(list).items.getById(spo.itemKeys[i][3]).select('File').expand('File')();
+          var desc = `Created: ${new Date(item.File.TimeCreated)} - Modified: ${new Date(item.File.TimeLastModified)}`;
+          
+          var buffer = await web.getFileByServerRelativePath(item.File.ServerRelativeUrl).getBuffer();
+          await this.appendFile(item.File.Name, buffer, this.form[this.field].results, desc);
+        } catch (e) {
+          errors.push(`SharePoint file append error: ${spo.itemKeys[i][2]} with error ${e}`);
+        }
+      }
+
+      if (errors.length > 0) {
+        // if there are errors then alert them
+        alert(`Errors saving SharePoint files:\n\n${errors.join('\n')}`);
+        throw errors.join('\n');
       }
     }
   }
@@ -688,21 +702,32 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       if (asyncResult.status === Office.AsyncResultStatus.Failed)
         return;
 
+      var errors:Array<string> = [];
       for (var m in asyncResult.value) {
-        var message = asyncResult.value[m];
+        try {
+          var message = asyncResult.value[m];
 
-        // must double url encode any / in the message id
-        var fileContent:string = await spc.callApi(
-          undefined,
-          undefined,
-          undefined,
-          `https://graph.microsoft.com/v1.0/me/messages/${message.itemId.replace(/\//g, '%252F')}/$value`,
-          'GET',
-          undefined,
-          'text'
-        );
+          // must double url encode any / in the message id
+          var fileContent:string = await spc.callApi(
+            undefined,
+            undefined,
+            undefined,
+            `https://graph.microsoft.com/v1.0/me/messages/${message.itemId.replace(/\//g, '%252F')}/$value`,
+            'GET',
+            undefined,
+            'text'
+          );
 
-        await ths.appendFile(`${message.subject.trim()}.eml`, new TextEncoder().encode(fileContent).buffer as ArrayBuffer, ths.form[ths.field].results);
+          await ths.appendFile(`${message.subject.trim()}.eml`, new TextEncoder().encode(fileContent).buffer as ArrayBuffer, ths.form[ths.field].results);
+        } catch (e) {
+          errors.push(`Email append error: ${message.subject} with error ${e}`);
+        }
+      }
+
+      if (errors.length > 0) {
+        // if there are errors then alert them
+        alert(`Errors saving emails:\n\n${errors.join('\n')}`);
+        throw errors.join('\n');
       }
     });
   }
@@ -718,71 +743,77 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     var file:any;
     var ths = this;
 
-    // get the file in 64k slices until complete
-    Office.context.document.getFileAsync(Office.FileType.Compressed, { sliceSize: 65536 }, (asyncResult:any) => {
-      if (asyncResult.status === Office.AsyncResultStatus.Failed)
-        return;
+    try {
+      // get the file in 64k slices until complete
+      Office.context.document.getFileAsync(Office.FileType.Compressed, { sliceSize: 65536 }, (asyncResult:any) => {
+        if (asyncResult.status === Office.AsyncResultStatus.Failed)
+          return;
 
-      file = asyncResult.value;
-      try {
-        file.getSliceAsync(0, processSlice);
-      } finally {
-        file.closeAsync();
-      }
-    });
-
-    // process the slice and append until completed
-    function processSlice(sliceResult:any) {
-      if (sliceResult.status === Office.AsyncResultStatus.Failed)
-        throw sliceResult.error.message;
-
-      docDataSlices[sliceResult.value.index] = sliceResult.value.data;
-      if (++slicesReceived == file.sliceCount)
-        saveFile();
-      else
-        file.getSliceAsync(slicesReceived, processSlice);
-    }
-
-    async function saveFile() {
-      // completed getting slices then start patching the file
-      let docData = [];
-      for (let i = 0; i < docDataSlices.length; i++)
-        docData = docData.concat(docDataSlices[i]);
-
-      // convert char codes to string
-      let fileContent = new String();
-      for (let j = 0; j < docData.length; j++)
-        fileContent += String.fromCharCode(docData[j]);
-
-      // try to get a file name from the document
-      var fileName = Office.context.document.url?.split('/').pop().split('\\').pop();
-      if (!fileName || fileName == '') {
-        fileName = `OfficeAddin-${new Date().toISOString().replace(/:/g, '-')}`;
-        switch (ths.office.type) {
-          case "Word":
-            fileName += ".docx";
-            break;
-          case "Excel":
-            fileName += ".xlsx";
-            break;
-          case "PowerPoint":
-            fileName += ".pptx";
-            break;
-          case "OneNote":
-            fileName += ".one";
-            break;
-          case "Project":
-            fileName += ".mpp";
-            break;
-          case "Visio":
-            fileName += ".vsdx";
-            break;
-          default:
-            throw "Unknown Office type, unable to save file";
+        file = asyncResult.value;
+        try {
+          file.getSliceAsync(0, processSlice);
+        } finally {
+          file.closeAsync();
         }
+      });
+
+      // process the slice and append until completed
+      function processSlice(sliceResult:any) {
+        if (sliceResult.status === Office.AsyncResultStatus.Failed)
+          throw sliceResult.error.message;
+
+        docDataSlices[sliceResult.value.index] = sliceResult.value.data;
+        if (++slicesReceived == file.sliceCount)
+          saveFile();
+        else
+          file.getSliceAsync(slicesReceived, processSlice);
       }
 
-      await ths.appendFile(`${fileName}`, Uint8Array.from(fileContent.toString(), c => c.charCodeAt(0)).buffer, ths.form[ths.field].results);
+      async function saveFile() {
+        // completed getting slices then start patching the file
+        let docData = [];
+        for (let i = 0; i < docDataSlices.length; i++)
+          docData = docData.concat(docDataSlices[i]);
+
+        // convert char codes to string
+        let fileContent = new String();
+        for (let j = 0; j < docData.length; j++)
+          fileContent += String.fromCharCode(docData[j]);
+
+        // try to get a file name from the document
+        var fileName = Office.context.document.url?.split('/').pop().split('\\').pop();
+        if (!fileName || fileName == '') {
+          fileName = `OfficeAddin-${new Date().toISOString().replace(/:/g, '-')}`;
+          switch (ths.office.type) {
+            case "Word":
+              fileName += ".docx";
+              break;
+            case "Excel":
+              fileName += ".xlsx";
+              break;
+            case "PowerPoint":
+              fileName += ".pptx";
+              break;
+            case "OneNote":
+              fileName += ".one";
+              break;
+            case "Project":
+              fileName += ".mpp";
+              break;
+            case "Visio":
+              fileName += ".vsdx";
+              break;
+            default:
+              throw "Unknown Office type, unable to save file";
+          }
+        }
+
+        await ths.appendFile(`${fileName}`, Uint8Array.from(fileContent.toString(), c => c.charCodeAt(0)).buffer, ths.form[ths.field].results);
+      }
+    } catch (e) {
+      // if there is an error then alert it
+      alert(`Error saving file:\n\n${e}`);
+      throw e;
     }
   }
 
