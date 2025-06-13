@@ -27,11 +27,15 @@ var loadComponents = () => {
 
 // on partial page load trigger bootstrap load
 setTimeout(() => {
-  ['navigate','currententrychange'].forEach(evt => 
-    window['navigation'].addEventListener(evt, () => {
-      setTimeout(loadComponents, 2000)
-    }, false)
-  );
+  var w = window as any;
+  w.pushstateOriginal = w.history.pushState.bind(w.history);
+  w.history.pushState = function () {
+    w.pushStateOriginal(...Array.prototype.slice.call(arguments, 0));
+    setTimeout(loadComponents, 2000);
+  };
+  w.addEventListener('popstate', () => {
+    setTimeout(loadComponents, 2000)
+  });
 }, 2000);
 
 // on page load trigger bootstrap load
