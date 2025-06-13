@@ -9,9 +9,7 @@ import "@pnp/sp/attachments";
 import "@pnp/sp/files";
 import "@pnp/sp/folders";
 import { PublicClientApplication } from "@azure/msal-browser";
-import { Logger, LogLevel } from "@pnp/logging";
 import { PermissionKind } from "@pnp/sp/security";
-import { PnPLogging } from './PnPLogging';
 import { App } from './App';
 
 ///<summary>
@@ -36,9 +34,6 @@ export class SharepointChoiceUtils {
       this.context = this.context?.replace(/\/$/,'');
 
       this.sp = spfi().using(SPBrowser({ baseUrl: this.context }));
-
-      Logger.subscribe(new PnPLogging());
-      Logger.activeLogLevel = LogLevel.Warning;
 
       this.mockClassicContext();
     }
@@ -188,7 +183,7 @@ export class SharepointChoiceUtils {
           d = await this.sp.web.lists.getByTitle(listTitle).items.getById(id)();
           await this.cleanLoadKeys(d, listTitle, id);
         } catch (e) {
-          alert('Error loading');
+          alert('Error loading:\n\n' + e);
           throw e;
         }
 
@@ -320,6 +315,7 @@ export class SharepointChoiceUtils {
     // patch save list item data and parse any data types appropriate for use in <sharepoint-choice ngModel=""> attributes
     public async save(formDataIncIdToUpdate: any, uneditedDataToBuildPatch: any, listTitle: string):Promise<number> {
         var save = JSON.parse(JSON.stringify(formDataIncIdToUpdate));
+        var errors:Array<string> = [];
         try {
           delete save["$$hashKey"];
 
@@ -342,7 +338,11 @@ export class SharepointChoiceUtils {
             });
 
             for (var i = 0; i < deletes.length; i++)
-              await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).attachmentFiles.getByName(deletes[i]).delete();
+              try {
+                await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).attachmentFiles.getByName(deletes[i]).delete();
+              } catch (e) {
+                errors.push(`Error deleting attachment ${deletes[i]} for item ${save.Id} in list ${listTitle} with error ${e}`);
+              }
     
             var adds = formDataIncIdToUpdate.Attachments.results.filter((a:any) => {
               return !a.Deleted && !a.ServerRelativeUrl
@@ -353,13 +353,21 @@ export class SharepointChoiceUtils {
               };
             });
 
-            for (var a = 0; a < adds.length; a++) {
-              await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).attachmentFiles.add(adds[a].name, adds[a].content);
-            }
+            for (var a = 0; a < adds.length; a++)
+              try {
+                await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).attachmentFiles.add(adds[a].name, adds[a].content);
+              } catch (e) {
+                errors.push(`Error adding attachment ${adds[a].name} for item ${save.Id} in list ${listTitle} with error ${e}`);
+              }
           }
         } catch (e) {
-          alert('Error saving');
+          alert('Error saving data:\n\n' + e);
           throw e;
+        }
+
+        if (errors.length > 0) {
+          alert('Error saving attachments:\n\n' + errors.join('\n'));
+          throw errors.join('\n');
         }
 
         return save.Id;
@@ -428,6 +436,7 @@ export class SharepointChoiceUtils {
       if (url)
         commonmeta['Request'] = url;
 
+      var errors:Array<string> = [];
       try {
         var folder;
         if (metadata || url) {
@@ -444,43 +453,52 @@ export class SharepointChoiceUtils {
 
         // process saves and deletes
         for (var i = 0; i < files.results.length; i++) {
-          var file = files.results[i];
-          if (!file.ListItemAllFields)
-            file.ListItemAllFields = {};
+          try {
+            var file = files.results[i];
+            if (!file.ListItemAllFields)
+              file.ListItemAllFields = {};
 
-          // clone common metadata for files
-          for (var m in commonmeta) {
-            file.ListItemAllFields[m] = commonmeta[m];
-          }
+            // clone common metadata for files
+            for (var m in commonmeta) {
+              file.ListItemAllFields[m] = commonmeta[m];
+            }
 
-          // basic list item fields cleanup
-          delete file.ListItemAllFields["$$hashKey"];
-          delete file.ListItemAllFields["Id"];
-          delete file.ListItemAllFields["ID"];
+            // basic list item fields cleanup
+            delete file.ListItemAllFields["$$hashKey"];
+            delete file.ListItemAllFields["Id"];
+            delete file.ListItemAllFields["ID"];
 
-          this.cleanSaveKeys(file.ListItemAllFields, file.OldListItemAllFields);
-          
-          if (file.Deleted) {
-            // file to delete
-            await this.sp.web.getFolderByServerRelativePath(path+'/'+file.FileName).recycle();
-          } else if (file.Data) {
-            // file to upload
-            await this.sp.web.getFolderByServerRelativePath(path).files.addUsingPath(file.FileName, file.Data, {Overwrite: true});
-            let i = await this.sp.web.getFolderByServerRelativePath(path).files.getByUrl(file.FileName).getItem();
-            await i.update(file.ListItemAllFields);
-            // mock the data back in so submit again doesnt fail
-            file.TimeCreated = new Date();
-            file.ServerRelativeUrl = path+'/'+file.FileName;
-            delete file.Data;
-          } else if (JSON.stringify(file.ListItemAllFields) != '{}') {
-            // get current item and check for changes
-            let i = await this.sp.web.getFolderByServerRelativePath(path+'/'+file.FileName).getItem();
-            await i.update(file.ListItemAllFields);
+            this.cleanSaveKeys(file.ListItemAllFields, file.OldListItemAllFields);
+            
+            if (file.Deleted) {
+              // file to delete
+              await this.sp.web.getFolderByServerRelativePath(path+'/'+file.FileName).recycle();
+            } else if (file.Data) {
+              // file to upload
+              await this.sp.web.getFolderByServerRelativePath(path).files.addUsingPath(file.FileName, file.Data, {Overwrite: true});
+              let i = await this.sp.web.getFolderByServerRelativePath(path).files.getByUrl(file.FileName).getItem();
+              await i.update(file.ListItemAllFields);
+              // mock the data back in so submit again doesnt fail
+              file.TimeCreated = new Date();
+              file.ServerRelativeUrl = path+'/'+file.FileName;
+              delete file.Data;
+            } else if (JSON.stringify(file.ListItemAllFields) != '{}') {
+              // get current item and check for changes
+              let i = await this.sp.web.getFolderByServerRelativePath(path+'/'+file.FileName).getItem();
+              await i.update(file.ListItemAllFields);
+            }
+          } catch (e) {
+            errors.push(`Error saving file ${file.FileName} in folder ${path} with error ${e}`);
           }
         }
       } catch (e) {
-        alert('Error saving files');
+        alert('Error saving folder:\n\n' + e);
         throw e;
+      }
+
+      if (errors.length > 0) {
+        alert('Error saving files:\n\n' + errors.join('\n'));
+        throw errors.join('\n');
       }
     }
 }
