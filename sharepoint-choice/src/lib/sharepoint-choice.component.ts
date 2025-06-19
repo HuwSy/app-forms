@@ -151,6 +151,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // on init, destroy
   ngOnInit(): void {
+    this.chRef.detectChanges();
   }
   ngOnDestroy(): void {
     this.editor.destroy();
@@ -254,7 +255,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // any field changes trigger for relevant updates
-  change(e:any) : void {
+  async change(e:any) : Promise<void> {
     // on multi select, not using ctrl key
     if (this.get('TypeAsString') == 'MultiChoice') {
       e.stopPropagation();
@@ -289,7 +290,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this.form[this.field] = e.target ? e.target.value : e;
     // if on change passed in
     if (typeof this.onchange == "function")
-      this.onchange(this);
+      await this.onchange(this);
+
+    this.chRef.detectChanges();
   }
   
   /* 
@@ -320,10 +323,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (!this.text.search)
       return;
 
-    this.text.search(this.form[this.field], this.text.parent || this).then((res:any) => {
-      this.results = res;
-      this.pos = -1;
-    });
+    this.results = await this.text.search(this.form[this.field], this.text.parent || this);
+
+    this.pos = -1;
+    this.chRef.detectChanges();
   }
 
   async selectedText(res:any): Promise<void> {
@@ -332,14 +335,14 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     if (!res) {
       this.form[this.field] = null;
-      this.results = [];
-      return;
+    } else {
+      this.form[this.field] = res[this.field];
+      if (this.text.select)
+        await this.text.select(res, this.text.parent || this);
     }
 
-    this.form[this.field] = res[this.field];
-    if (this.text.select)
-      await this.text.select(res, this.text.parent || this);
     this.results = [];
+    this.chRef.detectChanges();
   }
 
   /* 
@@ -489,7 +492,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     return `width: ${l[0].length}ch`;
   }
 
-  delete(i: number, f?: any, a:boolean = false) {
+  async delete(i: number, f?: any, a:boolean = false) {
     if (!f.ServerRelativeUrl) {
       // not uploaded then exclude from potential upload
       this.form[this.field].results.splice(i, 1);
@@ -512,7 +515,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
 
     if (typeof this.onchange == "function")
-      this.onchange(this);
+      await this.onchange(this);
+
     this.chRef.detectChanges();
   }
 
@@ -532,12 +536,19 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         try {
           await ths.appendFile(f.name, event.target.result, ths.form[ths.field].results);
           
-          if (typeof ths.onchange == "function")
-            ths.onchange(this);
+          if (typeof ths.onchange == "function") {
+            await ths.onchange(this); 
+            ths.chRef.detectChanges();
+          }
 
           remaining--;
+
+          // if last file added then clear the file input
           if (remaining == 0)
-            setTimeout(() => file.value = null, 10);
+            setTimeout(() => {
+              file.value = null;
+              ths.chRef.detectChanges();
+            }, 10);
         } catch (e) {
           alert(`File onread error: ${f.name} with error ${e}`);
         }
@@ -1029,7 +1040,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.users = [];
     
     if (typeof this.onchange == "function")
-      this.onchange(this);
+      await this.onchange(this);
+    
+    this.chRef.detectChanges();
   }
 
   // load list data only has IDs so expand the object
@@ -1070,7 +1083,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // removes a user
-  removeUser(usr:any): void {
+  async removeUser(usr:any): Promise<void> {
     if (!usr) {
       this.form[this.field + 'Id'] = null;
       this.display = [];
@@ -1083,11 +1096,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     })
 
     if (typeof this.onchange == "function")
-      this.onchange(this);
+      await this.onchange(this);
+    
+    this.chRef.detectChanges();
   }
 
   // trigger user search
-  async onUpUser(key): Promise<void> {
+  onUpUser(key): void {
     if (key == "ArrowDown") {
       if (this.pos < this.users.length - 1)
         this.pos++;
@@ -1141,5 +1156,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }).forEach(user => {
       this.users = [...this.users, user];
     });
+    
+    this.chRef.detectChanges();
   }
 }
