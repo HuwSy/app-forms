@@ -1,10 +1,15 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { SharepointChoiceUtils } from 'sharepoint-choice';
 
-import { ElementRef } from '@angular/core';
+import { ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SharepointChoiceComponent } from 'sharepoint-choice';
+
+import "@pnp/sp/webs";
+import "@pnp/sp/lists";
+import "@pnp/sp/items";
+import "@pnp/sp/site-groups";
 
 @Component({
   selector: 'app-hello-world-web-part',
@@ -50,7 +55,7 @@ export class HelloWorldWebPartComponent implements OnInit {
   declare tabs:any;
   declare files:any;
 
-  constructor(private elRef: ElementRef) {
+  constructor(private elRef: ElementRef, private chRef: ChangeDetectorRef) {
     // read attribute as Component bind doesnt trigger @Input
     this.description = this.description || this.elRef.nativeElement.getAttribute('description');
     this.context = this.context || this.elRef.nativeElement.getAttribute('context');
@@ -81,11 +86,15 @@ export class HelloWorldWebPartComponent implements OnInit {
     this._spUtils.permissions().then(r => {
       this.userId = r.userId; 
       this.perm = r.perms;
+    
+      this.chRef.detectChanges();
     });
     
     this._spUtils.fields(this.list).then(r => {
       this.spec = r;
       this.status = this.spec['Status']?.Choices;
+    
+      this.chRef.detectChanges();
     });
     
     // Dashboard
@@ -121,13 +130,17 @@ export class HelloWorldWebPartComponent implements OnInit {
           this.uned = JSON.parse(JSON.stringify(this.form));
       
           this._spUtils.sp.web.lists.getByTitle(this.list).items.getById(id).versions.top(5000)().then(d => {
-            this.versions = d
+            this.versions = d;
+    
+            this.chRef.detectChanges();
           });
 
           var f = await this.getFolder();
           if (f != null)
             for (var o in this.files)
               this.files[o].results = await this._spUtils.getFiles(f, o);
+
+          this.chRef.detectChanges();
         });
       }
     }
@@ -154,6 +167,7 @@ export class HelloWorldWebPartComponent implements OnInit {
     });
 
     this.loading = false;
+    this.chRef.detectChanges();
   }
 
   // save specific filter field
@@ -254,6 +268,8 @@ export class HelloWorldWebPartComponent implements OnInit {
     results.forEach(d => {
       this.spec.Choices.push(d);
     });
+    
+    this.chRef.detectChanges();
   }
   
   // add subtract repeating sections
@@ -304,6 +320,8 @@ export class HelloWorldWebPartComponent implements OnInit {
     await this._spUtils.ensurePath(this.form.Storage.Url + '/' + o, this._spUtils.context.length < 2 ? 2 : 4);
 
     await this._spUtils.saveFiles(this.form.Storage.Url, o, req, this.files[o], undefined);
+    
+    this.chRef.detectChanges();
   }
 
   neededStage(stage:string):boolean {
@@ -343,6 +361,8 @@ export class HelloWorldWebPartComponent implements OnInit {
       status = undefined;
 
     this.form.Id = await this._spUtils.save(this.form, this.uned, this.list);
+    
+    this.chRef.detectChanges();
 
     // update versions to abuse its user name processing later
     //this.versions = await pnp.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).versions.top(5000).get();
@@ -396,6 +416,7 @@ export class HelloWorldWebPartComponent implements OnInit {
       return;
     }
 
+    this.chRef.detectChanges();
     this.close();
   }
 
