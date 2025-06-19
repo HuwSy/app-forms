@@ -1,5 +1,5 @@
 import { bootstrapApplication } from '@angular/platform-browser';
-import { ErrorHandler } from '@angular/core';
+import { ErrorHandler, provideZonelessChangeDetection } from '@angular/core';
 import { SharepointChoiceLogging } from 'sharepoint-choice';
 import { HelloWorldWebPartComponent } from './app/hello-world-web-part/hello-world-web-part.component';
 
@@ -17,6 +17,7 @@ var loadComponents = () => {
     el.setAttribute('loaded', 'true');
     // bootstrap the component
     bootstrapApplication(component.com,
+      provideZonelessChangeDetection(),
       providers: [{
         provide: ErrorHandler,
         useClass: SharepointChoiceLogging
