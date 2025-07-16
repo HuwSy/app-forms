@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { SharepointChoiceUtils } from 'sharepoint-choice';
+import { SharepointChoiceUtils, SharepointChoiceLogging } from 'sharepoint-choice';
 
 import { ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -33,6 +33,7 @@ export class HelloWorldWebPartComponent implements OnInit {
   declare list:string;
   declare spec:any[string];
   private _spUtils: SharepointChoiceUtils;
+  private _log: SharepointChoiceLogging;
 
   // Dashboard
   declare searchText:string;
@@ -59,90 +60,94 @@ export class HelloWorldWebPartComponent implements OnInit {
     // read attribute as Component bind doesnt trigger @Input
     this.description = this.description || this.elRef.nativeElement.getAttribute('description');
     this.context = this.context || this.elRef.nativeElement.getAttribute('context');
+    this._spUtils = new SharepointChoiceUtils(this.context);
+    this._log = new SharepointChoiceLogging();
   }
 
   ngOnInit() {
-    this.tabs = [
-      {tab: 'New', display: 'Submission', status: 'Draft', owner: 'Visitors'},
-      {tab: 'Close', display: 'Close', status: 'Closing', owner: 'Members'},
-      {tab: 'Audit', display: 'Completed', status: 'Completed', owner: null}
-    ];
-
-    this.files = {Submission: {results:[]}};
-    for (var f in this.tabs)
-      this.files[this.tabs[f].tab] = {results:[]};
-
-    this._spUtils = new SharepointChoiceUtils(this.context);
-
-    var id = parseInt(this._spUtils.param('aid'));
-    this.dashboard = !(id > 0 || id === 0);
-
-    this.list = 'List';
-    this.spec = {};
-
-    this.userId = 0;
-    this.perm = {};
-
-    this._spUtils.permissions().then(r => {
-      this.userId = r.userId; 
-      this.perm = r.perms;
-    
-      this.chRef.detectChanges();
-    });
-    
-    this._spUtils.fields(this.list).then(r => {
-      this.spec = r;
-      this.status = this.spec['Status']?.Choices;
-    
-      this.chRef.detectChanges();
-    });
-    
-    // Dashboard
-    this.selected = '';
-
-    this.searchText = '';
-    this.currentPage = 1;
-    this.itemsPerPage = 25;
-    this.orderKey = null;
-    this.orderDir = false;
-    this.refresh = -1;
-    this.status = [];
-
-    this.loading = true;
-    this.data = [];
-    if (this.dashboard) {
-      this.loadData(false);
-      if (this.refresh > 0)
-        setInterval(this.loadData, this.refresh * 1000);
-    }
-
-    // Form
-    this.form = {Status: 'Draft'};
-    this.uned = {};
-    this.versions = [];
-    this.stage = this._spUtils.param('stage') || (id > 0 ? 'View' : 'New');
-    
-    if (!this.dashboard) {
-      this.moreData();
-      if (id > 0) {
-        this._spUtils.data(id, this.list).then(async d => {
-          this.form = d;
-          this.uned = JSON.parse(JSON.stringify(this.form));
+    try {
+      this.tabs = [
+        {tab: 'New', display: 'Submission', status: 'Draft', owner: 'Visitors'},
+        {tab: 'Close', display: 'Close', status: 'Closing', owner: 'Members'},
+        {tab: 'Audit', display: 'Completed', status: 'Completed', owner: null}
+      ];
+  
+      this.files = {Submission: {results:[]}};
+      for (var f in this.tabs)
+        this.files[this.tabs[f].tab] = {results:[]};
+  
+      var id = parseInt(this._spUtils.param('aid'));
+      this.dashboard = !(id > 0 || id === 0);
+  
+      this.list = 'List';
+      this.spec = {};
+  
+      this.userId = 0;
+      this.perm = {};
+  
+      this._spUtils.permissions().then(r => {
+        this.userId = r.userId; 
+        this.perm = r.perms;
       
-          this._spUtils.sp.web.lists.getByTitle(this.list).items.getById(id).versions.top(5000)().then(d => {
-            this.versions = d;
-    
+        this.chRef.detectChanges();
+      });
+      
+      this._spUtils.fields(this.list).then(r => {
+        this.spec = r;
+        this.status = this.spec['Status']?.Choices;
+      
+        this.chRef.detectChanges();
+      });
+      
+      // Dashboard
+      this.selected = '';
+  
+      this.searchText = '';
+      this.currentPage = 1;
+      this.itemsPerPage = 25;
+      this.orderKey = null;
+      this.orderDir = false;
+      this.refresh = -1;
+      this.status = [];
+  
+      this.loading = true;
+      this.data = [];
+      if (this.dashboard) {
+        this.loadData(false);
+        if (this.refresh > 0)
+          setInterval(this.loadData, this.refresh * 1000);
+      }
+  
+      // Form
+      this.form = {Status: 'Draft'};
+      this.uned = {};
+      this.versions = [];
+      this.stage = this._spUtils.param('stage') || (id > 0 ? 'View' : 'New');
+      
+      if (!this.dashboard) {
+        this.moreData();
+        if (id > 0) {
+          this._spUtils.data(id, this.list).then(async d => {
+            this.form = d;
+            this.uned = JSON.parse(JSON.stringify(this.form));
+        
+            this._spUtils.sp.web.lists.getByTitle(this.list).items.getById(id).versions.top(5000)().then(d => {
+              this.versions = d;
+      
+              this.chRef.detectChanges();
+            });
+  
+            var f = await this.getFolder();
+            if (f != null)
+              for (var o in this.files)
+                this.files[o].results = await this._spUtils.getFiles(f, o);
+  
             this.chRef.detectChanges();
           });
-
-          var f = await this.getFolder();
-          if (f != null)
-            for (var o in this.files)
-              this.files[o].results = await this._spUtils.getFiles(f, o);
-
-          this.chRef.detectChanges();
-        });
+        }
       }
+    } catch (e) {
+      this._log.handleError(e);
     }
   }
 
@@ -296,19 +301,13 @@ export class HelloWorldWebPartComponent implements OnInit {
     if (this.form.Storage && this.form.Storage.Url)
       return this.form.Storage.Url;
     
-    try {
-      let root = await this._spUtils.getRoot('Documents');
-      let path = `${root}/${this.form.Id}`;
+    let root = await this._spUtils.getRoot('Documents');
+    let path = `${root}/${this.form.Id}`;
 
-      if (needsCreating)
-        await this._spUtils.ensurePath(path, this._spUtils.context.length < 2 ? 2 : 4);
+    if (needsCreating)
+      await this._spUtils.ensurePath(path, this._spUtils.context.length < 2 ? 2 : 4);
 
-      return document.location.origin + path;
-    } catch (e) {
-      alert("Unable to access documents area.");
-    }
-      
-    return null;
+    return document.location.origin + path;
   }
 
   async saveFiles(o:string) {
@@ -353,71 +352,79 @@ export class HelloWorldWebPartComponent implements OnInit {
 
   // save
   async save(status):Promise<void> {
-    if (this.stage == 'View')
-      return;
-
-    this.form.Audit = status == 'Unread' ? 'Unread' : status ? 'Completed' : 'Updated';
-    if (status == 'Unread')
-      status = undefined;
-
-    this.form.Id = await this._spUtils.save(this.form, this.uned, this.list);
-    
-    this.chRef.detectChanges();
-
-    // update versions to abuse its user name processing later
-    //this.versions = await pnp.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).versions.top(5000).get();
-
-    // handle approval of task for next stage
-    switch (status) {
-      case 'Approved':
-        this.form.Rejection = null;
-        for (var i = 0; i < this.tabs.length; i++)
-          if (this.tabs[i].status == this.form.Status)
-            break;
-        for (i++; i < this.tabs.length; i++)
-          if (this.neededStage(this.tabs[i].tab)) {
-            status = this.tabs[i].status;
-            break;
-          }
-        break;
-      case 'Reject':
-        var reason = prompt("Please provide a rejection reason:");
-        if (reason == null || reason == '')
-          return;
-        this.form.Rejection = `${this.versions[0].Editor.LookupValue} (${(new Date()).toString().split(' GMT')[0]}): ${reason}`;
-        for (var i = 0; i < this.tabs.length; i++)
-          if (this.tabs[i].status == this.form.Status)
-            break;
-        for (i--; i >= 0; i--)
-          if (this.neededStage(this.tabs[i].tab)) {
-            status = this.tabs[i].status;
-            break;
-          }
-        break;
+    try {
+      if (this.stage == 'View')
+        return;
+  
+      this.form.Audit = status == 'Unread' ? 'Unread' : status ? 'Completed' : 'Updated';
+      if (status == 'Unread')
+        status = undefined;
+  
+      this.form.Id = await this._spUtils.save(this.form, this.uned, this.list);
+      
+      this.chRef.detectChanges();
+  
+      // update versions to abuse its user name processing later
+      //this.versions = await pnp.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).versions.top(5000).get();
+  
+      // handle approval of task for next stage
+      switch (status) {
+        case 'Approved':
+          this.form.Rejection = null;
+          for (var i = 0; i < this.tabs.length; i++)
+            if (this.tabs[i].status == this.form.Status)
+              break;
+          for (i++; i < this.tabs.length; i++)
+            if (this.neededStage(this.tabs[i].tab)) {
+              status = this.tabs[i].status;
+              break;
+            }
+          break;
+        case 'Reject':
+          var reason = prompt("Please provide a rejection reason:");
+          if (reason == null || reason == '')
+            return;
+          this.form.Rejection = `${this.versions[0].Editor.LookupValue} (${(new Date()).toString().split(' GMT')[0]}): ${reason}`;
+          for (var i = 0; i < this.tabs.length; i++)
+            if (this.tabs[i].status == this.form.Status)
+              break;
+          for (i--; i >= 0; i--)
+            if (this.neededStage(this.tabs[i].tab)) {
+              status = this.tabs[i].status;
+              break;
+            }
+          break;
+      }
+      
+      // if no folder path calculate and save to request
+      if (!this.form.Storage || !this.form.Storage.Url) {
+        // may fail to save on long paths, continue anyway
+        this.form.Storage = {Url: await this.getFolder(true), Description: 'here'};
+        if (this.form.Storage.Url != null)
+          await this._spUtils.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).update({ Storage: this.form.Storage });
+      }
+  
+      // save relevant files
+      for (var o in this.files)
+        if (this.files[o].results.length > 0)
+          await this.saveFiles(o);
+  
+      await this._spUtils.save(this.form, this.uned, this.list);
+  
+      if (this.hasPermission() && this.form.Rejection == null) {
+        document.location.href = `${document.location.href.split('?')[0]}?aid=${this.form.Id}`;
+        return;
+      }
+  
+      this.chRef.detectChanges();
+      this.close();
+    } catch (e) {
+      this._log.handleError({
+        error: e,
+        form: this.form,
+        files: this.files
+      });
     }
-    
-    // if no folder path calculate and save to request
-    if (!this.form.Storage || !this.form.Storage.Url) {
-      // may fail to save on long paths, continue anyway
-      this.form.Storage = {Url: await this.getFolder(true), Description: 'here'};
-      if (this.form.Storage.Url != null)
-        await this._spUtils.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).update({ Storage: this.form.Storage });
-    }
-
-    // save relevant files
-    for (var o in this.files)
-      if (this.files[o].results.length > 0)
-        await this.saveFiles(o);
-
-    await this._spUtils.save(this.form, this.uned, this.list);
-
-    if (this.hasPermission() && this.form.Rejection == null) {
-      document.location.href = `${document.location.href.split('?')[0]}?aid=${this.form.Id}`;
-      return;
-    }
-
-    this.chRef.detectChanges();
-    this.close();
   }
 
   // close
