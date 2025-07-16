@@ -10,14 +10,7 @@ export const App = {
   Tenancy: '',
   GraphClient: "",
 
-  Grafana: {
-    "Hostname": document.location.origin,
-    "Category": 'SPO',
-    "Environment": release,
-    "Username": undefined,
-    "UserAgent": navigator.userAgent,
-    "Language": navigator.language,
-  },
+  Grafana: null,
 
   ApiServers: {
     'grafana': {
