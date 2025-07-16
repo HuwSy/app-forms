@@ -64,7 +64,7 @@ export class SharepointChoiceLogging implements ErrorHandler {
     };
 
     // console here to keep click into source working
-    switch (error.level.substring(0, 1).toUpperCase()) {
+    switch (error.level?.substring(0, 1).toUpperCase()) {
       case 'E':
         console.error(error);
         break;
@@ -82,7 +82,7 @@ export class SharepointChoiceLogging implements ErrorHandler {
         break;
     }
 
-    let body = [((new Date()).getTime() * 1_000_000).toString(), JSON.stringify({ Params, Level: error.level, Message: error.message || error, StackTrace: stackTrace })];
+    let body = [((new Date()).getTime() * 1_000_000).toString(), JSON.stringify({ Params, Level: error.level || 'Unknown', Message: error.message || error, StackTrace: stackTrace })];
 
     // prevent flooding from multiple loggers on screen as timestamps must be sequential or grafana will not accept
     if (this._grafana.values.filter(x => x[1] == body[1] && parseInt(x[0]) + 1_000_000 < parseInt(body[0])).length == 0) {
