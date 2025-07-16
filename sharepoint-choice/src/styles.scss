@@ -184,6 +184,11 @@ a.fc-event {
       padding: 4px;
       border: 1px solid #eee;
     }
+
+    .choice > span {
+      border: 0 !important;
+      padding: 0 !important;
+    }
   }
 
   button {
@@ -377,7 +382,6 @@ a.fc-event {
     th {
       font-weight: bold;
       vertical-align: top;
-      background-color: #f7f7f7;
       white-space: nowrap;
     }
 
@@ -386,12 +390,22 @@ a.fc-event {
       width: 0;
       white-space: nowrap;
     }
+    
+    td {
+      vertical-align: bottom;
+    }
   }
   
-  tr:nth-child(even) {
-    background: #f7f7f7
+  tr:nth-child(odd) {
+    background: #e6e6e6;
   }
+}
 
+.files > div {
+  padding: 8px
+}
+.files > div:nth-child(odd) {
+  background: #e6e6e6;
 }
 
 .hideDetails label {
