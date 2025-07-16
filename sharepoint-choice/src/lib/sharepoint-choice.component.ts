@@ -1,5 +1,4 @@
 import { Component, OnInit, OnDestroy, Input, ElementRef, ChangeDetectorRef, ErrorHandler } from '@angular/core';
-import { UserQuery, User } from "./Models";
 import "@pnp/sp/webs";
 import { Web } from "@pnp/sp/webs";
 import { Editor, NgxEditorModule, Toolbar } from 'ngx-editor';
@@ -19,9 +18,9 @@ import { SharepointChoiceLogging } from './sharepoint-choice.logging';
   styleUrls: ['../styles.scss'],
   standalone: true,
   imports: [
-      CommonModule,
-      FormsModule,
-      NgxEditorModule
+    CommonModule,
+    FormsModule,
+    NgxEditorModule
   ],
   providers: [{
     provide: ErrorHandler,
@@ -39,11 +38,12 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   @Input() onchange!: Function; // onchange trigger a function(this)
 
   @Input() text!: { // override text for field
-    pattern?:string, // regex pattern for validation
+    pattern?: string, // regex pattern for validation
+    height?: number, // height of text area in px
 
-    search?:Function, // search via api for drop down options
-    select?:Function, // upon selection in drop down call back function
-    parent?:any // parent object that the control belongs to for call backs
+    search?: Function, // search via api for drop down options
+    select?: Function, // upon selection in drop down call back function
+    parent?: any // parent object that the control belongs to for call backs
   };
 
   @Input() select!: { // override select for field
@@ -51,19 +51,25 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     other?: string, // Other fill-in option text, will override to allow other
 
     filter?: Function // filter choices by a function
-    parent?:any // parent object that the control belongs to for call backs
+    parent?: any // parent object that the control belongs to for call backs
   };
-  
+
   @Input() file!: { // override file for field
     extract?: boolean, // extract files from zip and email
-    doctypes?: Array<string>, // document types
-    doctype?: string, // document type field name
-    notes?: string, // notes field name
-    archive?: string, // archive field name
-    view?: number, // view type
+    check?: boolean, // show check box for each file
+
     accept?: string, // accept file types attribute
     download?: boolean, // force download of files
-    uploadonly?: boolean // only upload files
+    uploadonly?: boolean, // only upload files
+
+    archive?: string, // archive field name
+    view?: number, // view type 0 - all, 1 - not archived, -1 - archived
+
+    doctypes?: Array<string>, // document types
+    doctype?: string, // document type field name
+
+    notes?: string, // notes input field name for singular note input space
+    spec?: any // field spec for additional fields, 
   };
 
   declare editor: Editor;
@@ -71,10 +77,40 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   declare tooltip: boolean;
   declare filesOver: boolean;
   declare name: string;
-  declare users: Array<User>;
   declare display: any;
   declare loading: Array<number>;
-  declare UserQuery: UserQuery;
+
+  // drop external models
+  declare UserQuery: {
+    queryParams: {
+      QueryString: string;
+      MaximumEntitySuggestions: number;
+      AllowEmailAddresses: boolean;
+      AllowOnlyEmailAddresses: boolean;
+      PrincipalType: number;
+      PrincipalSource: number;
+      SharePointGroupID: number;
+    };
+  };
+  declare users: Array<{
+    Key: string;
+    Description: string;
+    DisplayText: string;
+    EntityType: string;
+    ProviderDisplayName: string;
+    ProviderName: string;
+    IsResolved: boolean;
+    EntityData: {
+      IsAltSecIdPresent: string;
+      Title: string;
+      Email: string;
+      MobilePhone: string;
+      ObjectId: string;
+      Department: string;
+    };
+    MultipleMatches: any[];
+  }>;
+
   declare filterMulti: string;
   declare unused: string;
   declare results: any[any];
@@ -95,14 +131,14 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       loading: false
     };
     if (!this.text)
-      this.text = { };
+      this.text = {};
     if (!this.select)
-      this.select = { };
+      this.select = {};
     if (!this.file)
-      this.file = { };
+      this.file = {};
     if (!this.filter)
       this.filter = '';
-    
+
     // rich text field
     this.editor = new Editor();
     // rtf menu items
@@ -117,14 +153,14 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     ];
     // field must be model bound even if not is use
     this.unused = '';
-    
+
     this.results = [];
     this.pos = -1;
-    
+
     // user(s)
     this.users = [];
     this.display = [];
-    
+
     // schema setup
     this.UserQuery = {
       queryParams: {
@@ -137,12 +173,12 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         SharePointGroupID: 0
       }
     };
-    
+
     this.textKey.pipe(
       debounceTime(250),
       distinctUntilChanged()
     ).subscribe((key) => this.onUpTextSearch(key));
-    
+
     this.userKey.pipe(
       debounceTime(250),
       distinctUntilChanged()
@@ -169,10 +205,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (!this.form[this.field])
       return '';
     var s = this.form[this.field].toLocaleString().split('.');
-    return s[0] + (s.length == 1 ? '' : '.' + s[1].replace(/0*$/,''));
+    return s[0] + (s.length == 1 ? '' : '.' + s[1].replace(/0*$/, ''));
   }
 
-  numberSet(e:string|undefined):void {
+  numberSet(e: string | undefined): void {
     if (!e || e == '') {
       this.form[this.field] = null
       return;
@@ -208,8 +244,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // gets the required field properties and/or any overrides to determine which field type etc to display
   //declare overrode: any[string];
-  get(t:string):any {
-    var p:any = null;
+  get(t: string): any {
+    var p: any = null;
     var overrode = this.override ? (typeof this.override == "string" ? JSON.parse(this.override) : this.override) : {};
     if (overrode && overrode[t] != null)
       p = overrode[t];
@@ -220,13 +256,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // if its a multi choice, ensure the object is the correct type
     if (t == 'TypeAsString' && p == 'MultiChoice' && (!this.form[this.field] || !this.form[this.field].results))
       this.form[this.field] = {
-        __metadata: {type: "Collection(Edm.String)"},
+        __metadata: { type: "Collection(Edm.String)" },
         results: this.form[this.field] || []
       }
     // if its a multi user, ensure the object is the correct type
     if (t == 'TypeAsString' && p == 'UserMulti' && (!this.form[this.field + 'Id'] || !this.form[this.field + 'Id'].results))
       this.form[this.field + 'Id'] = {
-        __metadata: {type: "Collection(Edm.Int32)"},
+        __metadata: { type: "Collection(Edm.Int32)" },
         results: this.form[this.field + 'Id'] || []
       }
     // if its a url, ensure the correct object type and clone data into url for flat stored occurrences 
@@ -255,35 +291,35 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // any field changes trigger for relevant updates
-  async change(e:any) : Promise<void> {
+  async change(e: any): Promise<void> {
     // on multi select, not using ctrl key
     if (this.get('TypeAsString') == 'MultiChoice') {
       e.stopPropagation();
       let scrollTop = 0;
-      if ( e.target.parentNode )
+      if (e.target.parentNode)
         scrollTop = e.target.parentNode.scrollTop;
-  
+
       var v = e.target.innerText;
       // ensure object type is correct
       if (!this.form[this.field] || !this.form[this.field].__metadata)
         this.form[this.field] = {
-          __metadata: {type: "Collection(Edm.String)"},
+          __metadata: { type: "Collection(Edm.String)" },
           results: !this.form[this.field] ? [] : this.form[this.field].results ? this.form[this.field].results : typeof this.form[this.field] == "object" ? this.form[this.field] : [this.form[this.field]]
         }
       // if there are selected results set the field to add/remove the most recent click
       var i = this.form[this.field].results.indexOf(v);
       if (i >= 0)
-        this.form[this.field].results.splice(i,1);
+        this.form[this.field].results.splice(i, 1);
       else
         this.form[this.field].results.push(v);
-  
+
       const tmp = this.form[this.field].results;
       this.form[this.field].results = [];
-      for ( let i = 0; i < tmp.length; i++ ) {
-          this.form[this.field].results[i] = tmp[i];
+      for (let i = 0; i < tmp.length; i++) {
+        this.form[this.field].results[i] = tmp[i];
       }
-      setTimeout(( function() { e.target.parentNode.scrollTop = scrollTop; } ), 10 );
-      setTimeout(( function() { e.target.parentNode.focus(); } ), 10 );
+      setTimeout((function () { e.target.parentNode.scrollTop = scrollTop; }), 10);
+      setTimeout((function () { e.target.parentNode.focus(); }), 10);
     }
     // append only changes needs 1 way bind to form
     else if (this.get('AppendOnly'))
@@ -294,7 +330,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     this.chRef.detectChanges();
   }
-  
+
   /* 
   Common parts between text fields
   */
@@ -319,7 +355,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
   }
 
-  async onUpTextSearch(text:string): Promise<void> {
+  async onUpTextSearch(text: string): Promise<void> {
     if (!this.text.search)
       return;
 
@@ -329,7 +365,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 
-  async selectedText(res:any): Promise<void> {
+  async selectedText(res: any): Promise<void> {
     if (!this.text.search)
       return;
 
@@ -360,10 +396,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     let choices = this.get('Choices');
     // use any provided filter
     if (typeof this.select.filter == "function")
-      choices = choices.filter((c:any, i:number, a:any) => this.select.filter ? this.select.filter(c,i,a,this.select.parent || this) : true);
+      choices = choices.filter((c: any, i: number, a: any) => this.select.filter ? this.select.filter(c, i, a, this.select.parent || this) : true);
     // common filters
     var other = this.select.other;
-    return choices.filter((x:string) => {
+    return choices.filter((x: string) => {
       if (!x || x == '')
         return false;
       // filter exclude other if present
@@ -392,21 +428,21 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // on single selection change
-  selChangeS(v:string): void {
+  selChangeS(v: string): void {
     this.form[this.field] = v;
   }
 
   // on multi selection change, requires ctrl key
-  selChangeM(v:string): void {
+  selChangeM(v: string): void {
     this.form[this.field].results = v;
   }
-  
+
   /* 
   Common parts between file upload field types
   */
 
   // get outcomes of non standard fields into a plain text field for [required] to be triggered automatically
-  attach(): string|undefined {
+  attach(): string | undefined {
     return this.attachments().length > 0 ? 'true' : undefined;
   }
 
@@ -416,16 +452,16 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       return [];
     var v = this.file.view ?? 0;
     return this.form[this.field].results
-      .filter((f:any) => {
+      .filter((f: any) => {
         if (v == 0 || !this.file.archive)
           return true;
         if (v == 1 && !f.ListItemAllFields[this.file.archive])
-            return true;
+          return true;
         if (v == -1 && f.ListItemAllFields[this.file.archive])
-            return true;
+          return true;
         return false;
       })
-      .filter((f:any) => {
+      .filter((f: any) => {
         if (!this.filter || this.filter == '' || !this.file.doctype)
           return true;
         if (!f.ListItemAllFields || !f.ListItemAllFields[this.file.doctype])
@@ -434,10 +470,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           return true;
         return false;
       })
-      .sort((a:any, b:any) => {
+      .sort((a: any, b: any) => {
         if (!this.sort || this.sort == '' || this.sort == '-')
           this.sort = 'Created';
-        var s = this.sort.replace(/^[-\+]/,'');
+        var s = this.sort.replace(/^[-\+]/, '');
         var o = this.sort.startsWith('-') ? -1 : 1;
         if (!a.ListItemAllFields || !a.ListItemAllFields[s])
           return -2;
@@ -449,7 +485,36 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       });
   }
 
-  changeSort(field:string) {
+  keys(o): Array<string> {
+    // get keys of object
+    if (!o || typeof o != "object")
+      return [];
+    return Object.keys(o);
+  }
+
+  friendlyName(name: string): string {
+    return name.replace(/_x0020_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2');
+  }
+
+  hasChecked(): boolean {
+    if (!this.form[this.field] || !this.form[this.field].results)
+      return false;
+    // check if there are any files that have been checked
+    return this.form[this.field].results.some((f: any) => f.Checked);
+  }
+
+  setClasses(e: any): void {
+    // set the class of the file
+    this.form[this.field].results.forEach(f => {
+      if (f.Checked) {
+        f.ListItemAllFields['DocumentType'] = e.target.value;
+        f.Checked = false;
+      }
+    });
+    e.target.value = null;
+  }
+
+  changeSort(field: string) {
     if (this.sort == '-' + field) {
       this.sort = '+' + field;
     } else if (this.sort == '+' + field) {
@@ -472,8 +537,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // get all types used in the attachments
     if (this.file.doctype && this.form[this.field] && this.form[this.field].results)
       types = this.form[this.field].results
-        .map((f:any) => f.ListItemAllFields && this.file.doctype && this.file.doctype in f.ListItemAllFields ? f.ListItemAllFields[this.file.doctype] : null)
-        .filter((f:any) => f != null && f != '')
+        .map((f: any) => f.ListItemAllFields && this.file.doctype && this.file.doctype in f.ListItemAllFields ? f.ListItemAllFields[this.file.doctype] : null)
+        .filter((f: any) => f != null && f != '')
         .sort();
     // remove duplicates
     types = [...new Set(types)];
@@ -492,10 +557,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     return `width: ${l[0].length}ch`;
   }
 
-  async delete(i: number, f?: any, a:boolean = false) {
+  async delete(f?: any, a: boolean = false) {
     if (!f.ServerRelativeUrl) {
       // not uploaded then exclude from potential upload
-      this.form[this.field].results.splice(i, 1);
+      this.form[this.field].results = this.form[this.field].results.filter((x: any) => x.FileName != f.FileName);
     } else {
       // if uploaded already
       if (!this.file.archive || this.field == 'Attachments') {
@@ -521,23 +586,23 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // add attachment to array
-  async add(file:any) {
+  async add(file: any) {
     // read the files into the files array
-    var files:any = [];
+    var files: any = [];
     for (var i = file.files.length - 1; i >= 0; i--)
       files.push(file.files[i]);
     // copy these outside for reuse in the loop
     var ths = this;
     var remaining = files.length;
     // loop the array in forEach for variable isolation
-    files.forEach((f:any) => {
+    files.forEach((f: any) => {
       var reader = new window.FileReader();
-      reader.onload = async function (event:any) {
+      reader.onload = async function (event: any) {
         try {
           await ths.appendFile(f.name, event.target.result, ths.form[ths.field].results);
-          
+
           if (typeof ths.onchange == "function") {
-            await ths.onchange(this); 
+            await ths.onchange(this);
             ths.chRef.detectChanges();
           }
 
@@ -563,10 +628,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // gets a drag and drop new outlook item which includes ids not file data and adds to the files array
-  async outlook (transfer:any) {
+  async outlook(transfer: any) {
     var spc = new SharepointChoiceUtils();
 
-    function mailType(transfer:any, type:string) {
+    function mailType(transfer: any, type: string) {
       var item = transfer.getData(type);
       if (item == '')
         return null;
@@ -576,13 +641,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // one or more email messages dropped
     let maillistrow = mailType(transfer, 'multimaillistmessagerows') || mailType(transfer, 'maillistrow');
     if (maillistrow) {
-      var errors:Array<string> = [];
+      var errors: Array<string> = [];
       for (var i = 0; i < maillistrow.mailboxInfos.length; i++) {
         var fileName = maillistrow.subjects[i].trim() + ".eml";
-        
+
         try {
           // must double url encode any / in the message id
-          var fileContent:string = await spc.callApi(
+          var fileContent: string = await spc.callApi(
             undefined,
             undefined,
             undefined,
@@ -591,7 +656,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             undefined,
             'text'
           );
-          
+
           await this.appendFile(fileName, new TextEncoder().encode(fileContent).buffer as ArrayBuffer, this.form[this.field].results);
         } catch (e) {
           errors.push(`Email append error: ${fileName} with error ${e}`);
@@ -615,7 +680,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
       try {
         // must double url encode any / in the message id and attachment id
-        var getAttachment:any = await spc.callApi(
+        var getAttachment: any = await spc.callApi(
           undefined,
           undefined,
           undefined,
@@ -630,9 +695,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
 
     // a teams file drop, only works for teams libraries not onedrive/chat
-    let spo  = mailType(transfer, 'application/x-item-keys');
+    let spo = mailType(transfer, 'application/x-item-keys');
     if (spo) {
-      var errors:Array<string> = [];
+      var errors: Array<string> = [];
       for (var i = 0; i < spo.itemKeys.length; i++) {
         try {
           // the inner is still JSON encoded from teams
@@ -644,7 +709,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           var list = folder['vti_x005f_listtitle'] || folder['vti_listtitle'] || folder['listtitle'] || folder['title'];
           var item = await web.lists.getByTitle(list).items.getById(spo.itemKeys[i][3]).select('File').expand('File')();
           var desc = `Created: ${new Date(item.File.TimeCreated)} - Modified: ${new Date(item.File.TimeLastModified)}`;
-          
+
           var buffer = await web.getFileByServerRelativePath(item.File.ServerRelativeUrl).getBuffer();
           await this.appendFile(item.File.Name, buffer, this.form[this.field].results, desc);
         } catch (e) {
@@ -687,7 +752,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     s.addEventListener('load', () => {
       // only once office.js loaded
       if ('Office' in window) {
-        var Office:any = window['Office'];
+        var Office: any = window['Office'];
         // on ready should be ran soon after office.js is loaded trigger
         Office.onReady(info => {
           // capture what office type of addin for later use
@@ -703,23 +768,23 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // import from office addin selection or document panel
   importOutlook() {
     this.office.loading = true;
-    var Office:any = window['Office'];
+    var Office: any = window['Office'];
 
     // if the adding type is outlook then get the selected email(s)
     var spc = new SharepointChoiceUtils();
     var ths = this;
 
-    Office.context.mailbox.getSelectedItemsAsync(async (asyncResult:any) => {
+    Office.context.mailbox.getSelectedItemsAsync(async (asyncResult: any) => {
       if (asyncResult.status === Office.AsyncResultStatus.Failed)
         return;
 
-      var errors:Array<string> = [];
+      var errors: Array<string> = [];
       for (var m in asyncResult.value) {
         try {
           var message = asyncResult.value[m];
 
           // must double url encode any / in the message id
-          var fileContent:string = await spc.callApi(
+          var fileContent: string = await spc.callApi(
             undefined,
             undefined,
             undefined,
@@ -746,17 +811,17 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // import from office addin selection or document panel
   importOffice() {
     this.office.loading = true;
-    var Office:any = window['Office'];
+    var Office: any = window['Office'];
 
     // if the adding type is word or excel then get the current document
-    var docDataSlices:any = [];
+    var docDataSlices: any = [];
     var slicesReceived = 0;
-    var file:any;
+    var file: any;
     var ths = this;
 
     try {
       // get the file in 64k slices until complete
-      Office.context.document.getFileAsync(Office.FileType.Compressed, { sliceSize: 65536 }, (asyncResult:any) => {
+      Office.context.document.getFileAsync(Office.FileType.Compressed, { sliceSize: 65536 }, (asyncResult: any) => {
         if (asyncResult.status === Office.AsyncResultStatus.Failed)
           return;
 
@@ -769,7 +834,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       });
 
       // process the slice and append until completed
-      function processSlice(sliceResult:any) {
+      function processSlice(sliceResult: any) {
         if (sliceResult.status === Office.AsyncResultStatus.Failed)
           throw sliceResult.error.message;
 
@@ -828,14 +893,14 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
   }
 
-  async appendFile(fileName:string, data:ArrayBuffer, results:any, desc?:string) {
+  async appendFile(fileName: string, data: ArrayBuffer, results: any, desc?: string) {
     // only save files that have an extension
     if (fileName.indexOf('.') < 0)
       return;
     // cleanup the name, more agressive as it may not be from a windows file system or have trailing chars from email systems
-    var n = fileName.trim().replace(/[\\/:*?"%'#<>|=]/g,'-').replace(/[^a-zA-Z0-9]*$/g, '');
+    var n = fileName.trim().replace(/[\\/:*?"%'#<>|=]/g, '-').replace(/[^a-zA-Z0-9]*$/g, '');
     // get the extension
-    var e = n.substring(n.lastIndexOf('.')+1);
+    var e = n.substring(n.lastIndexOf('.') + 1);
     // get the first part of the name
     var f = n.substring(0, n.lastIndexOf('.'));
     // get the title
@@ -848,7 +913,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     while (results.filter(f => f.FileName == newName).length > 0) {
       newName = `${s} (${i++}).${e}`;
     }
-    
+
     var file = {
       FileName: newName,
       Data: data,
@@ -856,11 +921,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       ListItemAllFields: { Title: t }
     };
 
-    if (this.file.notes && desc)
+    if (desc && this.file.notes)
       file.ListItemAllFields[this.file.notes] = desc;
 
     results.push(file);
-    
+
     if (!this.file.extract)
       return;
 
@@ -870,19 +935,19 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       await this.msgs(data, results);
     if (fileName.toLowerCase().endsWith(".eml"))
       await this.emls(data, results);
-    
+
     this.office.loading = false;
     this.chRef.detectChanges();
   }
 
   // extract zip files and append to results
-  async zips(data:ArrayBuffer, results:Array<any>) {
+  async zips(data: ArrayBuffer, results: Array<any>) {
     try {
       var zip = await loadAsync(data);
       var files = Object.keys(zip.files);
       files.forEach(async (file) => {
         try {
-          var buffer:ArrayBuffer|undefined = await zip.file(file)?.async('arraybuffer');
+          var buffer: ArrayBuffer | undefined = await zip.file(file)?.async('arraybuffer');
           if (buffer) {
             await this.appendFile(file, buffer, results, `Date: ${zip.files[file].date}`);
           }
@@ -894,7 +959,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // extract and append msg email attachments to results
-  async msgs(data:ArrayBuffer, results:Array<any>) {
+  async msgs(data: ArrayBuffer, results: Array<any>) {
     try {
       // new MsgReader(data) doesnt seem to work and .default is not recognised but ['default'] works somehow
       var msgReader = new MsgReader['default'](data) as MsgReader;
@@ -904,7 +969,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       if (!('senderName' in fileData))
         return;
       // get the email date
-      var h = fileData.headers?.split('\n').filter((x:string) => x.startsWith('Date: '));
+      var h = fileData.headers?.split('\n').filter((x: string) => x.startsWith('Date: '));
       var received = h && h.length > 0 ? new Date(h[0].replace('Date: ', '')) : new Date();
       // get all attachments
       fileData.attachments?.forEach(async (attachment) => {
@@ -921,14 +986,14 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // extract and append eml email attachments to results
-  async emls(data:ArrayBuffer, results:Array<any>) {
+  async emls(data: ArrayBuffer, results: Array<any>) {
     try {
       // reads the email string data into a json object
       readEml(new TextDecoder().decode(data), (err, ReadEmlJson) => {
         if (err || !ReadEmlJson || !ReadEmlJson.attachments)
           return;
         var received = typeof ReadEmlJson.date == "string" ? new Date(ReadEmlJson.date) : ReadEmlJson.date || new Date();
-        ReadEmlJson.attachments.forEach(async (attachment:any) => {
+        ReadEmlJson.attachments.forEach(async (attachment: any) => {
           if (attachment.inline)
             return;
           try {
@@ -946,21 +1011,21 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // dragging and dropping, hover
-  over(evt:any) {
+  over(evt: any) {
     evt.preventDefault();
     evt.stopPropagation();
     this.filesOver = true;
   }
 
   // dragging and dropping, unhover
-  leave(evt:any) {
+  leave(evt: any) {
     evt.preventDefault();
     evt.stopPropagation();
     this.filesOver = false;
   }
-  
+
   // dragging and dropping, drop
-  async drop(evt:any) {
+  async drop(evt: any) {
     evt.preventDefault();
     evt.stopPropagation();
 
@@ -986,19 +1051,19 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   */
 
   // get outcomes of non standard fields into a plain text field for [required] to be triggered automatically
-  people(): string|undefined {
+  people(): string | undefined {
     return this.form[this.field + 'Id'] && (!this.form[this.field + 'Id'].results || this.form[this.field + 'Id'].results.length > 0) ? 'true' : undefined;
   }
-  
+
   // select user
-  async selectedUser(res:any): Promise<void> {
+  async selectedUser(res: any): Promise<void> {
     if (!this.spec['odata.context'])
       return;
 
     // ensure correct schema
     if (this.get('TypeAsString') == 'UserMulti' && (!this.form[this.field + 'Id'] || !this.form[this.field + 'Id'].__metadata))
       this.form[this.field + 'Id'] = {
-        __metadata: {type: "Collection(Edm.Int32)"},
+        __metadata: { type: "Collection(Edm.Int32)" },
         results: !this.form[this.field + 'Id'] ? [] : this.form[this.field + 'Id'].results ? this.form[this.field + 'Id'].results : typeof this.form[this.field + 'Id'] == "object" ? this.form[this.field + 'Id'] : [this.form[this.field + 'Id']]
       }
     if (this.get('TypeAsString') == 'User' && this.form[this.field + 'Id'] && this.form[this.field + 'Id'].results)
@@ -1007,7 +1072,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // use click item
     if (res) {
       // already selected, do nothing
-      if (this.get('TypeAsString') == 'UserMulti' && this.display.filter((x:any) => {
+      if (this.get('TypeAsString') == 'UserMulti' && this.display.filter((x: any) => {
         return x.Key == res.Key
       }).length > 0)
         return;
@@ -1038,19 +1103,19 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // clear search fields
     this.name = '';
     this.users = [];
-    
+
     if (typeof this.onchange == "function")
       await this.onchange(this);
-    
+
     this.chRef.detectChanges();
   }
 
   // load list data only has IDs so expand the object
-  displayUser(user:any): string {
+  displayUser(user: any): string {
     if (!this.spec['odata.context'] || !user)
       return user || '';
 
-    var u = this.display.filter((x:any) => {
+    var u = this.display.filter((x: any) => {
       return x.Id == user
     });
     if (u.length > 0 && u[0].DisplayText)
@@ -1059,12 +1124,12 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // setup context late to adapt to changes
     if (!this.loading)
       this.loading = [];
-    
+
     // dont trigger a new load web request if the users aready loading
     if (this.loading.indexOf(user) < 0 && typeof user == "number" && user > 0) {
       this.loading.push(user);
       // load the user
-      this.spec['odata.context'].web.getUserById(user)().then((u:any) => {
+      this.spec['odata.context'].web.getUserById(user)().then((u: any) => {
         // update the display table
         this.display.push({
           DisplayText: u.Title,
@@ -1078,26 +1143,26 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         }
       });
     }
-    
+
     return '';
   }
 
   // removes a user
-  async removeUser(usr:any): Promise<void> {
+  async removeUser(usr: any): Promise<void> {
     if (!usr) {
       this.form[this.field + 'Id'] = null;
       this.display = [];
       return;
     }
-    
+
     this.form[this.field + 'Id'].results.splice(this.form[this.field + 'Id'].results.indexOf(usr), 1);
-    this.display = this.display.filter((x:any) => {
+    this.display = this.display.filter((x: any) => {
       return x.Id != usr
     })
 
     if (typeof this.onchange == "function")
       await this.onchange(this);
-    
+
     this.chRef.detectChanges();
   }
 
@@ -1119,7 +1184,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
   }
 
-  async onUpUserSearch(text:string): Promise<void> {
+  async onUpUserSearch(text: string): Promise<void> {
     if (!this.spec['odata.context'])
       return;
 
@@ -1130,7 +1195,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // set group each query to adapt to changes
     this.UserQuery.queryParams.SharePointGroupID = parseInt(this.get('SelectionGroup') || 0);
     // ensure up to date digest for http posting
-    var token:any = await fetch(url + '/_api/contextinfo', {
+    var token: any = await fetch(url + '/_api/contextinfo', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1139,7 +1204,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     });
     let digest = await token.json();
     // query users api, no pnp endpoint for this
-    var search:any = await fetch(url + '/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.ClientPeoplePickerSearchUser', {
+    var search: any = await fetch(url + '/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.ClientPeoplePickerSearchUser', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1148,15 +1213,15 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       },
       body: JSON.stringify(this.UserQuery)
     });
-    let res:any = await search.json();
+    let res: any = await search.json();
     this.users = [];
-    const allUsers: User[] = JSON.parse(res.d.ClientPeoplePickerSearchUser);
+    let allUsers = JSON.parse(res.d.ClientPeoplePickerSearchUser);
     allUsers.filter(x => {
       return x.EntityData.Email && !~x.Key.indexOf('_adm') && !~x.Key.indexOf('adm_')
     }).forEach(user => {
       this.users = [...this.users, user];
     });
-    
+
     this.chRef.detectChanges();
   }
 }
