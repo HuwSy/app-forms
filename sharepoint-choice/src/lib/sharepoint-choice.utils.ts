@@ -444,14 +444,14 @@ export class SharepointChoiceUtils {
     return ret;
   }
 
-  public async relocateFolder(source: string, destination: string): Promise<string> {
+  public async relocateFolder(source: string, destination: string): Promise<string|null> {
     // ensure these are server relative paths
-    var dst = destination.includes("://") ? destination.substring(destination.indexOf("/", 9)) : destination;
-    var src = source.includes("://") ? source.substring(source.indexOf("/", 9)) : source;
+    var dst = decodeURIComponent(destination.includes("://") ? destination.substring(destination.indexOf("/", 9)) : destination);
+    var src = decodeURIComponent(source.includes("://") ? source.substring(source.indexOf("/", 9)) : source);
 
-    // if the destination folder is the same as the current then return existing source
+    // if the destination folder is the same as the current then return null
     if (src.toLowerCase().replace(/\/$/, '') == dst.toLowerCase().replace(/\/$/, ''))
-      return source;
+      return null;
 
     // move the files to the new folder by making the parent then moving the folder directly
     var parent = dst.substring(0, dst.lastIndexOf("/"));
@@ -465,7 +465,7 @@ export class SharepointChoiceUtils {
     });
 
     // return where its been moved
-    return (await folder()).ServerRelativeUrl || destination;
+    return decodeURIComponent((await folder()).ServerRelativeUrl || destination);
   }
 
   public async saveFiles(path: string, additional: string | undefined, url: any | undefined, files: any, metadata: any | undefined): Promise<void> {
