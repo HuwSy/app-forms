@@ -444,7 +444,7 @@ export class SharepointChoiceUtils {
     return ret;
   }
 
-  public async relocateFolder(destination: string, source: string): Promise<string> {
+  public async relocateFolder(source: string, destination: string): Promise<string> {
     // ensure these are server relative paths
     var dst = destination.includes("://") ? destination.substring(destination.indexOf("/", 9)) : destination;
     var src = source.includes("://") ? source.substring(source.indexOf("/", 9)) : source;
