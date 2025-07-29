@@ -36,6 +36,16 @@ export class SharepointChoiceUtils {
     this.sp = spfi().using(SPBrowser({ baseUrl: this.context }));
 
     this.mockClassicContext();
+    this.watermark();
+  }
+
+  private watermark() {
+    if (App.Release != 'LIVE' && document.getElementById('sp-environment-watermark') == null) {
+      var environment = document.createElement('style');
+      environment.id = 'sp-environment-watermark';
+      environment.innerHTML = `[ng-version]::before{content: '${Array(11).fill(App.Release).join(' - ')}';}`;
+      document.head.appendChild(environment);
+    }
   }
 
   private async mockClassicContext() {
