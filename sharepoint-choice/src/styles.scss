@@ -45,6 +45,17 @@ div[data-automation-id="CanvasControl"] {
   }
 }
 
+[ng-version]::before {
+  position: fixed;
+  top:0;
+  left:0;
+  transform: rotate(-45deg);
+  font-size: 64px;
+  padding: 45vh 0;
+  color: #eee;
+  overflow: hidden;
+  text-wrap: nowrap;
+}
 
 [ng-version], .choice {
   input,
