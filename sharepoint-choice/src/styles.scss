@@ -249,8 +249,8 @@ a.fc-event {
 .ToolTip {
   box-shadow: 2px 2px 2px #ddd;
   max-width: 350px;
-  top: -20px;
-  left: -20px;
+  top: 20px;
+  left: 20px;
 }
 
 .AutoComplete {
@@ -432,6 +432,7 @@ a.fc-event {
   padding: 0;
   border-bottom: 1px solid #20476b;
   margin-top: 12px;
+  position: relative:
 
   li {
     color: #20476b;
