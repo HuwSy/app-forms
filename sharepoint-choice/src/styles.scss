@@ -57,6 +57,10 @@ div[data-automation-id="CanvasControl"] {
   text-wrap: nowrap;
 }
 
+[ng-version] > * {
+  position: relative;
+}
+
 [ng-version], .choice {
   input,
   select,
