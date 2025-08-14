@@ -774,6 +774,18 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     var spc = new SharepointChoiceUtils();
     var ths = this;
 
+    if (Office.context.mailbox.initialData.isFromSharedFolder) {
+      Office.context.mailbox.item.getSharedPropertiesAsync(shared => {
+        if (shared.status === Office.AsyncResultStatus.Failed)
+          return;
+        this.getMailItem(Office, shared?.value?.targetMailbox, spc, ths);
+      });
+    } else {
+      this.getMailItem(Office, null, spc, ths);
+    }
+  }
+
+  getMailItem(Office:any, targetMailbox:string|null, spc:SharepointChoiceUtils, ths:SharepointChoiceComponent) {
     Office.context.mailbox.getSelectedItemsAsync(async (asyncResult: any) => {
       if (asyncResult.status === Office.AsyncResultStatus.Failed)
         return;
@@ -788,7 +800,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             undefined,
             undefined,
             undefined,
-            `https://graph.microsoft.com/v1.0/me/messages/${message.itemId.replace(/\//g, '%252F')}/$value`,
+            targetMailbox == null ?
+              `https://graph.microsoft.com/v1.0/me/messages/${message.itemId.replace(/\//g, '%252F')}/$value` :
+              `https://graph.microsoft.com/v1.0/users/${targetMailbox}/messages/${message.itemId.replace(/\//g, '%252F')}/$value`,
             'GET',
             undefined,
             'text'
@@ -1141,6 +1155,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           this.form[this.field + 'Id'].results.push(0);
           this.form[this.field + 'Id'].results.pop();
         }
+
+        this.chRef.detectChanges();
       });
     }
 
