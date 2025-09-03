@@ -17,8 +17,8 @@
 
   <i *ngIf="(get('Description') || '') != ''"
      title="{{get('Description')}}"
-     (mouseenter)="tooltip = true"
-     (mouseleave)="tooltip = false">(i)</i>
+     (mouseenter)="showHideTooltip(true)"
+     (mouseleave)="showHideTooltip(false)">(i)</i>
   <div class="ToolTip"
        [hidden]="!tooltip">{{get('Description')}}</div>
   <span *ngIf="get('Required')"
@@ -650,3 +650,4 @@
   <span style="display:none !important"
         id="DebugReq_{{field}}">{{required()}}</span>
 </div>
+
