@@ -197,6 +197,12 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   Common parts between multiple field types or minimal functions
   */
 
+  // show or hide tooltips 
+  showHideTooltip(show: boolean): void {
+    this.tooltip = show;
+    this.chRef.detectChanges();
+  }
+
   // show numbers with only 1 dot and without any trailing zeros
   niceNumber(): string {
     // .toLocaleString() will only retain 3 decimal places therefore split and do dp manually
@@ -1241,3 +1247,4 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
+
