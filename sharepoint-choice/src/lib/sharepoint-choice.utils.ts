@@ -380,7 +380,7 @@ export class SharepointChoiceUtils {
       if (typeof save.Id == "undefined" || save.Id < 1) {
         var saving = await this.sp.web.lists.getByTitle(listTitle).items.add(save);
         save.Id = saving.Id;
-      } else if (hasData(save)) {
+      } else if (this.hasData(save)) {
         await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).update(save);
       }
 
@@ -555,7 +555,7 @@ export class SharepointChoiceUtils {
           } else if (file.Data) {
             // file to upload
             await this.sp.web.getFolderByServerRelativePath(path).files.addUsingPath(file.FileName, file.Data, { Overwrite: true });
-            if (hasData(file.ListItemAllFields)) {
+            if (this.hasData(file.ListItemAllFields)) {
               let i = await this.sp.web.getFolderByServerRelativePath(path).files.getByUrl(file.FileName).getItem();
               await i.update(file.ListItemAllFields);
             }
@@ -563,7 +563,7 @@ export class SharepointChoiceUtils {
             file.TimeCreated = new Date();
             file.ServerRelativeUrl = path + '/' + file.FileName;
             delete file.Data;
-          } else if (hasData(file.ListItemAllFields)) {
+          } else if (this.hasData(file.ListItemAllFields)) {
             // get current item and check for changes
             let i = await this.sp.web.getFolderByServerRelativePath(path + '/' + file.FileName).getItem();
             await i.update(file.ListItemAllFields);
@@ -583,3 +583,4 @@ export class SharepointChoiceUtils {
     }
   }
 }
+
