@@ -1,22 +1,23 @@
-<div layout="column"
-     class="choice"
+<div class="choice"
      [ngClass]="{noTitle: (get('Title') || '') == ''}"
-     title="{{get('Title')}}">
+     title="{{((get('Description') || '') == '' ? get('Title') : '')}}">
+
   <label *ngIf="get('TypeAsString') == 'Boolean'">
     <input style="width: auto; height: auto;"
-           flex
            [disabled]="disabled"
            type="checkbox"
            [(ngModel)]="form[field]"
            [required]="required()"
            name="{{field}}_Y"
            (change)="change($event)">
-    <span style="font-size: inherit;">{{get('Title')}}</span>
+    <span style="font-size: inherit;"
+          title="{{((get('Description') || '') == '' ? '' : get('Title'))}}">{{get('Title')}}</span>
   </label>
-  <span *ngIf="get('TypeAsString') != 'Boolean'">{{get('Title')}}</span>
+
+  <span *ngIf="get('TypeAsString') != 'Boolean'"
+        title="{{((get('Description') || '') == '' ? '' : get('Title'))}}">{{get('Title')}}</span>
 
   <i *ngIf="(get('Description') || '') != ''"
-     title="{{get('Description')}}"
      (mouseenter)="showHideTooltip(true)"
      (mouseleave)="showHideTooltip(false)">(i)</i>
   <div class="ToolTip"
@@ -24,14 +25,12 @@
   <span *ngIf="get('Required')"
         class="Required">*</span>
 
-  <div layout="column"
-       *ngIf="get('TypeAsString') == 'MultiChoice'">
-    <input placeholder="Filter or search the choices below"
+  <div *ngIf="get('TypeAsString') == 'MultiChoice'">
+    <input placeholder="Filter or search the {{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}} below"
            *ngIf="!disabled"
            [(ngModel)]="filterMulti"><br>
     <select (mousedown)="false"
             (click)="change($event)"
-            flex
             multiple="multiple"
             class="{{multiLargeorSmall()}}"
             [disabled]="disabled"
@@ -43,39 +42,39 @@
     </select>
   </div>
 
-  <div layout="row"
-       *ngIf="get('TypeAsString') == 'Choice' && get('Format') != 'RadioButtons'">
+  <div *ngIf="get('TypeAsString') == 'Choice' && get('Format') != 'RadioButtons'">
     <select [disabled]="disabled"
             (ngModelChange)="selChangeS($event)"
             [ngModel]="form[field]"
             [required]="required()"
-            name="{{field}}_0"
-            flex
-            [hidden]="disabled && get('TypeAsString') == 'Choice' && (form[field] == '' || notInChoices()) && form[field] != '-'">
+            name="{{field}}_C"
+            [style.width.%]="!inChoices() ? 50 : 100"
+            *ngIf="!disabled || inChoices()">
+      <option disabled
+              selected
+              hidden>Please select {{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}</option>
       <option *ngIf="select.none"
-              [value]="!form[field] ? form[field] : '-'">{{select.none}}</option>
+              [value]="null">{{select.none}}</option>
       <option *ngFor="let i of choices()"
               [value]="i">{{i}}</option>
       <option *ngIf="select.other || get('FillInChoice')"
-              [value]="!form[field] || !notInChoices() ? 'Please select...' : form[field]">{{select.other || 'Other'}}, please specify...</option>
+              [value]="inChoices() ? 'Please select...' : form[field]">{{select.other || 'Other'}}, please specify...</option>
     </select>
-    <div *ngIf="get('TypeAsString') == 'Choice' && (form[field] == '' || notInChoices()) && form[field] != '-'"
-         style="padding:0">
-      <input [disabled]="disabled"
-             type="text"
-             flex
-             [(ngModel)]="form[field]"
-             [required]="required()"
-             name="{{field}}_1"
-             maxlength="250"
-             onclick="this.select();"
-             (change)="change($event)">
-    </div>
+    <input [disabled]="disabled"
+           type="text"
+           [(ngModel)]="form[field]"
+           [required]="required()"
+           name="{{field}}_CO"
+           [style.width.%]="!disabled || inChoices() ? 50 : 100"
+           maxlength="250"
+           onclick="this.select();"
+           (change)="change($event)"
+           *ngIf="!inChoices()">
   </div>
 
-  <div layout="row"
-       *ngIf="get('TypeAsString') == 'Choice' && get('Format') == 'RadioButtons'">
-    <label *ngIf="select.none">
+  <div *ngIf="get('TypeAsString') == 'Choice' && get('Format') == 'RadioButtons'">
+    <label *ngIf="select.none"
+           class="radio">
       <input [value]="null"
              [disabled]="disabled"
              type="radio"
@@ -85,7 +84,8 @@
              (change)="change($event)">
       {{select.none}}
     </label>
-    <label *ngFor="let i of choices()">
+    <label *ngFor="let i of choices()"
+           class="radio">
       <input [value]="i"
              [disabled]="disabled"
              type="radio"
@@ -97,10 +97,8 @@
     </label>
   </div>
 
-  <div ayout="column"
-       *ngIf="get('TypeAsString') == 'Number' || get('TypeAsString') == 'Integer'">
-    <input flex
-           [disabled]="disabled"
+  <div *ngIf="get('TypeAsString') == 'Number' || get('TypeAsString') == 'Integer'">
+    <input [disabled]="disabled"
            type="text"
            pattern="-{0,1}[0-9,]*\.{0,1}[0-9,]*"
            [ngModel]="niceNumber()"
@@ -109,13 +107,12 @@
            name="{{field}}_I"
            [min]="get('Min')"
            [max]="get('Max')"
-           (change)="change($event)">
+           (change)="change($event)"
+           placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
   </div>
 
-  <div layout="column"
-       *ngIf="get('TypeAsString') == 'DateTime' && get('DisplayFormat') != 1">
-    <input flex
-           [disabled]="disabled"
+  <div *ngIf="get('TypeAsString') == 'DateTime' && get('DisplayFormat') != 1">
+    <input [disabled]="disabled"
            type="date"
            [ngModel]="form[field] | date:'yyyy-MM-dd'"
            (ngModelChange)="form[field] = $event"
@@ -123,27 +120,25 @@
            name="{{field}}_D"
            (change)="change($event)"
            [min]="get('Min')"
-           [max]="get('Max')">
+           [max]="get('Max')"
+           placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
   </div>
 
-  <div layout="column"
-       *ngIf="get('TypeAsString') == 'DateTime' && get('DisplayFormat') == 1">
-    <input flex
-           [disabled]="disabled"
+  <div *ngIf="get('TypeAsString') == 'DateTime' && get('DisplayFormat') == 1">
+    <input [disabled]="disabled"
            type="datetime-local"
            [ngModel]="form[field] | date:'yyyy-MM-ddTHH:mm'"
            (ngModelChange)="form[field] = $event"
            [required]="required()"
-           name="{{field}}_D"
+           name="{{field}}_DT"
            (change)="change($event)"
            [min]="get('Min')"
-           [max]="get('Max')">
+           [max]="get('Max')"
+           placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
   </div>
 
-  <div layout="column"
-       *ngIf="get('TypeAsString') == 'Text'">
-    <input flex
-           [disabled]="disabled"
+  <div *ngIf="get('TypeAsString') == 'Text'">
+    <input [disabled]="disabled"
            type="text"
            [pattern]="text.pattern || '.*'"
            [(ngModel)]="form[field]"
@@ -152,7 +147,8 @@
            [maxlength]="get('MaxLength')"
            (change)="change($event)"
            (keyup)="onUpText($event.key)"
-           (click)="onUpText(undefined)">
+           (click)="onUpText(undefined)"
+           placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
     <div class="MaxLength"
          [hidden]="remaining() >= 5">Maximum {{remaining()}} characters remaining</div>
 
@@ -163,7 +159,7 @@
         <ul>
           <li *ngFor="let result of results; let i = index"
               (click)="selectedText(result)"
-              [hidden]="result.hide"
+              [hidden]="result['hide']"
               [style]="(pos == i ? 'background-color: rgba(0, 0, 0, 0.04);' : '')">
             {{result[field]}}
           </li>
@@ -176,92 +172,84 @@
     </div>
   </div>
 
-  <div layout="column"
-       *ngIf="!disabled && get('TypeAsString') == 'Note' && !get('RichText') && !get('AppendOnly')">
-    <textarea flex
-              [(ngModel)]="form[field]"
+  <div *ngIf="!disabled && get('TypeAsString') == 'Note' && !get('RichText') && !get('AppendOnly')">
+    <textarea [(ngModel)]="form[field]"
               [required]="required()"
               name="{{field}}_M"
               (change)="change($event)"
-              [style]="(text.height ? 'height: '+text.height+'px' : '')"></textarea>
+              [style]="(text.height ? 'height: '+text.height+'px' : '')"
+              placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."></textarea>
     <div class="MaxLength"
-         [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
+         [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
   </div>
 
-  <div layout="column"
-       *ngIf="!disabled && get('TypeAsString') == 'Note' && !get('RichText') && get('AppendOnly')">
-    <textarea flex
-              [required]="required()"
-              name="{{field}}_M"
+  <div *ngIf="!disabled && get('TypeAsString') == 'Note' && !get('RichText') && get('AppendOnly')">
+    <textarea [required]="required()"
+              name="{{field}}_MA"
               (change)="change($event)"
-              [style]="(text.height ? 'height: '+text.height+'px' : '')"></textarea>
+              [style]="(text.height ? 'height: '+text.height+'px' : '')"
+              placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."></textarea>
     <div class="MaxLength"
-         [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
+         [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
   </div>
 
-  <div layout="column"
-       *ngIf="disabled && get('TypeAsString') == 'Note' && !get('RichText')"
+  <div *ngIf="disabled && get('TypeAsString') == 'Note' && !get('RichText')"
        style="max-height: 500px; overflow: auto;">{{form[field]}}</div>
 
-  <div layout="column"
-       *ngIf="!disabled && get('TypeAsString') == 'Note' && get('RichText') && !get('AppendOnly')">
+  <div *ngIf="!disabled && get('TypeAsString') == 'Note' && get('RichText') && !get('AppendOnly')">
     <div class="NgxEditor__Wrapper">
       <ngx-editor-menu [editor]="editor"
                        [toolbar]="toolbar"></ngx-editor-menu>
       <ngx-editor [editor]="editor"
-                  flex
                   [(ngModel)]="form[field]"
-                  [placeholder]="'Type here...'"
+                  placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."
                   (ngModelChange)="change($event)"
+                  name="{{field}}_H"
                   [outputFormat]="'html'">
       </ngx-editor>
     </div>
     <div class="MaxLength"
-         [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
+         [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
   </div>
 
-  <div layout="column"
-       *ngIf="!disabled && get('TypeAsString') == 'Note' && get('RichText') && get('AppendOnly')">
+  <div *ngIf="!disabled && get('TypeAsString') == 'Note' && get('RichText') && get('AppendOnly')">
     <div class="NgxEditor__Wrapper">
       <ngx-editor-menu [editor]="editor"
                        [toolbar]="toolbar"></ngx-editor-menu>
       <ngx-editor [editor]="editor"
-                  flex
                   [(ngModel)]="unused"
-                  [placeholder]="'Type here...'"
+                  placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."
                   (ngModelChange)="change($event)"
+                  name="{{field}}_HA"
                   [outputFormat]="'html'">
       </ngx-editor>
     </div>
     <div class="MaxLength"
-         [hidden]="remaining() >= 15">{{remaining()}} characters remaining</div>
+         [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
   </div>
 
-  <div layout="column"
-       *ngIf="disabled && get('TypeAsString') == 'Note' && get('RichText')"
+  <div *ngIf="disabled && get('TypeAsString') == 'Note' && get('RichText')"
        style="max-height: 500px; overflow: auto;"
        [innerHTML]="form[field]"></div>
 
-  <div layout="row"
-       *ngIf="get('TypeAsString') == 'URL'">
-    <input flex="50"
-           [disabled]="disabled"
+  <div *ngIf="get('TypeAsString') == 'URL'">
+    <input [disabled]="disabled"
            [(ngModel)]="form[field].Url"
            [required]="required()"
            name="{{field}}_UU"
            placeholder="https://"
            pattern="^.+\:\/\/.+$|^mailto\:.+$"
-           (change)="change($event)">
-    <input flex="50"
-           [disabled]="disabled"
+           (change)="change($event)"
+           style="width:50%">
+    <input [disabled]="disabled"
            [(ngModel)]="form[field].Description"
            name="{{field}}_UD"
            maxlength="250"
-           (change)="change($event)">
+           (change)="change($event)"
+           style="width:50%">
   </div>
 
-  <div layout="column"
-       *ngIf="get('TypeAsString') == 'Attachments' && !file.uploadonly"
+  <div *ngIf="get('TypeAsString') == 'Attachments' && !file.uploadonly"
        style="position: relative;overflow-x: auto;"
        (dragover)="over($event)"
        (dragleave)="leave($event)"
@@ -277,7 +265,7 @@
     <div *ngIf="hasChecked() && file.doctype">
       Update selected:
       <select (change)="setClasses($event)"
-              name="FileCat">
+              name="{{field}}_Cat">
         <option disabled
                 selected
                 hidden>{{file.doctype}}</option>
@@ -335,7 +323,8 @@
             File Type
           </span>
           <select style="width:30px;border:none;margin-left:8px;"
-                  [(ngModel)]="filter">
+                  [(ngModel)]="filter"
+                  name="{{field}}_Filter">
             <option value>All</option>
             <option *ngFor="let v of usedTypes()"
                     value="{{v}}">{{v}}</option>
@@ -353,12 +342,12 @@
         </th>
         <th *ngIf="file.notes">
           <span>
-            {{file.notes}}
+            {{friendlyName(file.notes)}}
           </span>
         </th>
-        <th *ngFor="let k of keys(file.spec)">
+        <th *ngFor="let k of additionalKeys(file.spec)">
           <span>
-            {{file.spec[k].Title || friendlyName(file.spec[k].InternalName)}}
+            {{file.spec?.[k]?.Title || friendlyName(file.spec?.[k]?.InternalName)}}
           </span>
         </th>
         <th style="width: 0; white-space: nowrap;">
@@ -375,22 +364,15 @@
           <input type="checkbox"
                  [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402"
                  [(ngModel)]="f.Checked"
-                 name="FileCheckD_{{i}}">
+                 name="{{field}}_Checked_{{i}}">
         </td>
         <td *ngIf="file.doctype"
-            style="white-space: nowrap">
-          <select (change)="setClass(f,$event)"
-                  [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402"
-                  name="FileCatD_{{i}}"
-                  [style]="width()">
-            <option *ngIf="f.ListItemAllFields[file.doctype] && !f.Changed"
-                    value="{{f.ListItemAllFields[file.doctype]}}"
-                    selected>{{f.ListItemAllFields[file.doctype]}}</option>
-            <option *ngIf="!f.ListItemAllFields[file.doctype]"
-                    value=""></option>
-            <option *ngFor="let v of file.doctypes"
-                    value="{{v}}">{{v}}</option>
-          </select>
+            style="white-space: nowrap" [style]="width()">
+          <app-choice [form]="f.ListItemAllFields"
+                      [spec]="loadOrGenerateSpec(file.doctype, 'Choice')"
+                      [field]="file.doctype"
+                      [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402">
+          </app-choice>
         </td>
 
         <td *ngIf="!f.Deleted && (!file.archive || !f.ListItemAllFields[file.archive])"
@@ -405,7 +387,7 @@
                  [hidden]="f.ServerRelativeUrl"
                  [(ngModel)]="f.ListItemAllFields.Title"
                  style="width: calc( 100% - 16px );"
-                 name="FileNameD_{{i}}"
+                 name="{{field}}_Name_{{i}}"
                  [title]="f.FileName + ' - ' + f.Length">
 
           <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;"
@@ -435,16 +417,16 @@
         </td>
 
         <td *ngIf="file.notes">
-          <input [(ngModel)]="f.ListItemAllFields[file.notes]"
-                 [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402"
-                 style="width: 100%;"
-                 name="FileDescD_{{i}}"
-                 placeholder="{{friendlyName(file.notes)}}...">
-        </td>
-        <td *ngFor="let k of keys(file.spec)">
           <app-choice [form]="f.ListItemAllFields"
-                      [spec]="file.spec"
-                      [field]="file.spec[k].InternalName"
+                      [spec]="loadOrGenerateSpec(file.notes, 'Text')"
+                      [field]="file.notes"
+                      [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402">
+          </app-choice>
+        </td>
+        <td *ngFor="let k of additionalKeys(file.spec)">
+          <app-choice [form]="f.ListItemAllFields"
+                      [spec]="file.spec ?? spec"
+                      [field]="file.spec?.[k]?.InternalName"
                       [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402"
                       [text]="{
                         height: 35
@@ -468,7 +450,7 @@
                  type="checkbox"
                  [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402"
                  [(ngModel)]="f.Checked"
-                 name="FileCheckM_{{i}}">
+                 name="{{field}}_CheckM_{{i}}">
 
           <a *ngIf="f.ServerRelativeUrl && file.download"
              download="{{f.FileName}}"
@@ -480,7 +462,7 @@
                  [hidden]="f.ServerRelativeUrl"
                  [(ngModel)]="f.ListItemAllFields.Title"
                  style="width: calc( 100% - 38px );"
-                 name="FileNameM_{{i}}"
+                 name="{{field}}_NameM_{{i}}"
                  [title]="f.FileName + ' - ' + f.Length">
 
           <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;"
@@ -512,35 +494,26 @@
              *ngIf="!f.Deleted && (!file.archive || !f.ListItemAllFields[file.archive]) && file.doctype">
           <span *ngIf="file.spec">{{friendlyName(file.doctype)}}</span>
 
-          <select (change)="setClass(f,$event)"
-                  [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402"
-                  name="FileCatM_{{i}}">
-            <option disabled
-                    selected
-                    hidden>Please select {{friendlyName(file.doctype)}}</option>
-            <option *ngIf="f.ListItemAllFields[file.doctype] && !f.Changed"
-                    value="{{f.ListItemAllFields[file.doctype]}}"
-                    selected>{{f.ListItemAllFields[file.doctype]}}</option>
-            <option *ngIf="!f.ListItemAllFields[file.doctype]"
-                    value=""></option>
-            <option *ngFor="let v of file.doctypes"
-                    value="{{v}}">{{v}}</option>
-          </select>
+          <app-choice [form]="f.ListItemAllFields"
+                      [spec]="loadOrGenerateSpec(file.doctype, 'Choice')"
+                      [field]="file.doctype"
+                      [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402">
+          </app-choice>
         </div>
         <div class="choice"
              *ngIf="!f.Deleted && (!file.archive || !f.ListItemAllFields[file.archive]) && file.notes">
           <span *ngIf="file.spec">{{friendlyName(file.notes)}}</span>
 
-          <input [(ngModel)]="f.ListItemAllFields[file.notes]"
-                 [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402"
-                 style="width: 100%;"
-                 name="FileDescM_{{i}}"
-                 placeholder="{{friendlyName(file.notes)}}...">
-        </div>
-        <div *ngFor="let k of keys(file.spec)">
           <app-choice [form]="f.ListItemAllFields"
-                      [spec]="file.spec"
-                      [field]="file.spec[k].InternalName"
+                      [spec]="loadOrGenerateSpec(file.notes, 'Text')"
+                      [field]="file.notes"
+                      [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402">
+          </app-choice>
+        </div>
+        <div *ngFor="let k of additionalKeys(file.spec)">
+          <app-choice [form]="f.ListItemAllFields"
+                      [spec]="file.spec ?? spec"
+                      [field]="file.spec?.[k]?.InternalName"
                       [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402"
                       [text]="{
                         height: 75
@@ -554,18 +527,12 @@
     </div>
   </div>
 
-  <div layout="column"
-       *ngIf="get('TypeAsString') == 'Attachments' && !disabled"
+  <div *ngIf="get('TypeAsString') == 'Attachments' && !disabled"
        style="text-align: center; padding: 4px;"
        (dragover)="over($event)"
        (dragleave)="leave($event)"
        (drop)="drop($event)"
        [ngClass]="{'FilesOver': filesOver}">
-    <input hidden
-           type="text"
-           [required]="required()"
-           [value]="attach()"
-           name="{{field}}_A">
     <b style="font-size: 48px;">&#8613;</b><br>
     Drag and drop additional files here<br>
     or<br>
@@ -581,17 +548,12 @@
            type="file"
            style="display: none !important;"
            multiple
-           (change)="add($event.target)" />
+           (change)="add($event.target)"
+           name="{{field}}_F" />
     <button onclick="this.previousElementSibling.click()">Browse file</button>
   </div>
 
-  <div layout="column"
-       *ngIf="['User','UserMulti'].indexOf(get('TypeAsString')) >= 0">
-    <input hidden
-           type="text"
-           [required]="required()"
-           [value]="people()"
-           name="{{field}}_P">
+  <div *ngIf="['User','UserMulti'].indexOf(get('TypeAsString')) >= 0">
     <div *ngIf="form[field + 'Id'] && form[field + 'Id'].results">
       <span *ngFor="let user of form[field + 'Id'].results"
             style="padding: 8px;">{{displayUser(user)}} <a (click)="removeUser(user)"
@@ -605,10 +567,11 @@
     </div>
     <input type="text"
            [(ngModel)]="name"
-           name="name"
+           name="{{field}}_N"
            (keyup)="onUpUser($event.key)"
            (click)="onUpUser(undefined)"
-           [hidden]="disabled || (get('TypeAsString') == 'User' && form[field + 'Id'])">
+           [hidden]="disabled || (get('TypeAsString') == 'User' && form[field + 'Id'])"
+           placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
 
     <div style="position: relative; padding: 0;"
          [hidden]="disabled">
@@ -631,23 +594,37 @@
     </div>
   </div>
 
-  <div layout="column"
-       *ngIf="get('TypeAsString') == null || get('TypeAsString') == ''"
+  <div *ngIf="get('TypeAsString') == null || get('TypeAsString') == ''"
        style="position:relative;">
     <div class="spin"></div>
   </div>
 
-  <div layout="column"
-       *ngIf="['Lookup','LookupMulti','TaxonomyFieldType','TaxonomyFieldTypeMulti','AllDayEvent','Calculated','Computed','ContentTypeId','Counter','CrossProjectLink','Currency','File','GridChoice','Guid','ModStat','MultiColumn','PageSeparator','Recurrence','ThreadIndex','Threading','WorkflowEventType','WorkflowStatus','FieldLocation'].indexOf(get('TypeAsString')) >= 0">
+  <div *ngIf="['Lookup','LookupMulti','TaxonomyFieldType','TaxonomyFieldTypeMulti','AllDayEvent','Calculated','Computed','ContentTypeId','Counter','CrossProjectLink','Currency','File','GridChoice','Guid','ModStat','MultiColumn','PageSeparator','Recurrence','ThreadIndex','Threading','WorkflowEventType','WorkflowStatus','FieldLocation'].indexOf(get('TypeAsString')) >= 0">
     {{form[field] && form[field].results ? form[field].results.join(', ') : form[field]}}
-    <div style="opacity:0.85">Error, field type not yet editable...</div>
+    <div style="opacity:0.85">Error,{{required() ? ' required' : ''}} field type '{{get('TypeAsString')}}' not yet editable...</div>
   </div>
 
-  <span style="display:none !important"
-        id="DebugValue_{{field}}">{{form[field]}}</span>
-  <span style="display:none !important"
-        id="DebugType_{{field}}">{{get('TypeAsString')}}</span>
-  <span style="display:none !important"
-        id="DebugReq_{{field}}">{{required()}}</span>
-</div>
+  <input style="display:none !important;"
+         type="text"
+         [required]="required()"
+         [value]="validator()"
+         name="{{field}}_Validator">
 
+  @if (versions && versions.length > 1) {
+  <ul class="versions"
+      [hidden]="!versionsDisplayed">
+    <li><b>Field version history:</b></li>
+    @for (v of versions; track $index; let i = $index) {
+    @if (i == 0) {
+    <li class="current">
+      {{v[field] ?? 'blank'}} - {{v['Created'] | date:'dd MMM yyyy HH:mm:ss'}} {{v['Editor']['LookupValue']}}
+    </li>
+    } @else if (v[field] != versions[i-1][field] && (v[field] || v[field]?.toString().length > 0)) {
+    <li>
+      {{v[field]}} - {{v['Created'] | date:'dd MMM yyyy HH:mm:ss'}} {{v['Editor']['LookupValue']}} {{versionsToggle()}}
+    </li>
+    }
+    }
+  </ul>
+  }
+</div>

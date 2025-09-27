@@ -28,11 +28,12 @@ import { SharepointChoiceLogging } from './sharepoint-choice.logging';
   }]
 })
 export class SharepointChoiceComponent implements OnInit, OnDestroy {
-  @Input() form!: Array<string>; // form containing field
+  @Input() form!: object; // form containing field, varies based on list therefore object not defined explicitly
   @Input() field!: string; // internal field name on form object, used for push back and against spec
 
-  @Input() spec!: Array<Array<string>>; // spec of field loaded from list
-  @Input() override!: string; // manually override any spec above. sent as string as passing object kills large form performance
+  @Input() spec!: object; // spec of field loaded from list, varies based on list therefore object not defined explicitly
+  @Input() versions!: Array<object>; // version history of this field to display if presented, varies based on list therefore object not defined explicitly
+  @Input() override!: string|object; // manually override any spec above. prefer send as string as passing object kills large form performance
 
   @Input() disabled!: boolean; // get disabled state from outside
   @Input() onchange!: Function; // onchange trigger a function(this)
@@ -69,7 +70,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     doctype?: string, // document type field name
 
     notes?: string, // notes input field name for singular note input space
-    spec?: any // field spec for additional fields, 
+    spec?: Array<object> // field spec for additional fields, 
   };
 
   declare editor: Editor;
@@ -77,21 +78,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   declare tooltip: boolean;
   declare filesOver: boolean;
   declare name: string;
-  declare display: any;
   declare loading: Array<number>;
+  declare versionsDisplayed: boolean;
 
-  // drop external models
-  declare UserQuery: {
-    queryParams: {
-      QueryString: string;
-      MaximumEntitySuggestions: number;
-      AllowEmailAddresses: boolean;
-      AllowOnlyEmailAddresses: boolean;
-      PrincipalType: number;
-      PrincipalSource: number;
-      SharePointGroupID: number;
-    };
-  };
   declare users: Array<{
     Key: string;
     Description: string;
@@ -113,14 +102,40 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   declare filterMulti: string;
   declare unused: string;
-  declare results: any[any];
+  declare results: Array<object>; // varies based on the search source therefore not explicitly defined
   declare pos: number;
-  declare office: any;
+  declare office: {
+    type: string | null,
+    loading: boolean
+  };
+
   declare sort: string;
   declare filter: string;
 
   public textKey: Subject<string> = new Subject<string>();
   public userKey: Subject<string> = new Subject<string>();
+
+  private overridePrevious?: string;
+  private overrideParsed?: object;
+
+  private display: Array<{
+    Id: number;
+    Key: string;
+    DisplayText: string;
+  }>;
+  
+  // drop external models
+  private UserQuery: {
+    queryParams: {
+      QueryString: string;
+      MaximumEntitySuggestions: number;
+      AllowEmailAddresses: boolean;
+      AllowOnlyEmailAddresses: boolean;
+      PrincipalType: number;
+      PrincipalSource: number;
+      SharePointGroupID: number;
+    };
+  };
 
   constructor(
     private elRef: ElementRef,
@@ -203,19 +218,28 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 
+  // are there different field version values shown
+  versionsToggle(): string {
+    if (!this.versionsDisplayed) {
+      this.versionsDisplayed = true;
+      this.chRef.detectChanges();
+    }
+    return '';
+  }
+
   // show numbers with only 1 dot and without any trailing zeros
   niceNumber(): string {
     // .toLocaleString() will only retain 3 decimal places therefore split and do dp manually
     // if no dp then no decimal dot either
     // if dp only get 1st, should never be 2 i.e. 0.1.2
-    if (!this.form[this.field])
+    if (!this.form[this.field] && this.form[this.field] !== 0)
       return '';
     var s = this.form[this.field].toLocaleString().split('.');
     return s[0] + (s.length == 1 ? '' : '.' + s[1].replace(/0*$/, ''));
   }
 
   numberSet(e: string | undefined): void {
-    if (!e || e == '') {
+    if (!e) {
       this.form[this.field] = null
       return;
     }
@@ -238,6 +262,23 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     return true;
   }
 
+  // get outcomes of non standard fields into a plain text field for [required] to be triggered automatically 
+  validator(): string {
+    switch (this.get('TypeAsString')) {
+      case 'User':
+        return this.form[this.field + 'Id'] ? 'true' : '';
+      case 'UserMulti':
+        return (this.form[this.field + 'Id'] && this.form[this.field + 'Id'].results &&  this.form[this.field + 'Id'].results.length > 0) ? 'true' : '';
+      case 'Attachments':
+        return this.attachments().length > 0 ? 'true' : '';
+      case 'Choice':
+        return this.form[this.field] ? 'true' : '';
+      default:
+        // these will fall back on default html required validation
+        return 'true';
+    }
+  }
+
   // max length character countdown
   remaining(): number {
     var m = this.get('MaxLength');
@@ -251,14 +292,25 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // gets the required field properties and/or any overrides to determine which field type etc to display
   //declare overrode: any[string];
   get(t: string): any {
-    var p: any = null;
-    var overrode = this.override ? (typeof this.override == "string" ? JSON.parse(this.override) : this.override) : {};
-    if (overrode && overrode[t] != null)
-      p = overrode[t];
-    if (p == null && this.spec && this.spec[this.field.replace(/^OData_/, '')] && this.spec[this.field.replace(/^OData_/, '')][t])
-      p = this.spec[this.field.replace(/^OData_/, '')][t];
-    if (p == null && this.spec && this.spec[this.field] && this.spec[this.field][t])
-      p = this.spec[this.field][t];
+    // if override passed in, make sure its an object and convert only once unless changed
+    if (this.override && typeof this.override === 'string' && this.override != this.overridePrevious) {
+      this.overridePrevious = this.override;
+      this.overrideParsed = JSON.parse(this.override);
+    }
+    // if override is an object then use it directly
+    if (this.override && typeof this.override !== 'string') {
+      this.overrideParsed = this.override;
+    }
+    
+    // initial starting value of p from override
+    var p: any = this.overrideParsed ? this.overrideParsed[t] : null;
+    // if no override then get from field spec selected
+    if (p == null) {
+      let spec = this.spec[this.field.replace(/^OData_/, '')] ?? this.spec[this.field];
+      if (spec)
+        p = spec[t];
+    }
+
     // if its a multi choice, ensure the object is the correct type
     if (t == 'TypeAsString' && p == 'MultiChoice' && (!this.form[this.field] || !this.form[this.field].results))
       this.form[this.field] = {
@@ -285,12 +337,26 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           results: []
         }
     }
+    // if the field is empty (not set null) and its not a person field (+Id) then set the default value only if there is one
+    if (t == 'TypeAsString' && typeof this.form[this.field] == "undefined" && !this.form[this.field + 'Id']) {
+      var d = this.get('DefaultValue');
+      if (d)
+        this.form[this.field] = d;
+    }
+    // always disable read only fields initially, may get overridden later but thats the consumers responsibility
+    if (t == 'TypeAsString') {
+      var r = this.get('ReadOnlyField');
+      if (r)
+        this.disabled = true;
+    }
+
     // if no choices return empty array
     if (t == 'Choices' && p == null)
       return [];
     // if no title use internal field name
     if (t == 'Title' && p == null)
-      return this.field;
+      return this.friendlyName(this.field);
+    // min max of date time fields
     if (p == null && (t == 'Min' || t == 'Max') && this.get('TypeAsString') == 'DateTime')
       return (t == 'Min' ? '1970-01-01' : '9999-12-31') + (this.get('DisplayFormat') == 1 ? 'T00:00:00' : '');
     return p == null || typeof p.results == "undefined" ? p : p.results;
@@ -404,18 +470,15 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (typeof this.select.filter == "function")
       choices = choices.filter((c: any, i: number, a: any) => this.select.filter ? this.select.filter(c, i, a, this.select.parent || this) : true);
     // common filters
-    var other = this.select.other;
     return choices.filter((x: string) => {
-      if (!x || x == '')
-        return false;
-      // filter exclude other if present
-      if (other && other == x)
+      // exclude empty choices as they fail to save
+      if (!x)
         return false;
       // exclude unselected items on disabled fields
       if (this.disabled && this.form[this.field] && this.form[this.field].results && !~this.form[this.field].results.indexOf(x))
         return false;
       // filter on search above multichoice field
-      if (this.filterMulti && this.filterMulti.length > 0 && !~x.toLowerCase().indexOf(this.filterMulti.toLowerCase()))
+      if (this.filterMulti && !~x.toLowerCase().indexOf(this.filterMulti.toLowerCase()))
         return false;
       // else true
       return true;
@@ -423,14 +486,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // selected field option not in available choices, i.e. other
-  notInChoices(): boolean {
-    if (!this.form[this.field] || (this.form[this.field] == '-' && this.select.none))
-      return false;
-    var choices = this.choices();
-    if (!choices)
-      return false;
-    var ths = this;
-    return choices.indexOf(ths.form[ths.field]) < 0;
+  inChoices(): boolean {
+    if (!this.form[this.field])
+      return true;
+    return this.choices().indexOf(this.form[this.field]) >= 0;
   }
 
   // on single selection change
@@ -446,11 +505,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   /* 
   Common parts between file upload field types
   */
-
-  // get outcomes of non standard fields into a plain text field for [required] to be triggered automatically
-  attach(): string | undefined {
-    return this.attachments().length > 0 ? 'true' : undefined;
-  }
 
   // files post filtering
   attachments(): any[string] {
@@ -491,13 +545,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       });
   }
 
-  keys(o): Array<string> {
-    // get keys of object
-    if (!o || typeof o != "object")
-      return [];
-    return Object.keys(o);
-  }
-
   friendlyName(name: string): string {
     return name.replace(/_x0020_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2');
   }
@@ -530,11 +577,25 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
   }
 
-  setClass(f: any, e: any) {
-    if (!this.file.doctype)
-      return;
-    f.ListItemAllFields[this.file.doctype] = e.target ? e.target['value'] : e;
-    f.Changed = true;
+  additionalKeys(o): Array<string> {
+    // get keys of object
+    if (!o || typeof o != "object")
+      return [];
+    return Object.keys(o).filter(k => k != this.file?.doctype && k != this.file?.notes);
+  }
+
+  loadOrGenerateSpec(field:string, type:string) {
+    var s:object = {};
+    if (this.file?.spec && this.file.spec[field])
+       s[field] = this.file.spec[field];
+    else
+      s[field] = { 
+        TypeAsString: type,
+        InternalName: field,
+        Title: '',
+        Choices: this.file?.doctypes ?? []
+      };
+    return s;
   }
 
   usedTypes(): Array<string> {
@@ -1069,11 +1130,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   /* 
   Common parts between user field types
   */
-
-  // get outcomes of non standard fields into a plain text field for [required] to be triggered automatically
-  people(): string | undefined {
-    return this.form[this.field + 'Id'] && (!this.form[this.field + 'Id'].results || this.form[this.field + 'Id'].results.length > 0) ? 'true' : undefined;
-  }
 
   // select user
   async selectedUser(res: any): Promise<void> {

@@ -124,8 +124,23 @@ export class SharepointChoiceUtils {
     var spec: any = { 'odata.context': this.sp };
 
     try {
-      var arr = await this.sp.web.lists.getByTitle(listTitle).fields();
+      // even though the main fields are in the selection not all are returned such as Format, so parse the SchemaXml for the rest
+      var selectFields = 'Title,InternalName,TypeAsString,Required,Choices,MaxLength,Description,DisplayFormat,AppendOnly,SelectionGroup,Format,FillInChoice,RichText,ReadOnlyField,DefaultValue,SchemaXml'.split(',');
+      var arr = await this.sp.web.lists.getByTitle(listTitle).fields.select(...selectFields)();
       arr.forEach(x => {
+        if (x.SchemaXml) {
+          let s = (new DOMParser()).parseFromString(x.SchemaXml, "text/xml").documentElement.attributes;
+          Array.from(s).reduce((acc, attr) => {
+            if (!x[attr.name]) {
+              x[attr.name] = attr.value;
+              x[attr.name] = x[attr.name] == 'TRUE' ? true : x[attr.name] == 'FALSE' ? false : x[attr.name];
+              x[attr.name] = x[attr.name] != null && !isNaN(parseFloat(x[attr.name])) && isFinite(x[attr.name]) ? parseFloat(x[attr.name]) : x[attr.name];
+            }
+            return acc;
+          }, {});
+          // prevent reparsing anywhere else
+          x.SchemaXml = "";
+        }
         spec[x.InternalName] = x;
       });
     } catch (e) {
@@ -153,8 +168,12 @@ export class SharepointChoiceUtils {
       if (key.startsWith('odata.') || key == '__metadata')
         delete d[key];
 
-      // dont process nulls
-      if (!d[key] || d[key] === null)
+      // blank is null
+      if (d[key] == '')
+        d[key] = null;
+
+      // dont process nulls or blanks
+      if (d[key] == undefined || d[key] === null)
         continue;
 
       // return multifields to results, old behaviour for old people fields and to prevent json paring clashing
@@ -228,7 +247,7 @@ export class SharepointChoiceUtils {
       api?.[environment] || api?.['DEV'],
       `${App.ApiToken?.[api?.server]?.[environment] ?? App.ApiToken?.[api?.server]?.['DEV'] ?? ''}${api?.name}/${tokenRole}`,
       endPoint.split('/').length == 1 ? undefined
-        : environment == 'LOCAL' || !App.ApiServers?.[api?.server]?.[App.Release] ? `https://localhost:${api?.port || 44301}/${endPoint}` : `${App.ApiServers[api?.server][App.Release]}/${endPoint}`,
+        : environment == 'LOCAL' || !App.ApiServers?.[api?.server]?.[environment] ? `https://localhost:${api?.port || 44301}/${endPoint}` : `${App.ApiServers[api?.server][environment]}/${endPoint}`,
       httpMethod,
       jsonPostData,
       dataType
@@ -310,6 +329,8 @@ export class SharepointChoiceUtils {
     if (!uned || uned == null)
       uned = {};
 
+    delete save["$$hashKey"];
+
     for (var key in save) {
       if ((save[key] === null && uned[key] !== null) || key == "Id")
         continue;
@@ -321,7 +342,7 @@ export class SharepointChoiceUtils {
       }
 
       // prevent errors on nulls
-      if (save[key] == null)
+      if (save[key] == null || save[key] == undefined)
         continue;
 
       // convert dates
@@ -336,8 +357,16 @@ export class SharepointChoiceUtils {
 
       // convert back to direct array and ensure no nulls selected, should never occur but does on some browsers?
       if (typeof save[key] == "object" && save[key].results)
-        save[key] = save[key].results.filter((i: any) => i !== null && i !== undefined);
+        save[key] = save[key].results.filter((i: any) => i !== null && i !== undefined && i != '').map(i => i.toString());
     }
+  }
+
+  private hasData(save) : boolean {
+    for (var key in save)
+      if (key != "Id")
+        return true;
+
+    return false;
   }
 
   // patch save list item data and parse any data types appropriate for use in <sharepoint-choice ngModel=""> attributes
@@ -345,15 +374,13 @@ export class SharepointChoiceUtils {
     var save = JSON.parse(JSON.stringify(formDataIncIdToUpdate));
     var errors: Array<string> = [];
     try {
-      delete save["$$hashKey"];
-
       this.cleanSaveKeys(save, uneditedDataToBuildPatch);
 
       // save/update the item
       if (typeof save.Id == "undefined" || save.Id < 1) {
         var saving = await this.sp.web.lists.getByTitle(listTitle).items.add(save);
         save.Id = saving.Id;
-      } else {
+      } else if (hasData(save)) {
         await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).update(save);
       }
 
@@ -528,13 +555,15 @@ export class SharepointChoiceUtils {
           } else if (file.Data) {
             // file to upload
             await this.sp.web.getFolderByServerRelativePath(path).files.addUsingPath(file.FileName, file.Data, { Overwrite: true });
-            let i = await this.sp.web.getFolderByServerRelativePath(path).files.getByUrl(file.FileName).getItem();
-            await i.update(file.ListItemAllFields);
+            if (hasData(file.ListItemAllFields)) {
+              let i = await this.sp.web.getFolderByServerRelativePath(path).files.getByUrl(file.FileName).getItem();
+              await i.update(file.ListItemAllFields);
+            }
             // mock the data back in so submit again doesnt fail
             file.TimeCreated = new Date();
             file.ServerRelativeUrl = path + '/' + file.FileName;
             delete file.Data;
-          } else if (JSON.stringify(file.ListItemAllFields) != '{}') {
+          } else if (hasData(file.ListItemAllFields)) {
             // get current item and check for changes
             let i = await this.sp.web.getFolderByServerRelativePath(path + '/' + file.FileName).getItem();
             await i.update(file.ListItemAllFields);
