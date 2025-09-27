@@ -70,7 +70,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     doctype?: string, // document type field name
 
     notes?: string, // notes input field name for singular note input space
-    spec?: Array<object> // field spec for additional fields, 
+    spec?: object // field spec for additional fields, 
   };
 
   declare editor: Editor;
@@ -471,9 +471,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       choices = choices.filter((c: any, i: number, a: any) => this.select.filter ? this.select.filter(c, i, a, this.select.parent || this) : true);
     // common filters
     return choices.filter((x: string) => {
-      // exclude empty choices as they fail to save
-      if (!x)
-        return false;
       // exclude unselected items on disabled fields
       if (this.disabled && this.form[this.field] && this.form[this.field].results && !~this.form[this.field].results.indexOf(x))
         return false;
@@ -1303,4 +1300,5 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
+
 
