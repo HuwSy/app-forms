@@ -32,7 +32,7 @@ export class SharepointChoiceLogging implements ErrorHandler {
     let stackTrace = '';
     try {
       stackTrace = JSON.stringify(await fromError(error, { offline: true }));
-      if (stackTrace == null || stackTrace == 'null')
+      if (!stackTrace || stackTrace == 'null')
         stackTrace = '';
       if (stackTrace.length >= 2048)
         stackTrace = stackTrace.substring(0, 2045) + '...';
@@ -142,3 +142,4 @@ export class SharepointChoiceLogging implements ErrorHandler {
     })
   }
 }
+
