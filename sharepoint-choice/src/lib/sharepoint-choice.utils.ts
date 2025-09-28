@@ -51,10 +51,10 @@ export class SharepointChoiceUtils {
   private async mockClassicContext() {
     let w: any = window;
     // no classic sp context then mock one up
-    if (typeof w._spPageContextInfo == "undefined")
+    if (!w._spPageContextInfo)
       w._spPageContextInfo = {};
     // no user in context or a different web then mock it in
-    if (typeof w._spPageContextInfo.userLoginName == "undefined" || w._spPageContextInfo.webAbsoluteUrl != this.context) {
+    if (!w._spPageContextInfo.userLoginName || w._spPageContextInfo.webAbsoluteUrl != this.context) {
       var web = await this.sp.web();
       var user = await this.sp.web.currentUser();
       w._spPageContextInfo = {
@@ -339,7 +339,7 @@ export class SharepointChoiceUtils {
         continue;
 
       // remove and unedited, including internal fields
-      if (key == "Attachments" || (typeof uned[key] != "undefined" && JSON.stringify(uned[key]) == JSON.stringify(save[key]))) {
+      if (key == "Attachments" || (uned[key] != undefined && JSON.stringify(uned[key]) == JSON.stringify(save[key]))) {
         delete save[key];
         continue;
       }
@@ -349,7 +349,7 @@ export class SharepointChoiceUtils {
         continue;
 
       // convert dates
-      if (typeof save[key].toJSON != "undefined") {
+      if (save[key].toJSON) {
         save[key] = save[key].toJSON();
         continue;
       }
@@ -380,7 +380,7 @@ export class SharepointChoiceUtils {
       this.cleanSaveKeys(save, uneditedDataToBuildPatch);
 
       // save/update the item
-      if (typeof save.Id == "undefined" || save.Id < 1) {
+      if (!save.Id) {
         var saving = await this.sp.web.lists.getByTitle(listTitle).items.add(save);
         save.Id = saving.Id;
       } else if (this.hasData(save)) {
@@ -586,6 +586,7 @@ export class SharepointChoiceUtils {
     }
   }
 }
+
 
 
 
