@@ -339,7 +339,7 @@ export class SharepointChoiceUtils {
         continue;
 
       // remove and unedited, including internal fields
-      if (key == "Attachments" || (uned[key] != undefined && JSON.stringify(uned[key]) == JSON.stringify(save[key]))) {
+      if (key == "Attachments" || (uned[key] !== undefined && JSON.stringify(uned[key]) == JSON.stringify(save[key]))) {
         delete save[key];
         continue;
       }
@@ -360,7 +360,7 @@ export class SharepointChoiceUtils {
 
       // convert back to direct array and ensure no nulls selected, should never occur but does on some browsers?
       if (typeof save[key] == "object" && save[key].results)
-        save[key] = save[key].results.filter((i: any) => i != null && i != '').map(i => i.toString());
+        save[key] = save[key].results.filter((i: any) => i);
     }
   }
 
@@ -586,3 +586,4 @@ export class SharepointChoiceUtils {
     }
   }
 }
+
