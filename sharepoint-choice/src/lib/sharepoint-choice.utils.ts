@@ -26,9 +26,9 @@ export class SharepointChoiceUtils {
   ) {
     this.context = context;
     let w: any = window;
-    if ((this.context || "") == "")
+    if (!this.context)
       this.context = w._spPageContextInfo ? w._spPageContextInfo.webAbsoluteUrl : undefined;
-    if ((this.context || "") == "")
+    if (!this.context)
       this.context = document.location.href.split('?')[0].split('#')[0].split('/_layouts/')[0].split('/Lists/')[0].split('/Pages/')[0].split('/SitePages/')[0];
 
     this.context = this.context?.replace(/\/$/, '');
@@ -169,11 +169,11 @@ export class SharepointChoiceUtils {
         delete d[key];
 
       // blank is null
-      if (d[key] == '')
+      if (d[key] === '')
         d[key] = null;
 
       // dont process nulls or blanks
-      if (d[key] == undefined || d[key] === null)
+      if (d[key] == null)
         continue;
 
       // return multifields to results, old behaviour for old people fields and to prevent json paring clashing
@@ -295,7 +295,7 @@ export class SharepointChoiceUtils {
     }
 
     // if no url, login only, then return
-    if (apiUrl == null)
+    if (!apiUrl)
       return null;
 
     // query api
@@ -317,7 +317,7 @@ export class SharepointChoiceUtils {
       if (dataType == 'json') return await r.json();
       if (dataType == 'text') return await r.text();
       if (dataType == 'buffer') return await r.arrayBuffer();
-      if (dataType && dataType != '' && dataType != 'none') return new Blob([await r.arrayBuffer()], { type: dataType });
+      if (dataType && dataType != 'none') return new Blob([await r.arrayBuffer()], { type: dataType });
 
       return r;
     } catch (e) {
@@ -326,7 +326,7 @@ export class SharepointChoiceUtils {
   }
 
   private cleanSaveKeys(save: any, uned: any): any {
-    if (!uned || uned == null)
+    if (!uned)
       uned = {};
 
     delete save["$$hashKey"];
@@ -342,7 +342,7 @@ export class SharepointChoiceUtils {
       }
 
       // prevent errors on nulls
-      if (save[key] == null || save[key] == undefined)
+      if (save[key] == null)
         continue;
 
       // convert dates
@@ -357,7 +357,7 @@ export class SharepointChoiceUtils {
 
       // convert back to direct array and ensure no nulls selected, should never occur but does on some browsers?
       if (typeof save[key] == "object" && save[key].results)
-        save[key] = save[key].results.filter((i: any) => i !== null && i !== undefined && i != '').map(i => i.toString());
+        save[key] = save[key].results.filter((i: any) => i != null && i != '').map(i => i.toString());
     }
   }
 
@@ -432,7 +432,7 @@ export class SharepointChoiceUtils {
   public param(parameterToReturn: string): string | undefined {
     var rx = new RegExp(`[?&]${parameterToReturn}=([^&]+).*$`);
     var returnVal = document.location.search.match(rx);
-    return returnVal === null ? undefined : decodeURIComponent(returnVal[1]).replace(/\+/g, ' ');
+    return !returnVal ? undefined : decodeURIComponent(returnVal[1]).replace(/\+/g, ' ');
   }
 
   public async ensurePath(path: string, start: number): Promise<void> {
@@ -524,7 +524,7 @@ export class SharepointChoiceUtils {
       }
 
       // subfolders for these
-      if (additional && additional != '') {
+      if (additional) {
         path += '/' + additional;
         folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
         await folder.update(commonmeta);
@@ -583,4 +583,5 @@ export class SharepointChoiceUtils {
     }
   }
 }
+
 
