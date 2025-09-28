@@ -332,6 +332,9 @@ export class SharepointChoiceUtils {
     delete save["$$hashKey"];
 
     for (var key in save) {
+      if (save[key] === '')
+        save[key] = null;
+      
       if ((save[key] === null && uned[key] !== null) || key == "Id")
         continue;
 
@@ -583,5 +586,6 @@ export class SharepointChoiceUtils {
     }
   }
 }
+
 
 
