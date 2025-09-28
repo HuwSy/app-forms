@@ -256,7 +256,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // field required based on spec but required is not needed for hidden/disabled items
   required(): boolean {
-    if (!this.get('Required') || this.disabled || this.elRef.nativeElement.hidden)
+    if (this.disabled || this.elRef.nativeElement.hidden || !this.get('Required'))
       return false;
     return true;
   }
@@ -310,56 +310,62 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         p = spec[t];
     }
 
-    // if its a multi choice, ensure the object is the correct type
-    if (t == 'TypeAsString' && p == 'MultiChoice' && (!this.form[this.field] || !this.form[this.field].results))
-      this.form[this.field] = {
-        __metadata: { type: "Collection(Edm.String)" },
-        results: this.form[this.field] || []
-      }
-    // if its a multi user, ensure the object is the correct type
-    if (t == 'TypeAsString' && p == 'UserMulti' && (!this.form[this.field + 'Id'] || !this.form[this.field + 'Id'].results))
-      this.form[this.field + 'Id'] = {
-        __metadata: { type: "Collection(Edm.Int32)" },
-        results: this.form[this.field + 'Id'] || []
-      }
-    // if its a url, ensure the correct object type and clone data into url for flat stored occurrences 
-    if (t == 'TypeAsString' && p == 'URL' && (!this.form[this.field] || !this.form[this.field].Description))
-      this.form[this.field] = {
-        Description: '',
-        URL: this.form[this.field] || ''
-      }
-    // if its attachments, ensure the object is the correct type and office fired if needed
-    if (t == 'TypeAsString' && p == 'Attachments') {
-      this.officeAddin();
-      if (!this.form[this.field] || !this.form[this.field].results)
-        this.form[this.field] = {
-          results: []
-        }
-    }
-    if (t == 'RichText' && p && !this.editor)
-      this.editor = new Editor();
-    // if the field is empty (not set null) and its not a person field (+Id) then set the default value only if there is one
-    if (t == 'TypeAsString' && this.form[this.field] === undefined && !this.form[this.field + 'Id']) {
-      var d = this.get('DefaultValue');
-      if (d)
-        this.form[this.field] = d;
-    }
-    // always disable read only fields initially, may get overridden later but thats the consumers responsibility
     if (t == 'TypeAsString') {
+      // if its a multi choice, ensure the object is the correct type
+      if (p == 'MultiChoice') {
+        if (!this.form[this.field] || !this.form[this.field].results)
+          this.form[this.field] = {
+            __metadata: { type: "Collection(Edm.String)" },
+            results: this.form[this.field] || []
+          }
+      // if its a multi user, ensure the object is the correct type
+      } else if (p == 'UserMulti') {
+        if (!this.form[this.field + 'Id'] || !this.form[this.field + 'Id'].results)
+          this.form[this.field + 'Id'] = {
+            __metadata: { type: "Collection(Edm.Int32)" },
+            results: this.form[this.field + 'Id'] || []
+          }
+      // if its a url, ensure the correct object type and clone data into url for flat stored occurrences 
+      } else if (p == 'URL') {
+        if (!this.form[this.field] || !this.form[this.field].Description)
+          this.form[this.field] = {
+            Description: '',
+            URL: this.form[this.field] || ''
+          }
+      // if its attachments, ensure the object is the correct type and office fired if needed
+      } else if (p == 'Attachments') {
+        this.officeAddin();
+        if (!this.form[this.field] || !this.form[this.field].results)
+          this.form[this.field] = {
+            results: []
+          }
+      }
+      // if the field is empty (not set null) and its not a person field (+Id) then set the default value only if there is one
+      if (this.form[this.field] === undefined && !this.form[this.field + 'Id']) {
+        var d = this.get('DefaultValue');
+        if (d)
+          this.form[this.field] = d;
+      }
+      // always disable read only fields initially, may get overridden later but thats the consumers responsibility
       var r = this.get('ReadOnlyField');
       if (r)
         this.disabled = true;
     }
 
+    // init rich text editor
+    else if (t == 'RichText' && p && !this.editor)
+      this.editor = new Editor();
+
     // if no choices return empty array
-    if (t == 'Choices' && p == null)
+    else if (t == 'Choices' && p == null)
       return [];
     // if no title use internal field name
-    if (t == 'Title' && p == null)
+    else if (t == 'Title' && p == null)
       return this.friendlyName(this.field);
     // min max of date time fields
-    if (p == null && (t == 'Min' || t == 'Max') && this.get('TypeAsString') == 'DateTime')
+    else if ((t == 'Min' || t == 'Max') && p == null && this.get('TypeAsString') == 'DateTime')
       return (t == 'Min' ? '1970-01-01' : '9999-12-31') + (this.get('DisplayFormat') == 1 ? 'T00:00:00' : '');
+    
     return p == null || !p.results ? p : p.results;
   }
 
@@ -1305,4 +1311,5 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
+
 
