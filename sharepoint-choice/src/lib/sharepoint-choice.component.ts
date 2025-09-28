@@ -73,7 +73,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     spec?: object // field spec for additional fields, 
   };
 
-  declare editor: Editor;
+  declare editor?: Editor;
   declare toolbar: Toolbar;
   declare tooltip: boolean;
   declare filesOver: boolean;
@@ -154,8 +154,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (!this.filter)
       this.filter = '';
 
-    // rich text field
-    this.editor = new Editor();
     // rtf menu items
     this.toolbar = [
       ['text_color', 'background_color'],
@@ -202,10 +200,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // on init, destroy
   ngOnInit(): void {
-    this.chRef.detectChanges();
   }
   ngOnDestroy(): void {
-    this.editor.destroy();
+    this.editor?.destroy();
   }
 
   /* 
@@ -248,10 +245,12 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this.form[this.field] = null
       return;
     }
-    if (p < this.get('Min') && this.get('Min'))
-      p = this.get('Min');
-    if (p > this.get('Max') && this.get('Max'))
-      p = this.get('Max');
+    var min = this.get('Min');
+    if (min != null && p < min)
+      p = min;
+    var max = this.get('Max');
+    if (max != null && p > max)
+      p = max;
     this.form[this.field] = p;
   }
 
@@ -337,6 +336,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           results: []
         }
     }
+    if (t == 'RichText' && p && !this.editor)
+      this.editor = new Editor();
     // if the field is empty (not set null) and its not a person field (+Id) then set the default value only if there is one
     if (t == 'TypeAsString' && this.form[this.field] === undefined && !this.form[this.field + 'Id']) {
       var d = this.get('DefaultValue');
@@ -614,11 +615,15 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   width(): string {
-    var s = JSON.parse(JSON.stringify(this.file.doctypes ?? []));
-    var l = s.sort((a, b) => b.length - a.length);
-    if (!l || l.length == 0)
+    var c = 0;
+    for (var i = 0; i < this.file.doctypes.length; i++) {
+      let l = this.file.doctypes[i].length
+      if (l > c)
+        c = l;
+    }
+    if (c == 0)
       return '';
-    return `width: ${l[0].length}ch`;
+    return `width: ${c}ch`;
   }
 
   async delete(f?: any, a: boolean = false) {
@@ -1300,3 +1305,4 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
+
