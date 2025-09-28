@@ -27,9 +27,7 @@ export class SharepointChoiceUtils {
     this.context = context;
     let w: any = window;
     if (!this.context)
-      this.context = w._spPageContextInfo ? w._spPageContextInfo.webAbsoluteUrl : undefined;
-    if (!this.context)
-      this.context = document.location.href.split('?')[0].split('#')[0].split('/_layouts/')[0].split('/Lists/')[0].split('/Pages/')[0].split('/SitePages/')[0];
+      this.context = (w._spPageContextInfo ? w._spPageContextInfo.webAbsoluteUrl : null) ?? document.location.href.split('?')[0].split('#')[0].split('/_layouts/')[0].split('/Lists/')[0].split('/Pages/')[0].split('/SitePages/')[0];
 
     this.context = this.context?.replace(/\/$/, '');
 
@@ -75,7 +73,6 @@ export class SharepointChoiceUtils {
     let w: any = window;
 
     try {
-      await this.mockClassicContext();
       var web = await this.sp.web();
 
       // get any directly assigned groups
@@ -153,8 +150,10 @@ export class SharepointChoiceUtils {
   private async cleanLoadKeys(d: any, listTitle?: string, id?: number) {
     for (var key in d) {
       // people fields return twice
-      if (key.endsWith('StringId') && (d[key.replace(/StringId$/, 'Id')] || d[key.replace(/StringId$/, 'Id')] === null))
+      if (key.endsWith('StringId') && (d[key.replace(/StringId$/, 'Id')] || d[key.replace(/StringId$/, 'Id')] === null)) {
         delete d[key];
+        continue;
+      }
 
       // if there are attachments start loading
       if (key == 'Attachments' && listTitle && id) {
@@ -162,11 +161,14 @@ export class SharepointChoiceUtils {
           d[key] = { results: await this.sp.web.lists.getByTitle(listTitle).items.getById(id).attachmentFiles() };
         else
           d[key] = { results: [] };
+        continue;
       }
 
       // remove odata. prefixed
-      if (key.startsWith('odata.') || key == '__metadata')
+      if (key.startsWith('odata.') || key == '__metadata') {
         delete d[key];
+        continue;
+      }
 
       // blank is null
       if (d[key] === '')
@@ -182,6 +184,7 @@ export class SharepointChoiceUtils {
           results: d[key],
           __metadata: { type: (typeof d[key][0] == "number" ? "Collection(Edm.Int32)" : "Collection(Edm.String)") }
         }
+        continue;
       }
 
       // parse objects within text fields for looped data
@@ -355,12 +358,16 @@ export class SharepointChoiceUtils {
       }
 
       // convert JSON
-      if (typeof save[key] == "object" && !save[key].results && !save[key].Url)
+      if (typeof save[key] == "object" && !save[key].results && !save[key].Url) {
         save[key] = JSON.stringify(save[key]);
+        continue;
+      }
 
       // convert back to direct array and ensure no nulls selected, should never occur but does on some browsers?
-      if (typeof save[key] == "object" && save[key].results)
+      if (typeof save[key] == "object" && save[key].results) {
         save[key] = save[key].results.filter((i: any) => i);
+        continue;
+      }
     }
   }
 
@@ -586,4 +593,3 @@ export class SharepointChoiceUtils {
     }
   }
 }
-
