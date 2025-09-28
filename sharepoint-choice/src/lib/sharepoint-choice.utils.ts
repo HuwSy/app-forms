@@ -586,7 +586,3 @@ export class SharepointChoiceUtils {
     }
   }
 }
-
-
-
-
