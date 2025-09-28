@@ -338,7 +338,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         }
     }
     // if the field is empty (not set null) and its not a person field (+Id) then set the default value only if there is one
-    if (t == 'TypeAsString' && typeof this.form[this.field] == "undefined" && !this.form[this.field + 'Id']) {
+    if (t == 'TypeAsString' && this.form[this.field] === undefined && !this.form[this.field + 'Id']) {
       var d = this.get('DefaultValue');
       if (d)
         this.form[this.field] = d;
@@ -359,7 +359,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // min max of date time fields
     if (p == null && (t == 'Min' || t == 'Max') && this.get('TypeAsString') == 'DateTime')
       return (t == 'Min' ? '1970-01-01' : '9999-12-31') + (this.get('DisplayFormat') == 1 ? 'T00:00:00' : '');
-    return p == null || typeof p.results == "undefined" ? p : p.results;
+    return p == null || !p.results ? p : p.results;
   }
 
   // any field changes trigger for relevant updates
@@ -602,7 +602,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (this.file.doctype && this.form[this.field] && this.form[this.field].results)
       types = this.form[this.field].results
         .map((f: any) => f.ListItemAllFields && this.file.doctype && this.file.doctype in f.ListItemAllFields ? f.ListItemAllFields[this.file.doctype] : null)
-        .filter((f: any) => f != null && f != '')
+        .filter((f: any) => f)
         .sort();
     // remove duplicates
     types = [...new Set(types)];
@@ -697,7 +697,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     function mailType(transfer: any, type: string) {
       var item = transfer.getData(type);
-      if (item == '')
+      if (!item)
         return null;
       return JSON.parse(item)
     }
@@ -1300,5 +1300,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
+
 
 
