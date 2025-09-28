@@ -34,7 +34,7 @@ export class SharepointChoiceLogging implements ErrorHandler {
       stackTrace = JSON.stringify(await fromError(error, { offline: true }));
       if (!stackTrace || stackTrace == 'null')
         stackTrace = '';
-      if (stackTrace.length >= 2048)
+      else if (stackTrace.length >= 2048)
         stackTrace = stackTrace.substring(0, 2045) + '...';
     } catch (e) {
       // fail stack trace silently and log the remainder of the error as is
@@ -56,8 +56,8 @@ export class SharepointChoiceLogging implements ErrorHandler {
     var split = document.location.pathname.split('/');
     var path = document.location.pathname.match(/\/[^\/]*\/[^\/]*\/([^?]*)/);
     let Params = {
-      prefix: split[1] || '',
-      site: split[2] || '',
+      prefix: split[1] ?? '',
+      site: split[2] ?? '',
       path: path && path[1] ? path[1] : '',
       search: document.location.search,
       hash: document.location.hash
@@ -142,4 +142,3 @@ export class SharepointChoiceLogging implements ErrorHandler {
     })
   }
 }
-
