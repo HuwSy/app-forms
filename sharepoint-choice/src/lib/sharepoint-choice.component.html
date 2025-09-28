@@ -594,7 +594,7 @@
     </div>
   </div>
 
-  <div *ngIf="get('TypeAsString') == null || get('TypeAsString') == ''"
+  <div *ngIf="!get('TypeAsString')"
        style="position:relative;">
     <div class="spin"></div>
   </div>
@@ -627,4 +627,5 @@
     }
   </ul>
   }
+
 </div>
