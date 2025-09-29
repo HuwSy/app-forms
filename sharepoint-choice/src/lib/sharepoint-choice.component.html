@@ -579,8 +579,7 @@
     <button onclick="this.previousElementSibling.click()">Browse file</button>
   </div>
     }
-    @case ('UserMulti') {}
-    @case ('User') {
+    @case ('UserMulti') {
   <div>
     <div *ngIf="form[field + 'Id'] && form[field + 'Id'].results">
       <span *ngFor="let user of form[field + 'Id'].results"
@@ -588,7 +587,38 @@
            style="color: red;"
            [hidden]="disabled">X</a></span>
     </div>
-    <div *ngIf="form[field + 'Id'] && !form[field + 'Id'].results">
+    <input type="text"
+           [(ngModel)]="name"
+           name="{{field}}"
+           (keyup)="onUpUser($event.key)"
+           (click)="onUpUser(undefined)"
+           [hidden]="disabled || (get('TypeAsString') == 'User' && form[field + 'Id'])"
+           placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
+
+    <div style="position: relative; padding: 0;"
+         [hidden]="disabled">
+      <div class="AutoComplete"
+           *ngIf="users.length > 0">
+        <ul>
+          <li *ngFor="let user of users; let i = index"
+              (click)="selectedUser(user)"
+              [style]="(pos == i ? 'background-color: rgba(0, 0, 0, 0.04);' : '')">
+            {{user.DisplayText}}
+          </li>
+        </ul>
+        <ul>
+          <li style="text-align: right;"
+              (click)="selectedUser(null)">
+            Cancel
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+    }
+    @case ('User') {
+  <div>
+    <div *ngIf="form[field + 'Id']">
       <span style="padding: 8px;">{{displayUser(form[field + 'Id'])}} <a (click)="removeUser(null)"
            style="color: red;"
            [hidden]="disabled">X</a></span>
@@ -660,6 +690,7 @@
   }
 
 </div>
+
 
 
 
