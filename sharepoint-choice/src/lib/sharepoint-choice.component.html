@@ -10,7 +10,7 @@
            type="checkbox"
            [(ngModel)]="form[field]"
            [required]="required()"
-           name="{{field}}_Y"
+           name="{{field}}"
            (change)="change($event)">
     <span style="font-size: inherit;"
           title="{{((get('Description') || '') == '' ? '' : get('Title'))}}">{{get('Title')}}</span>
@@ -34,6 +34,7 @@
   <div>
     <input placeholder="Filter or search the {{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}} below"
            *ngIf="!disabled"
+           name="{{field}}_S"
            [(ngModel)]="filterMulti"><br>
     <select (mousedown)="false"
             (click)="change($event)"
@@ -42,7 +43,7 @@
             [disabled]="disabled"
             [ngModel]="form[field].results"
             [required]="required()"
-            name="{{field}}_S">
+            name="{{field}}">
       <option *ngFor="let i of choices()"
               [value]="i">{{i}}</option>
     </select>
@@ -54,7 +55,7 @@
             (ngModelChange)="selChangeS($event)"
             [ngModel]="form[field]"
             [required]="required()"
-            name="{{field}}_C"
+            name="{{field}}"
             [style.width.%]="!inChoices() ? 50 : 100"
             *ngIf="!disabled || inChoices()">
       <option disabled
@@ -71,7 +72,7 @@
            type="text"
            [(ngModel)]="form[field]"
            [required]="required()"
-           name="{{field}}_CO"
+           name="{{field}}_Other"
            [style.width.%]="!disabled || inChoices() ? 50 : 100"
            maxlength="250"
            onclick="this.select();"
@@ -87,7 +88,7 @@
              type="radio"
              [(ngModel)]="form[field]"
              [required]="required()"
-             name="{{field}}_R"
+             name="{{field}}"
              (change)="change($event)">
       {{select.none}}
     </label>
@@ -98,7 +99,7 @@
              type="radio"
              [(ngModel)]="form[field]"
              [required]="required()"
-             name="{{field}}_R"
+             name="{{field}}"
              (change)="change($event)">
       {{i}}
     </label>
@@ -110,7 +111,7 @@
            type="number"
            [(ngModel)]="form[field]"
            [required]="required()"
-           name="{{field}}_I"
+           name="{{field}}"
            [min]="get('Min')"
            [max]="get('Max')"
            placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
@@ -124,7 +125,7 @@
            [ngModel]="niceNumber()"
            (ngModelChange)="numberSet($event)"
            [required]="required()"
-           name="{{field}}_D"
+           name="{{field}}"
            [min]="get('Min')"
            [max]="get('Max')"
            (change)="change($event)"
@@ -138,7 +139,7 @@
            [ngModel]="form[field] | date:'yyyy-MM-dd'"
            (ngModelChange)="form[field] = $event"
            [required]="required()"
-           name="{{field}}_D"
+           name="{{field}}"
            (change)="change($event)"
            [min]="get('Min')"
            [max]="get('Max')"
@@ -151,7 +152,7 @@
            [ngModel]="form[field] | date:'yyyy-MM-ddTHH:mm'"
            (ngModelChange)="form[field] = $event"
            [required]="required()"
-           name="{{field}}_DT"
+           name="{{field}}"
            (change)="change($event)"
            [min]="get('Min')"
            [max]="get('Max')"
@@ -165,7 +166,7 @@
            [pattern]="text.pattern || '.*'"
            [(ngModel)]="form[field]"
            [required]="required()"
-           name="{{field}}_T"
+           name="{{field}}"
            [maxlength]="get('MaxLength')"
            (change)="change($event)"
            (keyup)="onUpText($event.key)"
@@ -198,7 +199,7 @@
   <div *ngIf="!disabled && !get('RichText') && !get('AppendOnly')">
     <textarea [(ngModel)]="form[field]"
               [required]="required()"
-              name="{{field}}_M"
+              name="{{field}}"
               (change)="change($event)"
               [style]="(text.height ? 'height: '+text.height+'px' : '')"
               placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."></textarea>
@@ -208,7 +209,7 @@
 
   <div *ngIf="!disabled && !get('RichText') && get('AppendOnly')">
     <textarea [required]="required()"
-              name="{{field}}_MA"
+              name="{{field}}"
               (change)="change($event)"
               [style]="(text.height ? 'height: '+text.height+'px' : '')"
               placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."></textarea>
@@ -227,7 +228,7 @@
                   [(ngModel)]="form[field]"
                   placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."
                   (ngModelChange)="change($event)"
-                  name="{{field}}_H"
+                  name="{{field}}"
                   [outputFormat]="'html'">
       </ngx-editor>
     </div>
@@ -243,7 +244,7 @@
                   [(ngModel)]="unused"
                   placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."
                   (ngModelChange)="change($event)"
-                  name="{{field}}_HA"
+                  name="{{field}}"
                   [outputFormat]="'html'">
       </ngx-editor>
     </div>
@@ -260,14 +261,14 @@
     <input [disabled]="disabled"
            [(ngModel)]="form[field].Url"
            [required]="required()"
-           name="{{field}}_UU"
+           name="{{field}}_Url"
            placeholder="https://"
            pattern="^.+\:\/\/.+$|^mailto\:.+$"
            (change)="change($event)"
            style="width:50%">
     <input [disabled]="disabled"
            [(ngModel)]="form[field].Description"
-           name="{{field}}_UD"
+           name="{{field}}_Desc"
            maxlength="250"
            (change)="change($event)"
            style="width:50%">
@@ -475,7 +476,7 @@
                  type="checkbox"
                  [disabled]="disabled || f.Deleted || (file.archive && f.ListItemAllFields[file.archive]) || f.ServerRelativeUrl?.length > 402"
                  [(ngModel)]="f.Checked"
-                 name="{{field}}_CheckM_{{i}}">
+                 name="{{field}}_Check_{{i}}">
 
           <a *ngIf="f.ServerRelativeUrl && file.download"
              download="{{f.FileName}}"
@@ -487,7 +488,7 @@
                  [hidden]="f.ServerRelativeUrl"
                  [(ngModel)]="f.ListItemAllFields.Title"
                  style="width: calc( 100% - 38px );"
-                 name="{{field}}_NameM_{{i}}"
+                 name="{{field}}_Name_{{i}}"
                  [title]="f.FileName + ' - ' + f.Length">
 
           <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;"
@@ -574,7 +575,7 @@
            style="display: none !important;"
            multiple
            (change)="add($event.target)"
-           name="{{field}}_F" />
+           name="{{field}}" />
     <button onclick="this.previousElementSibling.click()">Browse file</button>
   </div>
     }
@@ -594,7 +595,7 @@
     </div>
     <input type="text"
            [(ngModel)]="name"
-           name="{{field}}_N"
+           name="{{field}}"
            (keyup)="onUpUser($event.key)"
            (click)="onUpUser(undefined)"
            [hidden]="disabled || (get('TypeAsString') == 'User' && form[field + 'Id'])"
@@ -659,5 +660,6 @@
   }
 
 </div>
+
 
 
