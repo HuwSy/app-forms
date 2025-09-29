@@ -2,7 +2,9 @@
      [ngClass]="{noTitle: (get('Title') || '') == ''}"
      title="{{((get('Description') || '') == '' ? get('Title') : '')}}">
 
-  <label *ngIf="get('TypeAsString') == 'Boolean'">
+  @switch (get('TypeAsString')) {
+    @case ('Boolean') {
+  <label>
     <input style="width: auto; height: auto;"
            [disabled]="disabled"
            type="checkbox"
@@ -13,9 +15,9 @@
     <span style="font-size: inherit;"
           title="{{((get('Description') || '') == '' ? '' : get('Title'))}}">{{get('Title')}}</span>
   </label>
-
-  <span *ngIf="get('TypeAsString') != 'Boolean'"
-        title="{{((get('Description') || '') == '' ? '' : get('Title'))}}">{{get('Title')}}</span>
+     }
+     @default {
+  <span title="{{((get('Description') || '') == '' ? '' : get('Title'))}}">{{get('Title')}}</span>
 
   <i *ngIf="(get('Description') || '') != ''"
      (mouseenter)="showHideTooltip(true)"
@@ -24,8 +26,12 @@
        [hidden]="!tooltip">{{get('Description')}}</div>
   <span *ngIf="get('Required')"
         class="Required">*</span>
+    }
+  }
 
-  <div *ngIf="get('TypeAsString') == 'MultiChoice'">
+  @switch (get('TypeAsString')) {
+    @case ('MultiChoice') {
+  <div>
     <input placeholder="Filter or search the {{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}} below"
            *ngIf="!disabled"
            [(ngModel)]="filterMulti"><br>
@@ -41,8 +47,9 @@
               [value]="i">{{i}}</option>
     </select>
   </div>
-
-  <div *ngIf="get('TypeAsString') == 'Choice' && get('Format') != 'RadioButtons'">
+    }
+    @case ('Choice') {
+  <div *ngIf="get('Format') != 'RadioButtons'">
     <select [disabled]="disabled"
             (ngModelChange)="selChangeS($event)"
             [ngModel]="form[field]"
@@ -72,7 +79,7 @@
            *ngIf="!inChoices()">
   </div>
 
-  <div *ngIf="get('TypeAsString') == 'Choice' && get('Format') == 'RadioButtons'">
+  <div *ngIf="get('Format') == 'RadioButtons'">
     <label *ngIf="select.none"
            class="radio">
       <input [value]="null"
@@ -96,8 +103,10 @@
       {{i}}
     </label>
   </div>
-
-  <div *ngIf="get('TypeAsString') == 'Number' || get('TypeAsString') == 'Integer'">
+    }
+    @case ('Integer') {}
+    @case ('Number') {
+  <div>
     <input [disabled]="disabled"
            type="text"
            pattern="-{0,1}[0-9,]*\.{0,1}[0-9,]*"
@@ -110,8 +119,9 @@
            (change)="change($event)"
            placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
   </div>
-
-  <div *ngIf="get('TypeAsString') == 'DateTime' && get('DisplayFormat') != 1">
+    }
+    @case ('DateTime') {
+  <div *ngIf="get('DisplayFormat') != 1">
     <input [disabled]="disabled"
            type="date"
            [ngModel]="form[field] | date:'yyyy-MM-dd'"
@@ -124,7 +134,7 @@
            placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
   </div>
 
-  <div *ngIf="get('TypeAsString') == 'DateTime' && get('DisplayFormat') == 1">
+  <div *ngIf="get('DisplayFormat') == 1">
     <input [disabled]="disabled"
            type="datetime-local"
            [ngModel]="form[field] | date:'yyyy-MM-ddTHH:mm'"
@@ -136,8 +146,9 @@
            [max]="get('Max')"
            placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
   </div>
-
-  <div *ngIf="get('TypeAsString') == 'Text'">
+    }
+    @case ('Text') {
+  <div>
     <input [disabled]="disabled"
            type="text"
            [pattern]="text.pattern || '.*'"
@@ -171,8 +182,9 @@
       </div>
     </div>
   </div>
-
-  <div *ngIf="!disabled && get('TypeAsString') == 'Note' && !get('RichText') && !get('AppendOnly')">
+    }
+    @case ('Note') {
+  <div *ngIf="!disabled && !get('RichText') && !get('AppendOnly')">
     <textarea [(ngModel)]="form[field]"
               [required]="required()"
               name="{{field}}_M"
@@ -183,7 +195,7 @@
          [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
   </div>
 
-  <div *ngIf="!disabled && get('TypeAsString') == 'Note' && !get('RichText') && get('AppendOnly')">
+  <div *ngIf="!disabled && !get('RichText') && get('AppendOnly')">
     <textarea [required]="required()"
               name="{{field}}_MA"
               (change)="change($event)"
@@ -193,7 +205,7 @@
          [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
   </div>
 
-  <div *ngIf="disabled && get('TypeAsString') == 'Note' && !get('RichText')"
+  <div *ngIf="disabled && !get('RichText')"
        style="max-height: 500px; overflow: auto;">{{form[field]}}</div>
 
   <div *ngIf="!disabled && get('TypeAsString') == 'Note' && get('RichText') && !get('AppendOnly')">
@@ -212,7 +224,7 @@
          [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
   </div>
 
-  <div *ngIf="!disabled && get('TypeAsString') == 'Note' && get('RichText') && get('AppendOnly')">
+  <div *ngIf="!disabled && get('RichText') && get('AppendOnly')">
     <div class="NgxEditor__Wrapper">
       <ngx-editor-menu [editor]="editor"
                        [toolbar]="toolbar"></ngx-editor-menu>
@@ -228,11 +240,12 @@
          [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
   </div>
 
-  <div *ngIf="disabled && get('TypeAsString') == 'Note' && get('RichText')"
+  <div *ngIf="disabled && && get('RichText')"
        style="max-height: 500px; overflow: auto;"
        [innerHTML]="form[field]"></div>
-
-  <div *ngIf="get('TypeAsString') == 'URL'">
+    }
+    @case ('URL') {
+  <div>
     <input [disabled]="disabled"
            [(ngModel)]="form[field].Url"
            [required]="required()"
@@ -248,8 +261,9 @@
            (change)="change($event)"
            style="width:50%">
   </div>
-
-  <div *ngIf="get('TypeAsString') == 'Attachments' && !file.uploadonly"
+    }
+    @case ('Attachments') {
+  <div *ngIf="!file.uploadonly"
        style="position: relative;overflow-x: auto;"
        (dragover)="over($event)"
        (dragleave)="leave($event)"
@@ -527,7 +541,7 @@
     </div>
   </div>
 
-  <div *ngIf="get('TypeAsString') == 'Attachments' && !disabled"
+  <div *ngIf="!disabled"
        style="text-align: center; padding: 4px;"
        (dragover)="over($event)"
        (dragleave)="leave($event)"
@@ -552,8 +566,10 @@
            name="{{field}}_F" />
     <button onclick="this.previousElementSibling.click()">Browse file</button>
   </div>
-
-  <div *ngIf="['User','UserMulti'].indexOf(get('TypeAsString')) >= 0">
+    }
+    @case ('UserMulti') {}
+    @case ('User') {
+  <div>
     <div *ngIf="form[field + 'Id'] && form[field + 'Id'].results">
       <span *ngFor="let user of form[field + 'Id'].results"
             style="padding: 8px;">{{displayUser(user)}} <a (click)="removeUser(user)"
@@ -593,16 +609,19 @@
       </div>
     </div>
   </div>
-
-  <div *ngIf="!get('TypeAsString')"
-       style="position:relative;">
+    }
+    @case (null) {
+  <div style="position:relative;">
     <div class="spin"></div>
   </div>
-
-  <div *ngIf="['Lookup','LookupMulti','TaxonomyFieldType','TaxonomyFieldTypeMulti','AllDayEvent','Calculated','Computed','ContentTypeId','Counter','CrossProjectLink','Currency','File','GridChoice','Guid','ModStat','MultiColumn','PageSeparator','Recurrence','ThreadIndex','Threading','WorkflowEventType','WorkflowStatus','FieldLocation'].indexOf(get('TypeAsString')) >= 0">
+    }
+    @default {
+  <div>
     {{form[field] && form[field].results ? form[field].results.join(', ') : form[field]}}
     <div style="opacity:0.85">Error,{{required() ? ' required' : ''}} field type '{{get('TypeAsString')}}' not yet editable...</div>
   </div>
+     }
+  }
 
   <input style="display:none !important;"
          type="text"
@@ -629,3 +648,4 @@
   }
 
 </div>
+
