@@ -26,8 +26,10 @@ export class SharepointChoiceUtils {
   ) {
     this.context = context;
     let w: any = window;
+    // if no or null or incomplete context try to get this from mocked context or current page
     if (!this.context)
-      this.context = (w._spPageContextInfo ? w._spPageContextInfo.webAbsoluteUrl : null) ?? document.location.href.split('?')[0].split('#')[0].split('/_layouts/')[0].split('/Lists/')[0].split('/Pages/')[0].split('/SitePages/')[0];
+      this.context = (w._spPageContextInfo ? w._spPageContextInfo.webAbsoluteUrl : null) ?? 
+        document.location.href.replace(/(\/SitePages\/|\/Pages\/).*$/i, '');
 
     this.context = this.context?.replace(/\/$/, '');
 
@@ -593,3 +595,4 @@ export class SharepointChoiceUtils {
     }
   }
 }
+
