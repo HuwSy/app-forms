@@ -112,8 +112,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   declare sort: string;
   declare filter: string;
 
-  public textKey: Subject<string> = new Subject<string>();
-  public userKey: Subject<string> = new Subject<string>();
+  public textKey?: Subject<string>;
+  public userKey?: Subject<string>;
 
   private overridePrevious?: string;
   private overrideParsed?: object;
@@ -186,16 +186,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         SharePointGroupID: 0
       }
     };
-
-    this.textKey.pipe(
-      debounceTime(250),
-      distinctUntilChanged()
-    ).subscribe((key) => this.onUpTextSearch(key));
-
-    this.userKey.pipe(
-      debounceTime(250),
-      distinctUntilChanged()
-    ).subscribe((key) => this.onUpUserSearch(key));
   }
 
   // on init, destroy
@@ -323,6 +313,21 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             __metadata: { type: "Collection(Edm.Int32)" },
             results: this.form[this.field + 'Id'] || []
           }
+        if (!this.userKey) {
+          this.userKey = new Subject<string>();
+          this.userKey.pipe(
+            debounceTime(250),
+            distinctUntilChanged()
+          ).subscribe((key) => this.onUpUserSearch(key));
+        }
+      } else if (p == 'User') {
+        if (!this.userKey) {
+          this.userKey = new Subject<string>();
+          this.userKey.pipe(
+            debounceTime(250),
+            distinctUntilChanged()
+          ).subscribe((key) => this.onUpUserSearch(key));
+        }
       // if its a url, ensure the correct object type and clone data into url for flat stored occurrences 
       } else if (p == 'URL') {
         if (!this.form[this.field] || !this.form[this.field].Description)
@@ -337,6 +342,14 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           this.form[this.field] = {
             results: []
           }
+      } else if (p == 'Text') {
+        if (!this.textKey) {
+          this.textKey = new Subject<string>();
+          this.textKey.pipe(
+            debounceTime(250),
+            distinctUntilChanged()
+          ).subscribe((key) => this.onUpTextSearch(key));
+        }
       }
       // if the field is empty (not set null) and its not a person field (+Id) then set the default value only if there is one
       if (this.form[this.field] === undefined && !this.form[this.field + 'Id']) {
@@ -1309,5 +1322,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
+
 
 
