@@ -279,10 +279,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // max length character countdown
-  remaining(max: number|undefined): number|null {
+  remaining(max: number|undefined): number {
     var m = this.get('MaxLength');
     if (!m && !max)
-      return null;
+      return 255;
     return (m ?? max) - (this.form[this.field] || '').length;
   }
 
@@ -1309,4 +1309,5 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
+
 
