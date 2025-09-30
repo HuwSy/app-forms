@@ -103,6 +103,11 @@
              (change)="change($event)">
       {{i}}
     </label>
+    <input style="display:none !important;"
+         type="text"
+         [required]="required()"
+         [value]="validator()"
+         name="{{field}}_Validator">
   </div>
     }
     @case ('Integer') {
@@ -234,6 +239,11 @@
     </div>
     <div class="MaxLength"
          [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
+    <input style="display:none !important;"
+         type="text"
+         [required]="required()"
+         [value]="validator()"
+         name="{{field}}_Validator">
   </div>
 
   <div *ngIf="!disabled && get('RichText') && get('AppendOnly')">
@@ -250,6 +260,11 @@
     </div>
     <div class="MaxLength"
          [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
+    <input style="display:none !important;"
+         type="text"
+         [required]="required()"
+         [value]="validator()"
+         name="{{field}}_Validator">
   </div>
 
   <div *ngIf="disabled && && get('RichText')"
@@ -577,6 +592,11 @@
            (change)="add($event.target)"
            name="{{field}}" />
     <button onclick="this.previousElementSibling.click()">Browse file</button>
+    <input style="display:none !important;"
+         type="text"
+         [required]="required()"
+         [value]="validator('Attachments')"
+         name="{{field}}_Validator">
   </div>
     }
     @case ('UserMulti') {
@@ -594,6 +614,11 @@
            (click)="onUpUser(undefined)"
            [hidden]="disabled || (get('TypeAsString') == 'User' && form[field + 'Id'])"
            placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
+    <input style="display:none !important;"
+         type="text"
+         [required]="required()"
+         [value]="validator('UserMulti')"
+         name="{{field}}_Validator">
 
     <div style="position: relative; padding: 0;"
          [hidden]="disabled">
@@ -630,6 +655,11 @@
            (click)="onUpUser(undefined)"
            [hidden]="disabled || (get('TypeAsString') == 'User' && form[field + 'Id'])"
            placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
+    <input style="display:none !important;"
+         type="text"
+         [required]="required()"
+         [value]="validator('User')"
+         name="{{field}}_Validator">
 
     <div style="position: relative; padding: 0;"
          [hidden]="disabled">
@@ -665,12 +695,6 @@
      }
   }
 
-  <input style="display:none !important;"
-         type="text"
-         [required]="required()"
-         [value]="validator()"
-         name="{{field}}_Validator">
-
   @if (versions && versions.length > 1) {
   <ul class="versions"
       [hidden]="!versionsDisplayed">
@@ -690,8 +714,3 @@
   }
 
 </div>
-
-
-
-
-
