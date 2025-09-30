@@ -252,19 +252,16 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // get outcomes of non standard fields into a plain text field for [required] to be triggered automatically 
-  validator(): string {
-    switch (this.get('TypeAsString')) {
+  validator(type:string|undefined): string {
+    switch (type) {
       case 'User':
         return this.form[this.field + 'Id'] ? 'true' : '';
       case 'UserMulti':
-        return (this.form[this.field + 'Id'] && this.form[this.field + 'Id'].results &&  this.form[this.field + 'Id'].results.length > 0) ? 'true' : '';
+        return (this.form[this.field + 'Id'] && this.form[this.field + 'Id'].results && this.form[this.field + 'Id'].results.length > 0) ? 'true' : '';
       case 'Attachments':
         return this.attachments().length > 0 ? 'true' : '';
-      case 'Choice':
-        return this.form[this.field] ? 'true' : '';
       default:
-        // these will fall back on default html required validation
-        return 'true';
+        return this.form[this.field] ? 'true' : '';
     }
   }
 
@@ -1322,6 +1319,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
+
 
 
 
