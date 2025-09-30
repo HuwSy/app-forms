@@ -234,16 +234,12 @@
                   placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."
                   (ngModelChange)="change($event)"
                   name="{{field}}"
+                  [required]="required()"
                   [outputFormat]="'html'">
       </ngx-editor>
     </div>
     <div class="MaxLength"
          [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
-    <input style="display:none !important;"
-         type="text"
-         [required]="required()"
-         [value]="validator()"
-         name="{{field}}_Validator">
   </div>
 
   <div *ngIf="!disabled && get('RichText') && get('AppendOnly')">
@@ -255,16 +251,12 @@
                   placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."
                   (ngModelChange)="change($event)"
                   name="{{field}}"
+                  [required]="required()"
                   [outputFormat]="'html'">
       </ngx-editor>
     </div>
     <div class="MaxLength"
          [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
-    <input style="display:none !important;"
-         type="text"
-         [required]="required()"
-         [value]="validator()"
-         name="{{field}}_Validator">
   </div>
 
   <div *ngIf="disabled && && get('RichText')"
@@ -714,3 +706,4 @@
   }
 
 </div>
+
