@@ -173,7 +173,7 @@
            (click)="onUpText(undefined)"
            placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
     <div class="MaxLength"
-         [hidden]="remaining() >= 5">Maximum {{remaining()}} characters remaining</div>
+         [hidden]="remaining(255) >= 5">Maximum {{remaining(255)}} characters remaining</div>
 
     <div style="position: relative; padding: 0;"
          [hidden]="disabled">
@@ -690,6 +690,7 @@
   }
 
 </div>
+
 
 
 
