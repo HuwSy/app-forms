@@ -279,13 +279,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // max length character countdown
-  remaining(): number {
+  remaining(max: number|undefined): number|null {
     var m = this.get('MaxLength');
-    if (!m && this.get('TypeAsString') == 'Text')
-      m = 255;
-    if (!m)
-      return 255;
-    return m - (this.form[this.field] || '').length;
+    if (!m && !max)
+      return null;
+    return (m ?? max) - (this.form[this.field] || '').length;
   }
 
   // gets the required field properties and/or any overrides to determine which field type etc to display
@@ -1311,3 +1309,4 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
+
