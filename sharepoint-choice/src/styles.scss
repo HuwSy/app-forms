@@ -170,7 +170,7 @@ a.fc-event {
     display: inline-block;
   }
   span[hidden] {
-    display: none;
+    display: none !important;
   }
 
   label {
@@ -204,7 +204,7 @@ a.fc-event {
       display: inline-block;
     }
 
-    div span {
+    div > span {
       display: inline-block;
       padding: 4px;
       border: 1px solid #eee;
@@ -807,3 +807,4 @@ del {
     }
   }
 }
+
