@@ -19,23 +19,27 @@
      @default {
   <span title="{{((get('Description') || '') == '' ? '' : get('Title'))}}">{{get('Title')}}</span>
 
-  <i *ngIf="(get('Description') || '') != ''"
-     (mouseenter)="showHideTooltip(true)"
+       @if (get('Description')) {
+  <i (mouseenter)="showHideTooltip(true)"
      (mouseleave)="showHideTooltip(false)">(i)</i>
   <div class="ToolTip"
        [hidden]="!tooltip">{{get('Description')}}</div>
-  <span *ngIf="get('Required')"
-        class="Required">*</span>
+       }
+       @if (get('Required')) {
+  <span class="Required">*</span>
+       }
     }
   }
 
   @switch (get('TypeAsString')) {
     @case ('MultiChoice') {
   <div>
+       @if (!disabled) {
     <input placeholder="Filter or search the {{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}} below"
-           *ngIf="!disabled"
            name="{{prefix ?? ''}}{{field}}_Search"
            [(ngModel)]="filterMulti"><br>
+       }
+       
     <select (mousedown)="false"
             (click)="change($event)"
             multiple="multiple"
@@ -50,7 +54,8 @@
   </div>
     }
     @case ('Choice') {
-  <div *ngIf="get('Format') != 'RadioButtons'">
+  <div>
+       @if (get('Format') != 'RadioButtons') {
     <select [disabled]="disabled"
             (ngModelChange)="selChangeS($event)"
             [ngModel]="form[field]"
@@ -78,11 +83,9 @@
            onclick="this.select();"
            (change)="change($event)"
            *ngIf="!inChoices()">
-  </div>
-
-  <div *ngIf="get('Format') == 'RadioButtons'">
-    <label *ngIf="select.none"
-           class="radio">
+       } else {
+         @if (select.none) {
+    <label class="radio">
       <input [value]="null"
              [disabled]="disabled"
              type="radio"
@@ -92,6 +95,7 @@
              (change)="change($event)">
       {{select.none}}
     </label>
+         }
     <label *ngFor="let i of choices()"
            class="radio">
       <input [value]="i"
@@ -108,6 +112,7 @@
          [required]="required()"
          [value]="validator()"
          name="{{prefix ?? ''}}{{field}}_Validator">
+       }
   </div>
     }
     @case ('Integer') {
@@ -138,7 +143,8 @@
   </div>
     }
     @case ('DateTime') {
-  <div *ngIf="get('DisplayFormat') != 1">
+  <div>
+       @if (get('DisplayFormat') != 1) {
     <input [disabled]="disabled"
            type="date"
            [ngModel]="form[field] | date:'yyyy-MM-dd'"
@@ -149,9 +155,7 @@
            [min]="get('Min')"
            [max]="get('Max')"
            placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
-  </div>
-
-  <div *ngIf="get('DisplayFormat') == 1">
+       } else {
     <input [disabled]="disabled"
            type="datetime-local"
            [ngModel]="form[field] | date:'yyyy-MM-ddTHH:mm'"
@@ -162,6 +166,7 @@
            [min]="get('Min')"
            [max]="get('Max')"
            placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
+       }
   </div>
     }
     @case ('Text') {
@@ -180,10 +185,9 @@
     <div class="MaxLength"
          [hidden]="remaining(255) >= 5">Maximum {{remaining(255)}} characters remaining</div>
 
-    <div style="position: relative; padding: 0;"
-         [hidden]="disabled">
-      <div class="AutoComplete"
-           *ngIf="results.length > 0">
+       @if (!disabled && results.length > 0) {
+    <div style="position: relative; padding: 0;">
+      <div class="AutoComplete">
         <ul>
           <li *ngFor="let result of results; let i = index"
               (click)="selectedText(result)"
@@ -198,34 +202,26 @@
         </ul>
       </div>
     </div>
+       }
   </div>
     }
     @case ('Note') {
-  <div *ngIf="!disabled && !get('RichText') && !get('AppendOnly')">
+  <div>
+     @if (!disabled) {
+      @if (!get('RichText') && !get('AppendOnly')) {
     <textarea [(ngModel)]="form[field]"
               [required]="required()"
               name="{{prefix ?? ''}}{{field}}"
               (change)="change($event)"
               [style]="(text.height ? 'height: '+text.height+'px' : '')"
               placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."></textarea>
-    <div class="MaxLength"
-         [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
-  </div>
-
-  <div *ngIf="!disabled && !get('RichText') && get('AppendOnly')">
+       } else if (!get('RichText')) {
     <textarea [required]="required()"
               name="{{prefix ?? ''}}{{field}}"
               (change)="change($event)"
               [style]="(text.height ? 'height: '+text.height+'px' : '')"
               placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."></textarea>
-    <div class="MaxLength"
-         [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
-  </div>
-
-  <div *ngIf="disabled && !get('RichText')"
-       style="max-height: 500px; overflow: auto;">{{form[field]}}</div>
-
-  <div *ngIf="!disabled && get('TypeAsString') == 'Note' && get('RichText') && !get('AppendOnly')">
+       } else if (get('RichText') && !get('AppendOnly')) {
     <div class="NgxEditor__Wrapper">
       <ngx-editor-menu [editor]="editor"
                        [toolbar]="toolbar"></ngx-editor-menu>
@@ -238,11 +234,7 @@
                   [outputFormat]="'html'">
       </ngx-editor>
     </div>
-    <div class="MaxLength"
-         [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
-  </div>
-
-  <div *ngIf="!disabled && get('RichText') && get('AppendOnly')">
+       } else {
     <div class="NgxEditor__Wrapper">
       <ngx-editor-menu [editor]="editor"
                        [toolbar]="toolbar"></ngx-editor-menu>
@@ -255,13 +247,18 @@
                   [outputFormat]="'html'">
       </ngx-editor>
     </div>
+       }
     <div class="MaxLength"
          [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
-  </div>
-
-  <div *ngIf="disabled && && get('RichText')"
-       style="max-height: 500px; overflow: auto;"
+      } else {
+       @if (!get('RichText')) {
+    <div style="max-height: 500px; overflow: auto;">{{form[field]}}</div>
+       } else {
+  <div style="max-height: 500px; overflow: auto;"
        [innerHTML]="form[field]"></div>
+       }
+     }
+  </div>
     }
     @case ('URL') {
   <div>
@@ -282,8 +279,8 @@
   </div>
     }
     @case ('Attachments') {
-  <div *ngIf="!file.uploadonly"
-       style="position: relative;overflow-x: auto;"
+     @if (!file.uploadonly) {
+  <div style="position: relative;overflow-x: auto;"
        (dragover)="over($event)"
        (dragleave)="leave($event)"
        (drop)="drop($event)"
@@ -565,9 +562,9 @@
       </div>
     </div>
   </div>
-
-  <div *ngIf="!disabled"
-       style="text-align: center; padding: 4px;"
+     }
+     @if (!disabled) {
+  <div style="text-align: center; padding: 4px;"
        (dragover)="over($event)"
        (dragleave)="leave($event)"
        (drop)="drop($event)"
@@ -596,6 +593,7 @@
          [value]="validator('Attachments')"
          name="{{prefix ?? ''}}{{field}}_Validator">
   </div>
+     }
     }
     @case ('UserMulti') {
   <div>
@@ -712,3 +710,4 @@
   }
 
 </div>
+
