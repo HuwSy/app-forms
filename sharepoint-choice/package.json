@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-choice",
-  "version": "20.3.19",
+  "version": "20.3.24",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
@@ -26,7 +26,7 @@
     "buffer": "^6.0.3",
     "eml-parse-js": "^1.1.15",
     "jszip": "^3.10.1",
-    "ngx-editor": "^18.0.0",
+    "ngx-editor": "^19.0.0-beta.1",
     "stacktrace-js": "^2.0.2"
   },
   "devDependencies": {
@@ -37,6 +37,7 @@
     "typescript": "~5.9.2"
   }
 }
+
 
 
 
