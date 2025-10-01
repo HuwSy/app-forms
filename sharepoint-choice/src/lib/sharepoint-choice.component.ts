@@ -30,6 +30,7 @@ import { SharepointChoiceLogging } from './sharepoint-choice.logging';
 export class SharepointChoiceComponent implements OnInit, OnDestroy {
   @Input() form!: object; // form containing field, varies based on list therefore object not defined explicitly
   @Input() field!: string; // internal field name on form object, used for push back and against spec
+  @Input() prefix!: string; // prefix name attributes for uniqness, usefull for nesting
 
   @Input() spec!: object; // spec of field loaded from list, varies based on list therefore object not defined explicitly
   @Input() versions!: Array<object>; // version history of this field to display if presented, varies based on list therefore object not defined explicitly
@@ -1319,6 +1320,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
+
 
 
 
