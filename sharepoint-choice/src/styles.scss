@@ -169,6 +169,9 @@ a.fc-event {
     max-width: 100%;
     display: inline-block;
   }
+  span[hidden] {
+    display: none;
+  }
 
   label {
     font-size: 12px;
