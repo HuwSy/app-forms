@@ -447,7 +447,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (!this.text.search)
       return;
 
-    this.results = await this.text.search(this.form[this.field], this.text.parent || this);
+    this.results = await this.text.search(this.form[this.field], this.text.parent);
 
     this.pos = -1;
     this.chRef.detectChanges();
@@ -462,7 +462,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     } else {
       this.form[this.field] = res[this.field];
       if (this.text.select)
-        await this.text.select(res, this.text.parent || this);
+        await this.text.select(res, this.text.parent);
     }
 
     this.results = [];
@@ -484,7 +484,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     let choices = this.get('Choices');
     // use any provided filter
     if (typeof this.select.filter == "function")
-      choices = choices.filter((c: any, i: number, a: any) => this.select.filter ? this.select.filter(c, i, a, this.select.parent || this) : true);
+      choices = choices.filter((c: any, i: number, a: any) => this.select.filter ? this.select.filter(c, i, a, this.select.parent) : true);
     // common filters
     return choices.filter((x: string) => {
       // exclude unselected items on disabled fields
@@ -1320,6 +1320,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
+
 
 
 
