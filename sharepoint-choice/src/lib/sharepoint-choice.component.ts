@@ -30,16 +30,16 @@ import { SharepointChoiceLogging } from './sharepoint-choice.logging';
 export class SharepointChoiceComponent implements OnInit, OnDestroy {
   @Input() form!: object; // form containing field, varies based on list therefore object not defined explicitly
   @Input() field!: string; // internal field name on form object, used for push back and against spec
-  @Input() prefix!: string; // prefix name attributes for uniqness, usefull for nesting
+  @Input() prefix?: string; // prefix name attributes for uniqness, usefull for nesting
 
   @Input() spec!: object; // spec of field loaded from list, varies based on list therefore object not defined explicitly
-  @Input() versions!: Array<object>; // version history of this field to display if presented, varies based on list therefore object not defined explicitly
-  @Input() override!: string|object; // manually override any spec above. prefer send as string as passing object kills large form performance
+  @Input() versions?: Array<object>; // version history of this field to display if presented, varies based on list therefore object not defined explicitly
+  @Input() override?: string|object; // manually override any spec above. prefer send as string as passing object kills large form performance
 
   @Input() disabled!: boolean; // get disabled state from outside
-  @Input() onchange!: Function; // onchange trigger a function(this)
+  @Input() onchange?: Function; // onchange trigger a function(this)
 
-  @Input() text!: { // override text for field
+  @Input() text?: { // override text for field
     pattern?: string, // regex pattern for validation
     height?: number, // height of text area in px
 
@@ -48,7 +48,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     parent?: any // parent object that the control belongs to for call backs
   };
 
-  @Input() select!: { // override select for field
+  @Input() select?: { // override select for field
     none?: string, // none option text instead of null
     other?: string, // Other fill-in option text, will override to allow other
 
@@ -56,7 +56,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     parent?: any // parent object that the control belongs to for call backs
   };
 
-  @Input() file!: { // override file for field
+  @Input() file?: { // override file for field
     extract?: boolean, // extract files from zip and email
     check?: boolean, // show check box for each file
 
@@ -76,11 +76,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   declare editor?: Editor;
   declare toolbar: Toolbar;
-  declare tooltip: boolean;
-  declare filesOver: boolean;
-  declare name: string;
-  declare loading: Array<number>;
-  declare versionsDisplayed: boolean;
+  declare tooltip?: boolean;
+  declare filesOver?: boolean;
+  declare name?: string;
+  declare loading?: Array<number>;
+  declare versionsDisplayed?: boolean;
 
   declare users: Array<{
     Key: string;
@@ -101,7 +101,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     MultipleMatches: any[];
   }>;
 
-  declare filterMulti: string;
+  declare filterMulti?: string;
   declare unused: string;
   declare results: Array<object>; // varies based on the search source therefore not explicitly defined
   declare pos: number;
@@ -110,7 +110,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     loading: boolean
   };
 
-  declare sort: string;
+  declare sort?: string;
   declare filter: string;
 
   public textKey?: Subject<string>;
@@ -154,6 +154,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this.file = {};
     if (!this.filter)
       this.filter = '';
+    if (!this.disabled)
+      this.disabled = false;
 
     // rtf menu items
     this.toolbar = [
@@ -253,7 +255,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // get outcomes of non standard fields into a plain text field for [required] to be triggered automatically 
-  validator(type:string|undefined): string {
+  validator(type?:string): string {
     switch (type) {
       case 'User':
         return this.form[this.field + 'Id'] ? 'true' : '';
@@ -267,8 +269,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // max length character countdown
-  remaining(max: number|undefined): number {
+  remaining(max?: number): number {
     var m = this.get('MaxLength');
+    // no max limit in field spec or because of field type then use a number bigger than any remaining() >= ... values
     if (!m && !max)
       return 255;
     return (m ?? max) - (this.form[this.field] || '').length;
@@ -341,7 +344,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             results: []
           }
       } else if (p == 'Text') {
-        if (!this.textKey) {
+        if (!this.textKey && this.text?.search) {
           this.textKey = new Subject<string>();
           this.textKey.pipe(
             debounceTime(250),
@@ -349,12 +352,14 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           ).subscribe((key) => this.onUpTextSearch(key));
         }
       }
+
       // if the field is empty (not set null) and its not a person field (+Id) then set the default value only if there is one
       if (this.form[this.field] === undefined && !this.form[this.field + 'Id']) {
         var d = this.get('DefaultValue');
         if (d)
           this.form[this.field] = d;
       }
+
       // always disable read only fields initially, may get overridden later but thats the consumers responsibility
       var r = this.get('ReadOnlyField');
       if (r)
@@ -424,7 +429,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   */
 
   async onUpText(key): Promise<void> {
-    if (!this.text.search)
+    if (!this.textKey)
       return;
 
     if (key == "ArrowDown") {
@@ -444,7 +449,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   async onUpTextSearch(text: string): Promise<void> {
-    if (!this.text.search)
+    if (!this.text?.search)
       return;
 
     this.results = await this.text.search(this.form[this.field], this.text.parent);
@@ -454,7 +459,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   async selectedText(res: any): Promise<void> {
-    if (!this.text.search)
+    if (!this.text?.search)
       return;
 
     if (!res) {
@@ -483,8 +488,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // get choices from list
     let choices = this.get('Choices');
     // use any provided filter
-    if (typeof this.select.filter == "function")
-      choices = choices.filter((c: any, i: number, a: any) => this.select.filter ? this.select.filter(c, i, a, this.select.parent) : true);
+    if (typeof this.select?.filter == "function")
+      choices = choices.filter((c: any, i: number, a: any) => this.select?.filter ? this.select.filter(c, i, a, this.select.parent) : true);
     // common filters
     return choices.filter((x: string) => {
       // exclude unselected items on disabled fields
@@ -523,10 +528,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   attachments(): any[string] {
     if (!this.form[this.field] || !this.form[this.field].results)
       return [];
-    var v = this.file.view ?? 0;
+    var v = this.file?.view ?? 0;
     return this.form[this.field].results
       .filter((f: any) => {
-        if (v == 0 || !this.file.archive)
+        if (v == 0 || !this.file?.archive)
           return true;
         if (v == 1 && !f.ListItemAllFields[this.file.archive])
           return true;
@@ -535,7 +540,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         return false;
       })
       .filter((f: any) => {
-        if (!this.filter || this.filter == '' || !this.file.doctype)
+        if (!this.filter || this.filter == '' || !this.file?.doctype)
           return true;
         if (!f.ListItemAllFields || !f.ListItemAllFields[this.file.doctype])
           return true;
@@ -558,7 +563,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       });
   }
 
-  friendlyName(name: string): string {
+  friendlyName(name?: string): string {
+    if (!name)
+      return '';
     return name.replace(/_x0020_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2');
   }
 
@@ -580,7 +587,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     e.target.value = null;
   }
 
-  changeSort(field: string) {
+  changeSort(field?: string) {
+    if (!field)
+      return;
     if (this.sort == '-' + field) {
       this.sort = '+' + field;
     } else if (this.sort == '+' + field) {
@@ -590,20 +599,22 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
   }
 
-  additionalKeys(o): Array<string> {
+  additionalKeys(o?: any): Array<string> {
     // get keys of object
     if (!o || typeof o != "object")
       return [];
     return Object.keys(o).filter(k => k != this.file?.doctype && k != this.file?.notes);
   }
 
-  loadOrGenerateSpec(field:string, type:string) {
+  loadOrGenerateSpec(field?:string, type?:string) {
     var s:object = {};
+    if (!field)
+      return s;
     if (this.file?.spec && this.file.spec[field])
        s[field] = this.file.spec[field];
     else
       s[field] = { 
-        TypeAsString: type,
+        TypeAsString: type ?? 'Text',
         InternalName: field,
         Title: '',
         Choices: this.file?.doctypes ?? []
@@ -613,11 +624,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   usedTypes(): Array<string> {
     // get initial types
-    var types = this.file.doctypes || [];
+    var types = this.file?.doctypes || [];
     // get all types used in the attachments
-    if (this.file.doctype && this.form[this.field] && this.form[this.field].results)
+    if (this.file?.doctype && this.form[this.field] && this.form[this.field].results)
       types = this.form[this.field].results
-        .map((f: any) => f.ListItemAllFields && this.file.doctype && this.file.doctype in f.ListItemAllFields ? f.ListItemAllFields[this.file.doctype] : null)
+        .map((f: any) => f.ListItemAllFields && this.file?.doctype && this.file.doctype in f.ListItemAllFields ? f.ListItemAllFields[this.file.doctype] : null)
         .filter((f: any) => f)
         .sort();
     // remove duplicates
@@ -631,11 +642,12 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   width(): string {
     var c = 0;
-    for (var i = 0; i < this.file.doctypes.length; i++) {
-      let l = this.file.doctypes[i].length
-      if (l > c)
-        c = l;
-    }
+    if (this.file?.doctypes)
+      for (var i = 0; i < this.file.doctypes.length; i++) {
+        let l = this.file.doctypes[i].length
+        if (l > c)
+          c = l;
+      }
     if (c == 0)
       return '';
     return `width: ${c}ch`;
@@ -647,7 +659,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this.form[this.field].results = this.form[this.field].results.filter((x: any) => x.FileName != f.FileName);
     } else {
       // if uploaded already
-      if (!this.file.archive || this.field == 'Attachments') {
+      if (!this.file?.archive || this.field == 'Attachments') {
         // no archive flag or its attachments so no archiving, then flag for deletion
         if (a && !confirm('Are you sure you wish to delete this file?'))
           return;
@@ -1019,12 +1031,12 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       ListItemAllFields: { Title: t }
     };
 
-    if (desc && this.file.notes)
+    if (desc && this.file?.notes)
       file.ListItemAllFields[this.file.notes] = desc;
 
     results.push(file);
 
-    if (!this.file.extract)
+    if (!this.file?.extract)
       return;
 
     if (fileName.toLowerCase().endsWith(".zip"))
@@ -1263,6 +1275,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // trigger user search
   onUpUser(key): void {
+    if (!this.userKey)
+      return;
+
     if (key == "ArrowDown") {
       if (this.pos < this.users.length - 1)
         this.pos++;
@@ -1281,6 +1296,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   async onUpUserSearch(text: string): Promise<void> {
     if (!this.spec['odata.context'])
+      return;
+    if (!this.name)
       return;
 
     var url = (await this.spec['odata.context'].web()).ServerRelativeUrl;
@@ -1320,9 +1337,3 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
-
-
-
-
-
-

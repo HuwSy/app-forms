@@ -29,7 +29,7 @@ export class SharepointChoiceUtils {
     // if no or null or incomplete context try to get this from mocked context or current page
     if (!this.context)
       this.context = (w._spPageContextInfo ? w._spPageContextInfo.webAbsoluteUrl : null) ?? 
-        document.location.href.replace(/(\/SitePages\/|\/Pages\/).*$/i, '');
+        document.location.href.replace(/(\/SitePages\/|\/Pages\/|\/_layouts\/|\/Lists\/|#|\?).*$/i, '');
 
     this.context = this.context?.replace(/\/$/, '');
 
@@ -595,4 +595,3 @@ export class SharepointChoiceUtils {
     }
   }
 }
-
