@@ -1,7 +1,9 @@
 <div class="choice"
      [ngClass]="{noTitle: !get('Title')}"
      title="{{(!get('Description') ? get('Title') : '')}}">
+  @if (get('Title')) {
   <span title="{{(!get('Description') ? '' : get('Title'))}}">{{get('Title')}}</span>
+  }
 
   @if (get('Description')) {
   <i (mouseenter)="showHideTooltip(true)"
@@ -29,7 +31,7 @@
     }
     @case ('MultiChoice') {
     @if (!disabled) {
-    <input placeholder="Filter or search the {{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}} below"
+    <input placeholder="Filter or search {{get('Title') || friendlyName(get('InternalName'))}} below"
            name="{{prefix ?? ''}}{{field}}_Search"
            [(ngModel)]="filterMulti"><br>
     }
@@ -57,7 +59,7 @@
             [hidden]="disabled && !inChoices()">
       <option disabled
               selected
-              hidden>Please select {{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}</option>
+              hidden>Please select {{get('Title') || friendlyName(get('InternalName'))}}</option>
       @if (select?.none) {
       <option [value]="null">{{select?.none}}</option>
       }
@@ -75,7 +77,7 @@
            name="{{prefix ?? ''}}{{field}}_Other"
            [style.width.%]="!disabled || inChoices() ? 50 : 100"
            maxlength="250"
-           onclick="this.select();"
+           (click)="$event.target.select()"
            (change)="change($event)"
            [hidden]="inChoices()">
     }
@@ -92,7 +94,6 @@
       {{select?.none}}
     </label>
     }
-
     @for (i of choices(); track $index) {
     <label class="radio">
       <input [value]="i"
@@ -105,7 +106,6 @@
       {{i}}
     </label>
     }
-
     <input style="display:none !important;"
            type="text"
            [required]="required()"
@@ -121,7 +121,7 @@
            name="{{prefix ?? ''}}{{field}}"
            [min]="get('Min')"
            [max]="get('Max')"
-           placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
+           placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
     }
     @case ('Number') {
     <input [disabled]="disabled"
@@ -134,7 +134,7 @@
            [min]="get('Min')"
            [max]="get('Max')"
            (change)="change($event)"
-           placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
+           placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
     }
     @case ('DateTime') {
     @if (get('DisplayFormat') != 1) {
@@ -147,7 +147,7 @@
            (change)="change($event)"
            [min]="get('Min')"
            [max]="get('Max')"
-           placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
+           placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
     }
     @else {
     <input [disabled]="disabled"
@@ -159,7 +159,7 @@
            (change)="change($event)"
            [min]="get('Min')"
            [max]="get('Max')"
-           placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
+           placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
     }
     }
     @case ('Text') {
@@ -173,7 +173,7 @@
            (change)="change($event)"
            (keyup)="onUpText($event.key)"
            (click)="onUpText(undefined)"
-           placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
+           placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
     <div class="MaxLength"
          [hidden]="remaining(255) >= 5">Maximum {{remaining(255)}} characters remaining</div>
 
@@ -206,45 +206,41 @@
               name="{{prefix ?? ''}}{{field}}"
               (change)="change($event)"
               [style]="(text?.height ? 'height: '+text?.height+'px' : '')"
-              placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."></textarea>
+              placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."></textarea>
     }
     @else {
     <textarea [required]="required()"
               name="{{prefix ?? ''}}{{field}}"
               (change)="change($event)"
               [style]="(text?.height ? 'height: '+text?.height+'px' : '')"
-              placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."></textarea>
+              placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."></textarea>
     }
     }
     @else if (editor) {
-    @if (!get('AppendOnly')) {
     <div class="NgxEditor__Wrapper">
       <ngx-editor-menu [editor]="editor"
                        [toolbar]="toolbar"></ngx-editor-menu>
+      @if (!get('AppendOnly')) {
       <ngx-editor [editor]="editor"
                   [(ngModel)]="form[field]"
-                  placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."
+                  placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."
                   (ngModelChange)="change($event)"
                   name="{{prefix ?? ''}}{{field}}"
                   [required]="required()"
                   [outputFormat]="'html'">
       </ngx-editor>
-    </div>
-    }
-    @else {
-    <div class="NgxEditor__Wrapper">
-      <ngx-editor-menu [editor]="editor"
-                       [toolbar]="toolbar"></ngx-editor-menu>
+      }
+      @else {
       <ngx-editor [editor]="editor"
                   [(ngModel)]="unused"
-                  placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}..."
+                  placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."
                   (ngModelChange)="change($event)"
                   name="{{prefix ?? ''}}{{field}}"
                   [required]="required()"
                   [outputFormat]="'html'">
       </ngx-editor>
+      }
     </div>
-    }
     }
     <div class="MaxLength"
          [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
@@ -277,325 +273,302 @@
     }
     @case ('Attachments') {
     @if (!file?.uploadonly) {
-    <div style="position: relative;overflow-x: auto;"
+    @if (attachments().length > 0) {
+    <div [hidden]="!file?.doctype || !hasChecked()">
+      Update selected:
+      <select (change)="setClasses($event)"
+              name="{{prefix ?? ''}}{{field}}_Cat">
+        <option disabled
+                selected
+                hidden>{{file?.doctype}}</option>
+        @for (v of file?.doctypes; track $index) {
+        <option value="{{v}}">{{v}}</option>
+        }
+      </select>
+    </div>
+
+    <table class="files desktop"
+           (dragover)="over($event)"
+           (dragleave)="leave($event)"
+           (drop)="drop($event)"
+           [ngClass]="{'FilesOver': filesOver}">
+      <tr>
+        <th [hidden]="!file?.check"></th>
+        @if (field != 'Attachments' && file?.doctype) {
+        <th style="width: 0; white-space: nowrap;">
+          <span style="cursor: pointer;"
+                (click)="changeSort(file?.doctype)">
+            File Type
+          </span>
+          <select style="width:30px;border:none;margin-left:8px;"
+                  [(ngModel)]="filter"
+                  name="{{prefix ?? ''}}{{field}}_Filter">
+            <option value>All</option>
+
+            @for (v of usedTypes(); track $index) {
+            <option value="{{v}}">{{v}}</option>
+            }
+          </select>
+          <span [hidden]="sort != '+'+file?.doctype">&#9660;</span>
+          <span [hidden]="sort != '-'+file?.doctype">&#9650;</span>
+        </th>
+        }
+        <th>
+          <span style="cursor: pointer;"
+                (click)="changeSort('Title')">
+            File Name
+          </span>
+          <span [hidden]="sort != '+Title'">&#9660;</span>
+          <span [hidden]="sort != '-Title'">&#9650;</span>
+        </th>
+        @if (field != 'Attachments' && file?.notes) {
+        <th>
+          <span>
+            {{friendlyName(file?.notes)}}
+          </span>
+        </th>
+        }
+        @for (k of additionalKeys(file?.spec); track $index) {
+        <th>
+          <span>
+            {{file?.spec?.[k]?.Title || friendlyName(file?.spec?.[k]?.InternalName)}}
+          </span>
+        </th>
+        }
+        @if (field != 'Attachments') {
+        <th style="width: 0; white-space: nowrap;">
+          <span style="cursor: pointer;"
+                (click)="changeSort('Created')">
+            Date Uploaded
+          </span>
+          <span [hidden]="sort != '+Created'">&#9660;</span>
+          <span [hidden]="sort != '-Created'">&#9650;</span>
+        </th>
+        }
+        @else {
+        <th style="width: 0;"></th>
+        }
+      </tr>
+      @for (f of attachments(); track $index; let i = $index) {
+      <tr>
+        <td [hidden]="!file?.check">
+          <input type="checkbox"
+                 [disabled]="disabled || f.Deleted || (field != 'Attachments' && file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402"
+                 [(ngModel)]="f.Checked"
+                 name="{{prefix ?? ''}}{{field}}_Checked_{{i}}">
+        </td>
+        @if (field != 'Attachments' && file?.doctype) {
+        <td style="white-space: nowrap"
+            [style]="width()">
+          <app-choice [form]="f.ListItemAllFields"
+                      [spec]="loadOrGenerateSpec(file?.doctype, 'Choice')"
+                      [field]="file?.doctype || 'DocType'"
+                      [prefix]="field+'_'+i"
+                      [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
+          </app-choice>
+        </td>
+        }
+        @if (f.Deleted) {
+        <td>
+          <span style="color: red; text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
+
+          <a style="color: green; padding-left: 8px;cursor: pointer;"
+             (click)="delete(f, false)"
+             title="Undelete"
+             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">+</a>
+        </td>
+        }
+        @else if (field != 'Attachments' && file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) {
+        <td>
+          <span style="text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
+
+          <a style="color: green; padding-left: 8px;cursor: pointer;"
+             (click)="delete(f, false)"
+             title="Undelete"
+             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">+</a>
+          <a style="color: red; padding-left: 8px;cursor: pointer;"
+             (click)="delete(f, true)"
+             title="Delete"
+             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">x</a>
+        </td>
+        }
+        @else {
+        <td style="position: relative">
+          <a [hidden]="!f.ServerRelativeUrl || !file?.download"
+             download="{{f.FileName}}"
+             href="{{f.ServerRelativeUrl}}">{{f.ListItemAllFields?.Title || f.FileName}}</a>
+          <a [hidden]="!f.ServerRelativeUrl || file?.download"
+             (click)="newTab(f, $event)"
+             style="cursor:pointer">{{f.ListItemAllFields?.Title || f.FileName}}</a>
+
+          @if (field == 'Attachments') {
+          <a [hidden]="f.ServerRelativeUrl">{{f.FileName}}</a>
+          }
+          @else if (f.ListItemAllFields) {
+          <input [disabled]="disabled"
+                 [hidden]="f.ServerRelativeUrl"
+                 [(ngModel)]="f.ListItemAllFields.Title"
+                 style="width: calc( 100% - 38px );"
+                 name="{{prefix ?? ''}}{{field}}_Name_{{i}}"
+                 [title]="f.FileName + ' - ' + f.Length">
+          }
+
+          <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;"
+             (click)="delete(f, true)"
+             title="Delete"
+             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">x</a>
+        </td>
+        }
+        @if (field != 'Attachments' && file?.notes) {
+        <td>
+          <app-choice [form]="f.ListItemAllFields"
+                      [spec]="loadOrGenerateSpec(file?.notes)"
+                      [field]="file?.notes || 'Notes'"
+                      [prefix]="field+'_'+i"
+                      [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
+          </app-choice>
+        </td>
+        }
+        @for (k of additionalKeys(file?.spec); track $index) {
+        <td>
+          <app-choice [form]="f.ListItemAllFields"
+                      [spec]="file?.spec || spec"
+                      [field]="file?.spec?.[k]?.InternalName"
+                      [prefix]="field+'_'+i"
+                      [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402"
+                      [text]="{
+                        height: 35
+                      }"
+                      [override]='"{\"Title\":\"\"}"'>
+          </app-choice>
+        </td>
+        }
+        <td>
+          {{!f.ServerRelativeUrl ? 'Awaiting save' : !f.TimeCreated ? '' : f.TimeCreated | date:'dd MMM yyyy HH:mm'}}
+        </td>
+      </tr>
+      }
+    </table>
+
+    <div class="files mobile"
          (dragover)="over($event)"
          (dragleave)="leave($event)"
          (drop)="drop($event)"
          [ngClass]="{'FilesOver': filesOver}">
-
-      @if (attachments().length == 0) {
-      <div style="text-align: center">
-        No attachments yet.
-        <div [hidden]="disabled">Click the button below or drag and drop files to add.</div>
-      </div>
-      }
-      @else {
-      <div [hidden]="!file?.doctype || !hasChecked()">
-        Update selected:
-        <select (change)="setClasses($event)"
-                name="{{prefix ?? ''}}{{field}}_Cat">
-          <option disabled
-                  selected
-                  hidden>{{file?.doctype}}</option>
-          @for (v of file?.doctypes; track $index) {
-          <option value="{{v}}">{{v}}</option>
-          }
-        </select>
-      </div>
-
-      @if (field == 'Attachments') {
-      <table class="files"
-             cellspacing="0">
-        <tr>
-          <th>File Name</th>
-          <th style="width: 0;"></th>
-        </tr>
-        @for (f of attachments(); track $index) {
-        <tr>
-          @if (f.Deleted) {
-          <td>
-            <span style="color: red; text-decoration: line-through;">{{f.FileName}}</span>
-
-            <a style="color: green; padding-left: 8px;cursor: pointer;"
-               (click)="delete(f, false)"
-               title="Undelete"
-               [hidden]="disabled">+</a>
-          </td>
-          }
-          @else {
-          <td style="position: relative">
-            <a download="{{f.FileName}}"
-               href="{{f.ServerRelativeUrl}}"
-               [hidden]="!f.ServerRelativeUrl || !file?.download">{{f.FileName}}</a>
-            <a [hidden]="!f.ServerRelativeUrl || file?.download"
-               (click)="newTab(f, $event)"
-               style="cursor:pointer">{{f.FileName}}</a>
-            <a [hidden]="f.ServerRelativeUrl">{{f.FileName}}</a>
-
-            <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;"
-               (click)="delete(f, true)"
-               title="Delete"
-               [hidden]="disabled">x</a>
-          </td>
-          }
-          <td class="desktop">
-            {{!f.ServerRelativeUrl ? 'Pending save' : ''}}
-          </td>
-        </tr>
-        }
-      </table>
-      }
-      @else {
-      <table class="files desktop"
-             cellspacing="0">
-        <tr>
-          <th [hidden]="!file?.check"></th>
-          @if (file?.doctype) {
-          <th style="width: 0; white-space: nowrap;">
-            <span style="cursor: pointer;"
-                  (click)="changeSort(file?.doctype)">
-              File Type
-            </span>
-            <select style="width:30px;border:none;margin-left:8px;"
-                    [(ngModel)]="filter"
-                    name="{{prefix ?? ''}}{{field}}_Filter">
-              <option value>All</option>
-
-              @for (v of usedTypes(); track $index) {
-              <option value="{{v}}">{{v}}</option>
-              }
-            </select>
-            <span [hidden]="sort != '+'+file?.doctype">&#9660;</span>
-            <span [hidden]="sort != '-'+file?.doctype">&#9650;</span>
-          </th>
-          }
-          <th>
-            <span style="cursor: pointer;"
-                  (click)="changeSort('Title')">
-              File Name
-            </span>
-            <span [hidden]="sort != '+Title'">&#9660;</span>
-            <span [hidden]="sort != '-Title'">&#9650;</span>
-          </th>
-          @if (file?.notes) {
-          <th>
-            <span>
-              {{friendlyName(file?.notes)}}
-            </span>
-          </th>
-          }
-          @for (k of additionalKeys(file?.spec); track $index) {
-          <th>
-            <span>
-              {{file?.spec?.[k]?.Title || friendlyName(file?.spec?.[k]?.InternalName)}}
-            </span>
-          </th>
-          }
-          <th style="width: 0; white-space: nowrap;">
-            <span style="cursor: pointer;"
-                  (click)="changeSort('Created')">
-              Date Uploaded
-            </span>
-            <span [hidden]="sort != '+Created'">&#9660;</span>
-            <span [hidden]="sort != '-Created'">&#9650;</span>
-          </th>
-        </tr>
-        @for (f of attachments(); track $index; let i = $index) {
-        <tr>
-          <td [hidden]="!file?.check">
-            <input type="checkbox"
-                   [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive ?? 'Archive')]) || f.ServerRelativeUrl?.length > 402"
-                   [(ngModel)]="f.Checked"
-                   name="{{prefix ?? ''}}{{field}}_Checked_{{i}}">
-          </td>
-          @if (file?.doctype) {
-          <td style="white-space: nowrap"
-              [style]="width()">
-            <app-choice [form]="f.ListItemAllFields"
-                        [spec]="loadOrGenerateSpec(file?.doctype, 'Choice')"
-                        [field]="file?.doctype ?? 'DocType'"
-                        [prefix]="field+'_'+i"
-                        [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive ?? 'Archive')]) || f.ServerRelativeUrl?.length > 402">
-            </app-choice>
-          </td>
-          }
-          @if (f.Deleted) {
-          <td>
-            <span style="color: red; text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
-
-            <a style="color: green; padding-left: 8px;cursor: pointer;"
-               (click)="delete(f, false)"
-               title="Undelete"
-               [hidden]="disabled || f.ServerRelativeUrl?.length > 402">+</a>
-          </td>
-          }
-          @else if (file?.archive && f.ListItemAllFields[(file?.archive ?? 'Archive')]) {
-          <td>
-            <span style="text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
-
-            <a style="color: green; padding-left: 8px;cursor: pointer;"
-               (click)="delete(f, false)"
-               title="Undelete"
-               [hidden]="disabled || f.ServerRelativeUrl?.length > 402">+</a>
-            <a style="color: red; padding-left: 8px;cursor: pointer;"
-               (click)="delete(f, true)"
-               title="Delete"
-               [hidden]="disabled || f.ServerRelativeUrl?.length > 402">x</a>
-          </td>
-          }
-          @else {
-          <td style="position: relative">
-            <a [hidden]="!f.ServerRelativeUrl || !file?.download"
-               download="{{f.FileName}}"
-               href="{{f.ServerRelativeUrl}}">{{f.ListItemAllFields?.Title || f.FileName}}</a>
-            <a [hidden]="!f.ServerRelativeUrl || file?.download"
-               (click)="newTab(f, $event)"
-               style="cursor:pointer">{{f.ListItemAllFields?.Title || f.FileName}}</a>
-            <input [disabled]="disabled"
-                   [hidden]="f.ServerRelativeUrl"
-                   [(ngModel)]="f.ListItemAllFields.Title"
-                   style="width: calc( 100% - 16px );"
-                   name="{{prefix ?? ''}}{{field}}_Name_{{i}}"
-                   [title]="f.FileName + ' - ' + f.Length">
-
-            <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;"
-               (click)="delete(f, true)"
-               title="Delete"
-               [hidden]="disabled || f.ServerRelativeUrl?.length > 402">x</a>
-          </td>
-          }
-          @if (file?.notes) {
-          <td>
-            <app-choice [form]="f.ListItemAllFields"
-                        [spec]="loadOrGenerateSpec(file?.notes)"
-                        [field]="file?.notes ?? 'Notes'"
-                        [prefix]="field+'_'+i"
-                        [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive ?? 'Archive')]) || f.ServerRelativeUrl?.length > 402">
-            </app-choice>
-          </td>
-          }
-          @for (k of additionalKeys(file?.spec); track $index) {
-          <td>
-            <app-choice [form]="f.ListItemAllFields"
-                        [spec]="file?.spec ?? spec"
-                        [field]="file?.spec?.[k]?.InternalName"
-                        [prefix]="field+'_'+i"
-                        [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive ?? 'Archive')]) || f.ServerRelativeUrl?.length > 402"
-                        [text]="{
-                          height: 35
-                        }"
-                        [override]='"{\"Title\":\"\"}"'>
-            </app-choice>
-          </td>
-          }
-          <td>
-            {{!f.ServerRelativeUrl ? 'Awaiting save' : f.TimeCreated | date:'dd MMM yyyy HH:mm'}}
-          </td>
-        </tr>
-        }
-      </table>
-
-      <div class="files mobile">
-        @for (f of attachments(); track $index; let i = $index) {
+      @for (f of attachments(); track $index; let i = $index) {
+      <div>
+        @if (f.Deleted) {
         <div>
-          @if (f.Deleted) {
-          <div>
-            <span style="color: red; text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
+          <span style="color: red; text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
 
-            <a style="color: green; padding-left: 8px;cursor: pointer;"
-               (click)="delete(f, false)"
-               title="Undelete"
-               [hidden]="disabled || f.ServerRelativeUrl?.length > 402">+</a>
-          </div>
-          }
-          @else if (file?.archive && f.ListItemAllFields[(file?.archive ?? 'Archive')]) {
-          <div>
-            <span style="text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
-
-            <a style="color: green; padding-left: 8px;cursor: pointer;"
-               (click)="delete(f, false)"
-               title="Undelete"
-               [hidden]="disabled || f.ServerRelativeUrl?.length > 402">+</a>
-            <a style="color: red; padding-left: 8px;cursor: pointer;"
-               (click)="delete(f, true)"
-               title="Delete"
-               [hidden]="disabled || f.ServerRelativeUrl?.length > 402">x</a>
-          </div>
-          }
-          @else {
-          <div style="position: relative;">
-            <input [hidden]="!file?.check"
-                   type="checkbox"
-                   [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive ?? 'Archive')]) || f.ServerRelativeUrl?.length > 402"
-                   [(ngModel)]="f.Checked"
-                   name="{{prefix ?? ''}}{{field}}_Check_{{i}}">
-
-            <a [hidden]="!f.ServerRelativeUrl || !file?.download"
-               download="{{f.FileName}}"
-               href="{{f.ServerRelativeUrl}}">{{f.ListItemAllFields?.Title || f.FileName}}</a>
-            <a [hidden]="!f.ServerRelativeUrl || file?.download"
-               (click)="newTab(f, $event)"
-               style="cursor:pointer">{{f.ListItemAllFields?.Title || f.FileName}}</a>
-            <input [disabled]="disabled"
-                   [hidden]="f.ServerRelativeUrl"
-                   [(ngModel)]="f.ListItemAllFields.Title"
-                   style="width: calc( 100% - 38px );"
-                   name="{{prefix ?? ''}}{{field}}_Name_{{i}}"
-                   [title]="f.FileName + ' - ' + f.Length">
-
-            <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;"
-               (click)="delete(f, true)"
-               title="Delete"
-               [hidden]="disabled || f.ServerRelativeUrl?.length > 402">x</a>
-          </div>
-
-          @if (file?.doctype) {
-          <div class="choice">
-            {{friendlyName(file?.doctype)}}
-
-            <app-choice [form]="f.ListItemAllFields"
-                        [spec]="loadOrGenerateSpec(file?.doctype, 'Choice')"
-                        [field]="file?.doctype ?? 'DocType'"
-                        [prefix]="field+'_'+i"
-                        [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive ?? 'Archive')]) || f.ServerRelativeUrl?.length > 402">
-            </app-choice>
-          </div>
-          }
-          @if (file?.notes) {
-          <div class="choice">
-            {{friendlyName(file?.notes)}}
-
-            <app-choice [form]="f.ListItemAllFields"
-                        [spec]="loadOrGenerateSpec(file?.notes)"
-                        [field]="file?.notes ?? 'Notes'"
-                        [prefix]="field+'_'+i"
-                        [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive ?? 'Archive')]) || f.ServerRelativeUrl?.length > 402">
-            </app-choice>
-          </div>
-          }
-          @for (k of additionalKeys(file?.spec); track $index) {
-          <div>
-            <app-choice [form]="f.ListItemAllFields"
-                        [spec]="file?.spec ?? spec"
-                        [field]="file?.spec?.[k]?.InternalName"
-                        [prefix]="field+'_'+i"
-                        [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive ?? 'Archive')]) || f.ServerRelativeUrl?.length > 402"
-                        [text]="{
-                          height: 75
-                        }">
-            </app-choice>
-          </div>
-          }
-          }
-          <div>
-            {{!f.ServerRelativeUrl ? 'Awaiting save' : f.TimeCreated | date:'dd MMM yyyy HH:mm'}}
-          </div>
+          <a style="color: green; padding-left: 8px;cursor: pointer;"
+             (click)="delete(f, false)"
+             title="Undelete"
+             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">+</a>
         </div>
         }
+        @else if (field != 'Attachments' && file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) {
+        <div>
+          <span style="text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
+
+          <a style="color: green; padding-left: 8px;cursor: pointer;"
+             (click)="delete(f, false)"
+             title="Undelete"
+             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">+</a>
+          <a style="color: red; padding-left: 8px;cursor: pointer;"
+             (click)="delete(f, true)"
+             title="Delete"
+             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">x</a>
+        </div>
+        }
+        @else {
+        <div style="position: relative;">
+          <input [hidden]="!file?.check"
+                 type="checkbox"
+                 [disabled]="disabled || f.Deleted || (field != 'Attachments' && file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402"
+                 [(ngModel)]="f.Checked"
+                 name="{{prefix ?? ''}}{{field}}_Check_{{i}}">
+
+          <a [hidden]="!f.ServerRelativeUrl || !file?.download"
+             download="{{f.FileName}}"
+             href="{{f.ServerRelativeUrl}}">{{f.ListItemAllFields?.Title || f.FileName}}</a>
+          <a [hidden]="!f.ServerRelativeUrl || file?.download"
+             (click)="newTab(f, $event)"
+             style="cursor:pointer">{{f.ListItemAllFields?.Title || f.FileName}}</a>
+
+          @if (field == 'Attachments') {
+          <a [hidden]="f.ServerRelativeUrl">{{f.FileName}}</a>
+          }
+          @else if (f.ListItemAllFields) {
+          <input [disabled]="disabled"
+                 [hidden]="f.ServerRelativeUrl"
+                 [(ngModel)]="f.ListItemAllFields.Title"
+                 style="width: calc( 100% - 38px );"
+                 name="{{prefix ?? ''}}{{field}}_Name_{{i}}"
+                 [title]="f.FileName + ' - ' + f.Length">
+          }
+
+          <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;"
+             (click)="delete(f, true)"
+             title="Delete"
+             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">x</a>
+        </div>
+
+        @if (field != 'Attachments' && file?.doctype) {
+        <div class="choice">
+          {{friendlyName(file?.doctype)}}
+
+          <app-choice [form]="f.ListItemAllFields"
+                      [spec]="loadOrGenerateSpec(file?.doctype, 'Choice')"
+                      [field]="file?.doctype || 'DocType'"
+                      [prefix]="field+'_'+i"
+                      [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
+          </app-choice>
+        </div>
+        }
+        @if (field != 'Attachments' && file?.notes) {
+        <div class="choice">
+          {{friendlyName(file?.notes)}}
+
+          <app-choice [form]="f.ListItemAllFields"
+                      [spec]="loadOrGenerateSpec(file?.notes)"
+                      [field]="file?.notes || 'Notes'"
+                      [prefix]="field+'_'+i"
+                      [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
+          </app-choice>
+        </div>
+        }
+        @for (k of additionalKeys(file?.spec); track $index) {
+        <div>
+          <app-choice [form]="f.ListItemAllFields"
+                      [spec]="file?.spec || spec"
+                      [field]="file?.spec?.[k]?.InternalName"
+                      [prefix]="field+'_'+i"
+                      [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402"
+                      [text]="{
+                        height: 75
+                      }">
+          </app-choice>
+        </div>
+        }
+        }
+        <div>
+          {{!f.ServerRelativeUrl ? 'Awaiting save' : !f.TimeCreated ? '' : f.TimeCreated | date:'dd MMM yyyy HH:mm'}}
+        </div>
       </div>
       }
-      }
     </div>
+
+    }
+    @else {
+    <div style="text-align: center; padding: 4px;"
+         (dragover)="over($event)"
+         (dragleave)="leave($event)"
+         (drop)="drop($event)"
+         [ngClass]="{'FilesOver': filesOver}">
+      No attachments yet.
+    </div>
+    }
     }
     @if (!disabled) {
     <div style="text-align: center; padding: 4px;"
@@ -604,7 +577,7 @@
          (drop)="drop($event)"
          [ngClass]="{'FilesOver': filesOver}">
       <b style="font-size: 48px;">&#8613;</b><br>
-      Drag and drop additional files here<br>
+      Drag and drop files here<br>
       or<br>
 
       @if (office.type) {
@@ -616,13 +589,15 @@
               [hidden]="office.type == 'Outlook'">Import open file</button>
       }
 
-      <input accept="{{file?.accept}}"
+      <input #fileInput
+             accept="{{file?.accept}}"
              type="file"
              style="display: none !important;"
              multiple
              (change)="add($event.target)"
              name="{{prefix ?? ''}}{{field}}" />
-      <button onclick="this.previousElementSibling.click()">Browse file</button>
+      <button (click)="fileInput.click()">Browse file</button>
+
       <input style="display:none !important;"
              type="text"
              [required]="required()"
@@ -632,7 +607,7 @@
     }
     }
     @case ('UserMulti') {
-    <div>
+    <div class="people">
       @for (user of form[field + 'Id']?.results; track $index) {
       <span style="padding: 8px;">{{displayUser(user)}} <a (click)="removeUser(user)"
            style="color: red;"
@@ -645,7 +620,7 @@
            (keyup)="onUpUser($event.key)"
            (click)="onUpUser(undefined)"
            [hidden]="disabled"
-           placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
+           placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
     <input style="display:none !important;"
            type="text"
            [required]="required()"
@@ -674,7 +649,7 @@
     }
     }
     @case ('User') {
-    <div>
+    <div class="people">
       @if (form[field + 'Id']) {
       <span style="padding: 8px;">{{displayUser(form[field + 'Id'])}} <a (click)="removeUser(null)"
            style="color: red;"
@@ -687,7 +662,7 @@
            (keyup)="onUpUser($event.key)"
            (click)="onUpUser(undefined)"
            [hidden]="disabled || form[field + 'Id']"
-           placeholder="{{(get('Title') != '' ? get('Title') : null) ?? friendlyName(get('InternalName'))}}...">
+           placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
     <input style="display:none !important;"
            type="text"
            [required]="required()"
@@ -716,9 +691,7 @@
     }
     }
     @case (null) {
-    <div style="position:relative;">
-      <div class="spin"></div>
-    </div>
+    <div class="spin"></div>
     }
     @default {
     {{form[field] && form[field].results ? form[field].results.join(', ') : form[field]}}
@@ -738,7 +711,7 @@
     </li>
     } @else if (v[field] != versions[i-1][field] && (v[field] || v[field]?.toString().length > 0)) {
     <li>
-      {{v[field]}} - {{v['Created'] | date:'dd MMM yyyy HH:mm:ss'}} {{v['Editor']['LookupValue']}} {{versionsToggle()}}
+      {{v[field] ?? 'blank'}} - {{v['Created'] | date:'dd MMM yyyy HH:mm:ss'}} {{v['Editor']['LookupValue']}} {{versionsToggle()}}
     </li>
     }
     }

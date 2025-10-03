@@ -98,7 +98,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       ObjectId: string;
       Department: string;
     };
-    MultipleMatches: any[];
+    MultipleMatches: unknown[];
   }>;
 
   declare filterMulti?: string;
@@ -233,15 +233,15 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this.form[this.field] = null
       return;
     }
-    var p = parseFloat(e.replace(/[^0-9\.]/g, ''));
+    let p = parseFloat(e.replace(/[^0-9\.]/g, ''));
     if (isNaN(p)) {
       this.form[this.field] = null
       return;
     }
-    var min = this.get('Min');
+    let min = this.get('Min');
     if (min != null && p < min)
       p = min;
-    var max = this.get('Max');
+    let max = this.get('Max');
     if (max != null && p > max)
       p = max;
     this.form[this.field] = p;
@@ -270,11 +270,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // max length character countdown
   remaining(max?: number): number {
-    var m = this.get('MaxLength');
+    let m = this.get('MaxLength');
     // no max limit in field spec or because of field type then use a number bigger than any remaining() >= ... values
     if (!m && !max)
       return 255;
-    return (m ?? max) - (this.form[this.field] || '').length;
+    return (m ?? max) - (this.form[this.field] ?? '').length;
   }
 
   // gets the required field properties and/or any overrides to determine which field type etc to display
@@ -291,7 +291,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
     
     // initial starting value of p from override
-    var p: any = this.overrideParsed ? this.overrideParsed[t] : null;
+    let p: any = this.overrideParsed ? this.overrideParsed[t] : null;
     // if no override then get from field spec selected
     if (p == null) {
       let spec = this.spec[this.field.replace(/^OData_/, '')] ?? this.spec[this.field];
@@ -355,13 +355,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
       // if the field is empty (not set null) and its not a person field (+Id) then set the default value only if there is one
       if (this.form[this.field] === undefined && !this.form[this.field + 'Id']) {
-        var d = this.get('DefaultValue');
+        let d = this.get('DefaultValue');
         if (d)
           this.form[this.field] = d;
       }
 
       // always disable read only fields initially, may get overridden later but thats the consumers responsibility
-      var r = this.get('ReadOnlyField');
+      let r = this.get('ReadOnlyField');
       if (r)
         this.disabled = true;
     }
@@ -380,7 +380,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     else if ((t == 'Min' || t == 'Max') && p == null && this.get('TypeAsString') == 'DateTime')
       return (t == 'Min' ? '1970-01-01' : '9999-12-31') + (this.get('DisplayFormat') == 1 ? 'T00:00:00' : '');
     
-    return p == null || !p.results ? p : p.results;
+    return p?.results ?? p;
   }
 
   // any field changes trigger for relevant updates
@@ -392,7 +392,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       if (e.target.parentNode)
         scrollTop = e.target.parentNode.scrollTop;
 
-      var v = e.target.innerText;
+      let v = e.target.innerText;
       // ensure object type is correct
       if (!this.form[this.field] || !this.form[this.field].__metadata)
         this.form[this.field] = {
@@ -400,7 +400,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           results: !this.form[this.field] ? [] : this.form[this.field].results ? this.form[this.field].results : typeof this.form[this.field] == "object" ? this.form[this.field] : [this.form[this.field]]
         }
       // if there are selected results set the field to add/remove the most recent click
-      var i = this.form[this.field].results.indexOf(v);
+      let i = this.form[this.field].results.indexOf(v);
       if (i >= 0)
         this.form[this.field].results.splice(i, 1);
       else
@@ -493,10 +493,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // common filters
     return choices.filter((x: string) => {
       // exclude unselected items on disabled fields
-      if (this.disabled && this.form[this.field] && this.form[this.field].results && !~this.form[this.field].results.indexOf(x))
+      if (this.disabled && this.form[this.field] && this.form[this.field].results && !this.form[this.field].results.includes(x))
         return false;
       // filter on search above multichoice field
-      if (this.filterMulti && !~x.toLowerCase().indexOf(this.filterMulti.toLowerCase()))
+      if (this.filterMulti && !x.toLowerCase().includes(this.filterMulti.toLowerCase()))
         return false;
       // else true
       return true;
@@ -528,7 +528,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   attachments(): any[string] {
     if (!this.form[this.field] || !this.form[this.field].results)
       return [];
-    var v = this.file?.view ?? 0;
+    let v = this.file?.view || 0;
     return this.form[this.field].results
       .filter((f: any) => {
         if (v == 0 || !this.file?.archive)
@@ -540,7 +540,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         return false;
       })
       .filter((f: any) => {
-        if (!this.filter || this.filter == '' || !this.file?.doctype)
+        if (!this.filter || !this.file?.doctype)
           return true;
         if (!f.ListItemAllFields || !f.ListItemAllFields[this.file.doctype])
           return true;
@@ -549,10 +549,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         return false;
       })
       .sort((a: any, b: any) => {
-        if (!this.sort || this.sort == '' || this.sort == '-')
+        if (!this.sort || this.sort == '-')
           this.sort = 'Created';
-        var s = this.sort.replace(/^[-\+]/, '');
-        var o = this.sort.startsWith('-') ? -1 : 1;
+        let s = this.sort.replace(/^[-\+]/, '');
+        let o = this.sort.startsWith('-') ? -1 : 1;
         if (!a.ListItemAllFields || !a.ListItemAllFields[s])
           return -2;
         if (a.ListItemAllFields[s] < b.ListItemAllFields[s])
@@ -601,30 +601,30 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   additionalKeys(o?: any): Array<string> {
     // get keys of object
-    if (!o || typeof o != "object")
+    if (!o || typeof o != "object" || this.field == 'Attachments')
       return [];
     return Object.keys(o).filter(k => k != this.file?.doctype && k != this.file?.notes);
   }
 
   loadOrGenerateSpec(field?:string, type?:string) {
-    var s:object = {};
+    let s:object = {};
     if (!field)
       return s;
     if (this.file?.spec && this.file.spec[field])
        s[field] = this.file.spec[field];
     else
       s[field] = { 
-        TypeAsString: type ?? 'Text',
+        TypeAsString: type || 'Text',
         InternalName: field,
         Title: '',
-        Choices: this.file?.doctypes ?? []
+        Choices: this.file?.doctypes || []
       };
     return s;
   }
 
   usedTypes(): Array<string> {
     // get initial types
-    var types = this.file?.doctypes || [];
+    let types = this.file?.doctypes || [];
     // get all types used in the attachments
     if (this.file?.doctype && this.form[this.field] && this.form[this.field].results)
       types = this.form[this.field].results
@@ -641,9 +641,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   width(): string {
-    var c = 0;
+    let c = 0;
     if (this.file?.doctypes)
-      for (var i = 0; i < this.file.doctypes.length; i++) {
+      for (let i = 0; i < this.file.doctypes.length; i++) {
         let l = this.file.doctypes[i].length
         if (l > c)
           c = l;
@@ -661,13 +661,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       // if uploaded already
       if (!this.file?.archive || this.field == 'Attachments') {
         // no archive flag or its attachments so no archiving, then flag for deletion
-        if (a && !confirm('Are you sure you wish to delete this file?'))
+        if (a && !window.confirm('Are you sure you wish to delete this file?'))
           return;
         f.Deleted = a;
       } else {
         // toggle archived or delete flag
         if (f.ListItemAllFields[this.file.archive] && (a || f.Deleted)) {
-          if (a && !confirm('Are you sure you wish to delete this file?'))
+          if (a && !window.confirm('Are you sure you wish to delete this file?'))
             return;
           f.Deleted = a;
         } else
@@ -684,15 +684,15 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // add attachment to array
   async add(file: any) {
     // read the files into the files array
-    var files: any = [];
-    for (var i = file.files.length - 1; i >= 0; i--)
+    let files: any = [];
+    for (let i = file.files.length - 1; i >= 0; i--)
       files.push(file.files[i]);
     // copy these outside for reuse in the loop
-    var ths = this;
-    var remaining = files.length;
+    let ths = this;
+    let remaining = files.length;
     // loop the array in forEach for variable isolation
     files.forEach((f: any) => {
-      var reader = new window.FileReader();
+      let reader = new FileReader();
       reader.onload = async function (event: any) {
         try {
           await ths.appendFile(f.name, event.target.result, ths.form[ths.field].results);
@@ -725,10 +725,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // gets a drag and drop new outlook item which includes ids not file data and adds to the files array
   async outlook(transfer: any) {
-    var spc = new SharepointChoiceUtils();
+    let spc = new SharepointChoiceUtils();
 
     function mailType(transfer: any, type: string) {
-      var item = transfer.getData(type);
+      let item = transfer.getData(type);
       if (!item)
         return null;
       return JSON.parse(item)
@@ -737,13 +737,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // one or more email messages dropped
     let maillistrow = mailType(transfer, 'multimaillistmessagerows') || mailType(transfer, 'maillistrow');
     if (maillistrow) {
-      var errors: Array<string> = [];
-      for (var i = 0; i < maillistrow.mailboxInfos.length; i++) {
-        var fileName = maillistrow.subjects[i].trim() + ".eml";
+      let errors: Array<string> = [];
+      for (let i = 0; i < maillistrow.mailboxInfos.length; i++) {
+        let fileName = maillistrow.subjects[i].trim() + ".eml";
 
         try {
           // must double url encode any / in the message id
-          var fileContent: string = await spc.callApi(
+          let fileContent: string = await spc.callApi(
             undefined,
             undefined,
             undefined,
@@ -823,7 +823,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   officeAddin(): void {
     // dont double load the script
-    if (document.getElementById('officejs') || window['Office'])
+    if (document.getElementById('officejs') || (window as any).Office)
       return;
     // try and determine if we are in an office addin
     try {
@@ -839,16 +839,16 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       // continue as its probably an addin
     }
     // load the office.js script as web/pwa apps are iframes and full clients are not with no obvious way to detect if its needed
-    var s = document.createElement('script');
+    let s = document.createElement('script');
     s.src = 'https://appsforoffice.microsoft.com/lib/1/hosted/office.js';
     s.id = 'officejs';
     document.head.appendChild(s);
     // capture the office type for later use along with triggering change detection if needed
-    var ths = this;
+    let ths = this;
     s.addEventListener('load', () => {
       // only once office.js loaded
       if ('Office' in window) {
-        var Office: any = window['Office'];
+        let Office: any = (window as any).Office;
         // on ready should be ran soon after office.js is loaded trigger
         Office.onReady(info => {
           // capture what office type of addin for later use
@@ -864,7 +864,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // import from office addin selection or document panel
   importOutlook() {
     this.office.loading = true;
-    var Office: any = window['Office'];
+    let Office: any = (window as any).Office;
 
     // if the adding type is outlook then get the selected email(s)
     var spc = new SharepointChoiceUtils();
@@ -921,13 +921,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // import from office addin selection or document panel
   importOffice() {
     this.office.loading = true;
-    var Office: any = window['Office'];
+    let Office: any = (window as any).Office;
 
     // if the adding type is word or excel then get the current document
-    var docDataSlices: any = [];
-    var slicesReceived = 0;
-    var file: any;
-    var ths = this;
+    let docDataSlices: any = [];
+    let slicesReceived = 0;
+    let file: any;
+    let ths = this;
 
     try {
       // get the file in 64k slices until complete
@@ -968,7 +968,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
         // try to get a file name from the document
         var fileName = Office.context.document.url?.split('/').pop().split('\\').pop();
-        if (!fileName || fileName == '') {
+        if (!fileName) {
           fileName = `OfficeAddin-${new Date().toISOString().replace(/:/g, '-')}`;
           switch (ths.office.type) {
             case "Word":
@@ -1102,7 +1102,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       readEml(new TextDecoder().decode(data), (err, ReadEmlJson) => {
         if (err || !ReadEmlJson || !ReadEmlJson.attachments)
           return;
-        var received = typeof ReadEmlJson.date == "string" ? new Date(ReadEmlJson.date) : ReadEmlJson.date || new Date();
+        var received = (typeof ReadEmlJson.date == "string" ? new Date(ReadEmlJson.date) : ReadEmlJson.date) || new Date();
         ReadEmlJson.attachments.forEach(async (attachment: any) => {
           if (attachment.inline)
             return;
@@ -1122,6 +1122,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // dragging and dropping, hover
   over(evt: any) {
+    if (this.disabled)
+      return;
     evt.preventDefault();
     evt.stopPropagation();
     this.filesOver = true;
@@ -1129,6 +1131,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // dragging and dropping, unhover
   leave(evt: any) {
+    if (this.disabled)
+      return;
     evt.preventDefault();
     evt.stopPropagation();
     this.filesOver = false;
@@ -1136,6 +1140,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // dragging and dropping, drop
   async drop(evt: any) {
+    if (this.disabled)
+      return;
     evt.preventDefault();
     evt.stopPropagation();
 
@@ -1148,8 +1154,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.filesOver = false;
 
     // if no transfer on drop and not chromium based add the meta tag to allow the drop next time
-    if (!evt.dataTransfer && !window['chrome']) {
-      var m = document.createElement("meta");
+    if (!evt.dataTransfer && !(window as any).chrome) {
+      let m = document.createElement("meta");
       m.httpEquiv = "X-UA-Compatible";
       m.content = "chrome=1";
       document.head.appendChild(m);
@@ -1305,7 +1311,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // set the user partial being searched
     this.UserQuery.queryParams.QueryString = this.name;
     // set group each query to adapt to changes
-    this.UserQuery.queryParams.SharePointGroupID = parseInt(this.get('SelectionGroup') || 0);
+    this.UserQuery.queryParams.SharePointGroupID = parseInt(this.get('SelectionGroup') || '0');
     // ensure up to date digest for http posting
     var token: any = await fetch(url + '/_api/contextinfo', {
       method: 'POST',
@@ -1329,7 +1335,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.users = [];
     let allUsers = JSON.parse(res.d.ClientPeoplePickerSearchUser);
     allUsers.filter(x => {
-      return x.EntityData.Email && !~x.Key.indexOf('_adm') && !~x.Key.indexOf('adm_')
+      return x.EntityData.Email && !x.Key.includes('_adm') && !x.Key.includes('adm_')
     }).forEach(user => {
       this.users = [...this.users, user];
     });

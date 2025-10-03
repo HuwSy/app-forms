@@ -1,8 +1,9 @@
-var release = ~document.location.href.toLowerCase().indexOf('/app-') || ~document.location.href.toLowerCase().indexOf('prd/') ? 'LIVE'
-    : ~document.location.href.toLowerCase().indexOf('/pre-') || ~document.location.href.toLowerCase().indexOf('pre/') ? 'PRE'
-      : ~document.location.href.toLowerCase().indexOf('/tst-') || ~document.location.href.toLowerCase().indexOf('tst/') ? 'TST'
-        : ~document.location.href.toLowerCase().indexOf('/sit-') || ~document.location.href.toLowerCase().indexOf('sit/') ? 'SIT'
-          : 'DEV';
+const url = window.location.href.toLowerCase();
+const release = (url.includes('/app-') || url.includes('prd/')) ? 'LIVE'
+  : (url.includes('/pre-') || url.includes('pre/')) ? 'PRE'
+    : (url.includes('/tst-') || url.includes('tst/')) ? 'TST'
+      : (url.includes('/sit-') || url.includes('sit/')) ? 'SIT'
+        : 'DEV';
 
 export const App = {
   Release: release,
