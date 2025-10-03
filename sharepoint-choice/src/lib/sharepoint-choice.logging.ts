@@ -16,10 +16,10 @@ export class SharepointChoiceLogging implements ErrorHandler {
       "stream": App.Grafana || {
         "Environment": App.Release,
         "System": 'SharePoint-Choice',
-        "Hostname": document.location.origin,
+        "Hostname": window.location.origin,
         "Username": undefined,
-        "UserAgent": navigator.userAgent,
-        "Language": navigator.language,
+        "UserAgent": navigator?.userAgent,
+        "Language": navigator?.language,
       },
       "values": []
     };
@@ -53,14 +53,14 @@ export class SharepointChoiceLogging implements ErrorHandler {
     }
 
     // define current page path params
-    var split = document.location.pathname.split('/');
-    var path = document.location.pathname.match(/\/[^\/]*\/[^\/]*\/([^?]*)/);
+    var split = window.location.pathname.split('/');
+    var path = window.location.pathname.match(/\/[^\/]*\/[^\/]*\/([^?]*)/);
     let Params = {
       prefix: split[1] ?? '',
       site: split[2] ?? '',
       path: path && path[1] ? path[1] : '',
-      search: document.location.search,
-      hash: document.location.hash
+      search: window.location.search,
+      hash: window.location.hash
     };
 
     // console here to keep click into source working
@@ -82,7 +82,7 @@ export class SharepointChoiceLogging implements ErrorHandler {
         break;
     }
 
-    let body = [((new Date()).getTime() * 1_000_000).toString(), JSON.stringify({ Params, Level: error.level || 'Unknown', Message: error.message || error, StackTrace: stackTrace })];
+    let body = [((new Date()).getTime() * 1_000_000).toString(), JSON.stringify({ Params, Level: error.level ?? 'Unknown', Message: error.message ?? error, StackTrace: stackTrace })];
 
     // prevent flooding from multiple loggers on screen as timestamps must be sequential or grafana will not accept
     if (this._grafana.values.filter(x => x[1] == body[1] && parseInt(x[0]) + 1_000_000 < parseInt(body[0])).length == 0) {
@@ -122,7 +122,7 @@ export class SharepointChoiceLogging implements ErrorHandler {
     this._grafana.values = this._grafana.values.splice(saving);
 
     // dont log under localhost or if no grafana api map
-    if (document.location.host.includes('localhost') || !App.ApiServers?.['grafana']?.[App.Release])
+    if (window.location.host.includes('localhost') || !App.ApiServers?.['grafana']?.[App.Release])
       return;
 
     // start posting

@@ -26,9 +26,9 @@ export class SharepointChoiceUtils {
   ) {
     this.context = context;
     let w: any = window;
-    // if no or null or incomplete context try to get this from mocked context or current page
+    // if no mock or null or empty or incomplete context try to get this from the current page url
     if (!this.context)
-      this.context = (w._spPageContextInfo ? w._spPageContextInfo.webAbsoluteUrl : null) ?? 
+      this.context = (w._spPageContextInfo ? w._spPageContextInfo.webAbsoluteUrl : null) || 
         document.location.href.replace(/(\/SitePages\/|\/Pages\/|\/_layouts\/|\/Lists\/|#|\?).*$/i, '');
 
     this.context = this.context?.replace(/\/$/, '');
@@ -41,7 +41,7 @@ export class SharepointChoiceUtils {
 
   private watermark() {
     if (App.Release != 'LIVE' && document.getElementById('sp-environment-watermark') == null) {
-      var environment = document.createElement('style');
+      let environment = document.createElement('style');
       environment.id = 'sp-environment-watermark';
       environment.innerHTML = `[ng-version]::before{content: '${Array(11).fill(App.Release).join(' - ')}';}`;
       document.head.appendChild(environment);
@@ -55,8 +55,8 @@ export class SharepointChoiceUtils {
       w._spPageContextInfo = {};
     // no user in context or a different web then mock it in
     if (!w._spPageContextInfo.userLoginName || w._spPageContextInfo.webAbsoluteUrl != this.context) {
-      var web = await this.sp.web();
-      var user = await this.sp.web.currentUser();
+      let web = await this.sp.web();
+      let user = await this.sp.web.currentUser();
       w._spPageContextInfo = {
         userLoginName: user.LoginName,
         userDisplayName: user.Title,
@@ -71,15 +71,15 @@ export class SharepointChoiceUtils {
   // get the current user and permissions to a flat object for easier use in [disabled]="permission['']" etc
   // NOTE: this will only detect direct assignments or users added to a mail enabled global security group
   public async permissions(): Promise<any> {
-    var p: any = {};
+    let p: any = {};
     let w: any = window;
 
     try {
-      var web = await this.sp.web();
+      let web = await this.sp.web();
 
       // get any directly assigned groups
       // this doesnt work well with ad and aad groups assignments
-      var perm = await this.sp.web.currentUser.groups();
+      let perm = await this.sp.web.currentUser.groups();
       perm.forEach(x => {
         p[x.LoginName] = true;
         if (x.LoginName.startsWith(`${web.Title} `))
@@ -89,9 +89,9 @@ export class SharepointChoiceUtils {
       // ad and aad groups within sp groups dont always expose groups above
       // this depends on hidden, no crawl list with specific permissions assigned to the same list item title and created by SHAREPOINT\System Account
       try {
-        var sec = await this.sp.web.lists.getByTitle('Security')();
+        let sec = await this.sp.web.lists.getByTitle('Security')();
         if (sec.Hidden && sec.IsApplicationList) {
-          var per = await this.sp.web.lists.getByTitle('Security').items.select("Title").top(5000)();
+          let per = await this.sp.web.lists.getByTitle('Security').items.select("Title").top(5000)();
           per.forEach(s => {
             p[s.Title] = true;
             if (s.Title.startsWith(`${web.Title} `))
@@ -109,9 +109,9 @@ export class SharepointChoiceUtils {
   // check permission against object
   public async hasPermission(object: any, permissions: any[PermissionKind]): Promise<boolean> {
     try {
-      var perm = await object.getCurrentUserEffectivePermissions();
-      for (var p in permissions) {
-        if (this.sp.web.hasPermissions(perm, permissions[p]))
+      let perm = await object.getCurrentUserEffectivePermissions();
+      for (let permission of permissions) {
+        if (this.sp.web.hasPermissions(perm, permission))
           return true;
       }
     } catch (e) { }
@@ -120,12 +120,12 @@ export class SharepointChoiceUtils {
 
   // get list fields in the appropriate format for use in <sharepoint-choice spec=""> attributes
   public async fields(listTitle: string): Promise<any> {
-    var spec: any = { 'odata.context': this.sp };
+    let spec: any = { 'odata.context': this.sp };
 
     try {
       // even though the main fields are in the selection not all are returned such as Format, so parse the SchemaXml for the rest
-      var selectFields = 'Title,InternalName,TypeAsString,Required,Choices,MaxLength,Description,DisplayFormat,AppendOnly,SelectionGroup,Format,FillInChoice,RichText,ReadOnlyField,DefaultValue,SchemaXml'.split(',');
-      var arr = await this.sp.web.lists.getByTitle(listTitle).fields.select(...selectFields)();
+      let selectFields = 'Title,InternalName,TypeAsString,Required,Choices,MaxLength,Description,DisplayFormat,AppendOnly,SelectionGroup,Format,FillInChoice,RichText,ReadOnlyField,DefaultValue,SchemaXml'.split(',');
+      let arr = await this.sp.web.lists.getByTitle(listTitle).fields.select(...selectFields)();
       arr.forEach(x => {
         if (x.SchemaXml) {
           let s = (new DOMParser()).parseFromString(x.SchemaXml, "text/xml").documentElement.attributes;
@@ -201,8 +201,8 @@ export class SharepointChoiceUtils {
 
       // dates and date times
       let i = d[key].toString();
-      if (i.match(/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9]:*[0-9]*\.*[0-9]*Z*$/) != null
-        || i.match(/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]$/) != null) {
+      if (/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9]:*[0-9]*\.*[0-9]*Z*$/.test(i)
+        || /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]$/.test(i)) {
         d[key] = new Date(d[key]);
         continue;
       }
@@ -211,13 +211,13 @@ export class SharepointChoiceUtils {
 
   // load list item data and parse any data types appropriate for use in <sharepoint-choice ngModel=""> attributes
   public async data(id: number, listTitle: string): Promise<any> {
-    var d: any = {};
+    let d: any = {};
 
     try {
       d = await this.sp.web.lists.getByTitle(listTitle).items.getById(id)();
       await this.cleanLoadKeys(d, listTitle, id);
     } catch (e) {
-      alert('Error loading:\n\n' + e);
+      window.alert('Error loading:\n\n' + e);
       throw e;
     }
 
@@ -227,13 +227,13 @@ export class SharepointChoiceUtils {
   private parseLoop(i: any): any {
     try {
       if (typeof i == "string") {
-        if (i.match(/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9]:*[0-9]*\.*[0-9]*Z*$/) != null
-          || i.match(/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]$/) != null) {
+        if (/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9]:*[0-9]*\.*[0-9]*Z*$/.test(i)
+          || /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]$/.test(i)) {
           return new Date(i);
         }
       } else if (typeof i == "object") {
         try {
-          for (var a in i)
+          for (let a of Object.keys(i))
             i[a] = this.parseLoop(i[a]);
         } catch (e) { }
       }
@@ -336,7 +336,7 @@ export class SharepointChoiceUtils {
 
     delete save["$$hashKey"];
 
-    for (var key in save) {
+    for (let key of Object.keys(save)) {
       if (save[key] === '')
         save[key] = null;
       
@@ -404,7 +404,7 @@ export class SharepointChoiceUtils {
           return a.FileName;
         });
 
-        for (var i = 0; i < deletes.length; i++)
+        for (let i = 0; i < deletes.length; i++)
           try {
             await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).attachmentFiles.getByName(deletes[i]).delete();
           } catch (e) {
@@ -420,7 +420,7 @@ export class SharepointChoiceUtils {
           };
         });
 
-        for (var a = 0; a < adds.length; a++)
+        for (let a = 0; a < adds.length; a++)
           try {
             await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).attachmentFiles.add(adds[a].name, adds[a].content);
           } catch (e) {
@@ -428,12 +428,12 @@ export class SharepointChoiceUtils {
           }
       }
     } catch (e) {
-      alert('Error saving data:\n\n' + e);
+      window.alert('Error saving data:\n\n' + e);
       throw e;
     }
 
     if (errors.length > 0) {
-      alert('Error saving attachments:\n\n' + errors.join('\n'));
+      window.alert('Error saving attachments:\n\n' + errors.join('\n'));
       throw errors.join('\n');
     }
 
@@ -543,14 +543,14 @@ export class SharepointChoiceUtils {
       }
 
       // process saves and deletes
-      for (var i = 0; i < files.results.length; i++) {
+      for (let i = 0; i < files.results.length; i++) {
+        let file = files.results[i];
         try {
-          var file = files.results[i];
           if (!file.ListItemAllFields)
             file.ListItemAllFields = {};
 
           // clone common metadata for files
-          for (var m in commonmeta) {
+          for (let m of Object.keys(commonmeta)) {
             file.ListItemAllFields[m] = commonmeta[m];
           }
 
@@ -585,12 +585,12 @@ export class SharepointChoiceUtils {
         }
       }
     } catch (e) {
-      alert('Error saving folder:\n\n' + e);
+      window.alert('Error saving folder:\n\n' + e);
       throw e;
     }
 
     if (errors.length > 0) {
-      alert('Error saving files:\n\n' + errors.join('\n'));
+      window.alert('Error saving files:\n\n' + errors.join('\n'));
       throw errors.join('\n');
     }
   }
