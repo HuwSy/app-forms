@@ -26,7 +26,8 @@ div[data-automation-id="CanvasControl"] {
   }
   section.mainContent,
   div.CanvasZone {
-    margin: 0;padding:0 !important
+    margin: 0;
+    padding: 0 !important;
   }
   div[data-sp-feature-tag="PageTitle web part (Banner)"] div {
     min-height: 0;
@@ -57,11 +58,15 @@ div[data-automation-id="CanvasControl"] {
   padding: 45vh 0;
   color: #eee;
   overflow: hidden;
-  text-wrap: nowrap;
+  white-space: nowrap;
 }
 
 [ng-version] > * {
   position: relative;
+}
+
+[ng-version] h3 {
+  clear: both;
 }
 
 [ng-version], .choice {
@@ -204,16 +209,16 @@ a.fc-event {
       display: inline-block;
     }
 
-    div > span {
-      display: inline-block;
-      padding: 4px;
-      border: 1px solid #eee;
-    }
-
     .choice > span {
       border: 0 !important;
       padding: 0 !important;
     }
+  }
+
+  div.people > span {
+    display: inline-block;
+    padding: 4px;
+    border: 1px solid #eee;
   }
 
   button {
@@ -288,7 +293,7 @@ a.fc-event {
 }
 
 .AutoComplete {
-  box-shadow: 0 2px 7px rgb(0 0 0 / 20%);
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.20);
   width: 350px;
   top: 0;
   border-radius: 0 0 4px 4px;
@@ -417,6 +422,7 @@ a.fc-event {
   margin-top: 20px;
   border: none;
   width: 100%;
+  border-spacing: 0;
 
   td,
   th {
@@ -807,4 +813,3 @@ del {
     }
   }
 }
-
