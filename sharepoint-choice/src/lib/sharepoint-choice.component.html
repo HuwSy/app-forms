@@ -365,6 +365,7 @@
                       [spec]="loadOrGenerateSpec(file?.doctype, 'Choice')"
                       [field]="file?.doctype || 'DocType'"
                       [prefix]="field+'_'+i"
+                      (change)="changed($event)"
                       [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
           </app-choice>
         </td>
@@ -409,6 +410,7 @@
           <input [disabled]="disabled"
                  [hidden]="f.ServerRelativeUrl"
                  [(ngModel)]="f.ListItemAllFields.Title"
+                 (change)="changed($event)"
                  style="width: calc( 100% - 38px );"
                  name="{{prefix ?? ''}}{{field}}_Name_{{i}}"
                  [title]="f.FileName + ' - ' + f.Length">
@@ -426,6 +428,7 @@
                       [spec]="loadOrGenerateSpec(file?.notes)"
                       [field]="file?.notes || 'Notes'"
                       [prefix]="field+'_'+i"
+                      (change)="changed($event)"
                       [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
           </app-choice>
         </td>
@@ -440,6 +443,7 @@
                       [text]="{
                         height: 35
                       }"
+                      (change)="changed($event)"
                       [override]='"{\"Title\":\"\"}"'>
           </app-choice>
         </td>
@@ -488,6 +492,7 @@
                  type="checkbox"
                  [disabled]="disabled || f.Deleted || (field != 'Attachments' && file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402"
                  [(ngModel)]="f.Checked"
+                 (change)="changed($event)"
                  name="{{prefix ?? ''}}{{field}}_Check_{{i}}">
 
           <a [hidden]="!f.ServerRelativeUrl || !file?.download"
@@ -506,6 +511,7 @@
                  [(ngModel)]="f.ListItemAllFields.Title"
                  style="width: calc( 100% - 38px );"
                  name="{{prefix ?? ''}}{{field}}_Name_{{i}}"
+                 (change)="changed($event)"
                  [title]="f.FileName + ' - ' + f.Length">
           }
 
@@ -523,6 +529,7 @@
                       [spec]="loadOrGenerateSpec(file?.doctype, 'Choice')"
                       [field]="file?.doctype || 'DocType'"
                       [prefix]="field+'_'+i"
+                      (change)="changed($event)"
                       [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
           </app-choice>
         </div>
@@ -535,6 +542,7 @@
                       [spec]="loadOrGenerateSpec(file?.notes)"
                       [field]="file?.notes || 'Notes'"
                       [prefix]="field+'_'+i"
+                      (change)="changed($event)"
                       [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
           </app-choice>
         </div>
@@ -545,6 +553,7 @@
                       [spec]="file?.spec || spec"
                       [field]="file?.spec?.[k]?.InternalName"
                       [prefix]="field+'_'+i"
+                      (change)="changed($event)"
                       [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402"
                       [text]="{
                         height: 75
