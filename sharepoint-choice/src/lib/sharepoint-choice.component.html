@@ -121,6 +121,7 @@
            name="{{prefix ?? ''}}{{field}}"
            [min]="get('Min')"
            [max]="get('Max')"
+           (change)="changed($event)"
            placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
     }
     @case ('Number') {
