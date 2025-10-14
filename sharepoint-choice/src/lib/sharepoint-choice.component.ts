@@ -418,7 +418,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this.form[this.field] = e.target ? e.target.value : e;
 
     this.chRef.detectChanges();
-
     this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
   }
 
@@ -470,7 +469,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     this.results = [];
     this.chRef.detectChanges();
-
     this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
   }
 
@@ -585,6 +583,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       }
     });
     e.target.value = null;
+    
+    this.chRef.detectChanges();
+    this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
   }
 
   changeSort(field?: string) {
@@ -676,7 +677,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
 
     this.chRef.detectChanges();
-
     this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
   }
 
@@ -1042,7 +1042,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     this.office.loading = false;
     this.chRef.detectChanges();
-
     this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
   }
 
@@ -1212,7 +1211,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.users = [];
 
     this.chRef.detectChanges();
-
     this.change.emit({field: this.field, value: this.form[this.field + 'Id']?.results ?? this.form[this.field + 'Id']});
   }
 
@@ -1269,7 +1267,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     })
 
     this.chRef.detectChanges();
-
     this.change.emit({field: this.field, value: this.form[this.field + 'Id']?.results ?? this.form[this.field + 'Id']});
   }
 
