@@ -26,7 +26,7 @@
              [(ngModel)]="form[field]"
              [required]="required()"
              name="{{prefix ?? ''}}{{field}}"
-             (change)="change($event)">
+             (change)="changed($event)">
     </label>
     }
     @case ('MultiChoice') {
@@ -36,7 +36,7 @@
            [(ngModel)]="filterMulti"><br>
     }
     <select (mousedown)="false"
-            (click)="change($event)"
+            (click)="changed($event)"
             multiple="multiple"
             class="{{multiLargeorSmall()}}"
             [disabled]="disabled"
@@ -78,7 +78,7 @@
            [style.width.%]="!disabled || inChoices() ? 50 : 100"
            maxlength="250"
            (click)="$event.target.select()"
-           (change)="change($event)"
+           (change)="changed($event)"
            [hidden]="inChoices()">
     }
     @else {
@@ -90,7 +90,7 @@
              [(ngModel)]="form[field]"
              [required]="required()"
              name="{{prefix ?? ''}}{{field}}"
-             (change)="change($event)">
+             (change)="changed($event)">
       {{select?.none}}
     </label>
     }
@@ -102,7 +102,7 @@
              [(ngModel)]="form[field]"
              [required]="required()"
              name="{{prefix ?? ''}}{{field}}"
-             (change)="change($event)">
+             (change)="changed($event)">
       {{i}}
     </label>
     }
@@ -133,7 +133,7 @@
            name="{{prefix ?? ''}}{{field}}"
            [min]="get('Min')"
            [max]="get('Max')"
-           (change)="change($event)"
+           (change)="changed($event)"
            placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
     }
     @case ('DateTime') {
@@ -144,7 +144,7 @@
            (ngModelChange)="form[field] = $event"
            [required]="required()"
            name="{{prefix ?? ''}}{{field}}"
-           (change)="change($event)"
+           (change)="changed($event)"
            [min]="get('Min')"
            [max]="get('Max')"
            placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
@@ -156,7 +156,7 @@
            (ngModelChange)="form[field] = $event"
            [required]="required()"
            name="{{prefix ?? ''}}{{field}}"
-           (change)="change($event)"
+           (change)="changed($event)"
            [min]="get('Min')"
            [max]="get('Max')"
            placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
@@ -170,7 +170,7 @@
            [required]="required()"
            name="{{prefix ?? ''}}{{field}}"
            [maxlength]="get('MaxLength')"
-           (change)="change($event)"
+           (change)="changed($event)"
            (keyup)="onUpText($event.key)"
            (click)="onUpText(undefined)"
            placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
@@ -204,14 +204,14 @@
     <textarea [(ngModel)]="form[field]"
               [required]="required()"
               name="{{prefix ?? ''}}{{field}}"
-              (change)="change($event)"
+              (change)="changed($event)"
               [style]="(text?.height ? 'height: '+text?.height+'px' : '')"
               placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."></textarea>
     }
     @else {
     <textarea [required]="required()"
               name="{{prefix ?? ''}}{{field}}"
-              (change)="change($event)"
+              (change)="changed($event)"
               [style]="(text?.height ? 'height: '+text?.height+'px' : '')"
               placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."></textarea>
     }
@@ -224,7 +224,7 @@
       <ngx-editor [editor]="editor"
                   [(ngModel)]="form[field]"
                   placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."
-                  (ngModelChange)="change($event)"
+                  (ngModelChange)="changed($event)"
                   name="{{prefix ?? ''}}{{field}}"
                   [required]="required()"
                   [outputFormat]="'html'">
@@ -234,7 +234,7 @@
       <ngx-editor [editor]="editor"
                   [(ngModel)]="unused"
                   placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."
-                  (ngModelChange)="change($event)"
+                  (ngModelChange)="changed($event)"
                   name="{{prefix ?? ''}}{{field}}"
                   [required]="required()"
                   [outputFormat]="'html'">
@@ -262,13 +262,13 @@
            name="{{prefix ?? ''}}{{field}}_Url"
            placeholder="https://"
            pattern="^.+\:\/\/.+$|^mailto\:.+$"
-           (change)="change($event)"
+           (change)="changed($event)"
            style="width:50%">
     <input [disabled]="disabled"
            [(ngModel)]="form[field].Description"
            name="{{prefix ?? ''}}{{field}}_Desc"
            maxlength="250"
-           (change)="change($event)"
+           (change)="changed($event)"
            style="width:50%">
     }
     @case ('Attachments') {
