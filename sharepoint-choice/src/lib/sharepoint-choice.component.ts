@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Input, ElementRef, ChangeDetectorRef, ErrorHandler } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, ElementRef, ChangeDetectorRef, ErrorHandler, Output, EventEmitter } from '@angular/core';
 import "@pnp/sp/webs";
 import { Web } from "@pnp/sp/webs";
 import { Editor, NgxEditorModule, Toolbar } from 'ngx-editor';
@@ -37,7 +37,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   @Input() override?: string|object; // manually override any spec above. prefer send as string as passing object kills large form performance
 
   @Input() disabled!: boolean; // get disabled state from outside
-  @Input() onchange?: Function; // onchange trigger a function(this)
+  @Output() change = new EventEmitter<{field: string, value: any}>(); // emit changes to parent through (change) binding
 
   @Input() text?: { // override text for field
     pattern?: string, // regex pattern for validation
@@ -45,7 +45,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     search?: Function, // search via api for drop down options
     select?: Function, // upon selection in drop down call back function
-    parent?: any // parent object that the control belongs to for call backs
+    parent?: any // parent object that the control belongs to for call backs or specific search functions
   };
 
   @Input() select?: { // override select for field
@@ -53,7 +53,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     other?: string, // Other fill-in option text, will override to allow other
 
     filter?: Function // filter choices by a function
-    parent?: any // parent object that the control belongs to for call backs
   };
 
   @Input() file?: { // override file for field
@@ -384,7 +383,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // any field changes trigger for relevant updates
-  async change(e: any): Promise<void> {
+  async changed(e: any): Promise<void> {
     // on multi select, not using ctrl key
     if (this.get('TypeAsString') == 'MultiChoice') {
       e.stopPropagation();
@@ -417,11 +416,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // append only changes needs 1 way bind to form
     else if (this.get('AppendOnly'))
       this.form[this.field] = e.target ? e.target.value : e;
-    // if on change passed in
-    if (typeof this.onchange == "function")
-      await this.onchange(this);
 
     this.chRef.detectChanges();
+
+    this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
   }
 
   /* 
@@ -472,6 +470,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     this.results = [];
     this.chRef.detectChanges();
+
+    this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
   }
 
   /* 
@@ -487,9 +487,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   choices(): any[string] {
     // get choices from list
     let choices = this.get('Choices');
-    // use any provided filter
+    // use any provided filter, pass in the form for context or specific filters but not the remainder of this object
     if (typeof this.select?.filter == "function")
-      choices = choices.filter((c: any, i: number, a: any) => this.select?.filter ? this.select.filter(c, i, a, this.select.parent) : true);
+      choices = choices.filter((c: any, i: number, a: any) => this.select?.filter ? this.select.filter(c, i, a, {form: this.form}) : true);
     // common filters
     return choices.filter((x: string) => {
       // exclude unselected items on disabled fields
@@ -675,10 +675,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       }
     }
 
-    if (typeof this.onchange == "function")
-      await this.onchange(this);
-
     this.chRef.detectChanges();
+
+    this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
   }
 
   // add attachment to array
@@ -696,11 +695,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       reader.onload = async function (event: any) {
         try {
           await ths.appendFile(f.name, event.target.result, ths.form[ths.field].results);
-
-          if (typeof ths.onchange == "function") {
-            await ths.onchange(this);
-            ths.chRef.detectChanges();
-          }
 
           remaining--;
 
@@ -1048,6 +1042,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     this.office.loading = false;
     this.chRef.detectChanges();
+
+    this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
   }
 
   // extract zip files and append to results
@@ -1215,10 +1211,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.name = '';
     this.users = [];
 
-    if (typeof this.onchange == "function")
-      await this.onchange(this);
-
     this.chRef.detectChanges();
+
+    this.change.emit({field: this.field, value: this.form[this.field + 'Id']?.results ?? this.form[this.field + 'Id']});
   }
 
   // load list data only has IDs so expand the object
@@ -1273,10 +1268,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       return x.Id != usr
     })
 
-    if (typeof this.onchange == "function")
-      await this.onchange(this);
-
     this.chRef.detectChanges();
+
+    this.change.emit({field: this.field, value: this.form[this.field + 'Id']?.results ?? this.form[this.field + 'Id']});
   }
 
   // trigger user search
