@@ -247,6 +247,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (max != null && p > max)
       p = max;
     this.form[this.field] = p;
+
+    this.chRef.detectChanges();
+    this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
   }
 
   // field required based on spec but required is not needed for hidden/disabled items
@@ -522,11 +525,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // on single selection change
   selChangeS(v: string): void {
     this.form[this.field] = v;
-  }
-
-  // on multi selection change, requires ctrl key
-  selChangeM(v: string): void {
-    this.form[this.field].results = v;
   }
 
   /* 
