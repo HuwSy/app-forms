@@ -36,7 +36,7 @@
            [(ngModel)]="filterMulti"><br>
     }
     <select (mousedown)="false"
-            (click)="changed($event)"
+            (click)="changedM($event)"
             multiple="multiple"
             class="{{multiLargeorSmall()}}"
             [disabled]="disabled"
@@ -212,7 +212,7 @@
     @else {
     <textarea [required]="required()"
               name="{{prefix ?? ''}}{{field}}"
-              (change)="changed($event)"
+              (change)="changedA($event)"
               [style]="(text?.height ? 'height: '+text?.height+'px' : '')"
               placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."></textarea>
     }
@@ -235,7 +235,7 @@
       <ngx-editor [editor]="editor"
                   [(ngModel)]="unused"
                   placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."
-                  (ngModelChange)="changed($event)"
+                  (ngModelChange)="changedA($event)"
                   name="{{prefix ?? ''}}{{field}}"
                   [required]="required()"
                   [outputFormat]="'html'">
