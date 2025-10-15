@@ -436,7 +436,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // append only changes needs 1 way bind to form
   changedA(e: any): void {
-    this.form[this.field] = e;
+    this.form[this.field] = e.target ? e.target.value : e;
 
     this.chRef.detectChanges();
     this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
