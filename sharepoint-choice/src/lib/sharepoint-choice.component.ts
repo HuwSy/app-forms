@@ -28,6 +28,7 @@ import { SharepointChoiceLogging } from './sharepoint-choice.logging';
   }]
 })
 export class SharepointChoiceComponent implements OnInit, OnDestroy {
+  // should consider @Output ngModel but then field and spec would need more repatition, ie form['Title'] spec["Title']
   @Input() form!: object; // form containing field, varies based on list therefore object not defined explicitly
   @Input() field!: string; // internal field name on form object, used for push back and against spec
   @Input() prefix?: string; // prefix name attributes for uniqness, usefull for nesting
@@ -36,6 +37,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   @Input() versions?: Array<object>; // version history of this field to display if presented, varies based on list therefore object not defined explicitly
   @Input() override?: string|object; // manually override any spec above. prefer send as string as passing object kills large form performance
 
+  // could also input hidden rather than elRef but that doesnt pick up non angular html hidden or parent hidden
   @Input() disabled!: boolean; // get disabled state from outside
   @Output() change = new EventEmitter<{field: string, value: any}>(); // emit changes to parent through (change) binding
 
@@ -43,6 +45,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     pattern?: string, // regex pattern for validation
     height?: number, // height of text area in px
 
+    // should move from call backs that depend on parent being passed in to @Output keys sent @Input search results @Output selected but it would place these for all field types
     search?: Function, // search via api for drop down options
     select?: Function, // upon selection in drop down call back function
     parent?: any // parent object that the control belongs to for call backs or specific search functions
@@ -383,39 +386,47 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // any field changes trigger for relevant updates
-  async changed(e: any): Promise<void> {
-    // on multi select, not using ctrl key
-    if (this.get('TypeAsString') == 'MultiChoice') {
-      e.stopPropagation();
-      let scrollTop = 0;
-      if (e.target.parentNode)
-        scrollTop = e.target.parentNode.scrollTop;
+  changed(): void {
+    this.chRef.detectChanges();
+    this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
+  }
 
-      let v = e.target.innerText;
-      // ensure object type is correct
-      if (!this.form[this.field] || !this.form[this.field].__metadata)
-        this.form[this.field] = {
-          __metadata: { type: "Collection(Edm.String)" },
-          results: !this.form[this.field] ? [] : this.form[this.field].results ? this.form[this.field].results : typeof this.form[this.field] == "object" ? this.form[this.field] : [this.form[this.field]]
-        }
-      // if there are selected results set the field to add/remove the most recent click
-      let i = this.form[this.field].results.indexOf(v);
-      if (i >= 0)
-        this.form[this.field].results.splice(i, 1);
-      else
-        this.form[this.field].results.push(v);
+  // on multi select, not using ctrl key
+  changedM(e:any): void {
+    e.stopPropagation();
+    let scrollTop = 0;
+    if (e.target.parentNode)
+      scrollTop = e.target.parentNode.scrollTop;
 
-      const tmp = this.form[this.field].results;
-      this.form[this.field].results = [];
-      for (let i = 0; i < tmp.length; i++) {
-        this.form[this.field].results[i] = tmp[i];
+    let v = e.target.innerText;
+    // ensure object type is correct
+    if (!this.form[this.field] || !this.form[this.field].__metadata)
+      this.form[this.field] = {
+        __metadata: { type: "Collection(Edm.String)" },
+        results: !this.form[this.field] ? [] : this.form[this.field].results ? this.form[this.field].results : typeof this.form[this.field] == "object" ? this.form[this.field] : [this.form[this.field]]
       }
-      setTimeout((function () { e.target.parentNode.scrollTop = scrollTop; }), 10);
-      setTimeout((function () { e.target.parentNode.focus(); }), 10);
-    }
-    // append only changes needs 1 way bind to form
-    else if (this.get('AppendOnly'))
-      this.form[this.field] = e.target ? e.target.value : e;
+    // if there are selected results set the field to add/remove the most recent click
+    let i = this.form[this.field].results.indexOf(v);
+    if (i >= 0)
+      this.form[this.field].results.splice(i, 1);
+    else
+      this.form[this.field].results.push(v);
+
+    const tmp = this.form[this.field].results;
+    this.form[this.field].results = [];
+    for (let i = 0; i < tmp.length; i++)
+      this.form[this.field].results[i] = tmp[i];
+
+    setTimeout((function () { e.target.parentNode.scrollTop = scrollTop; }), 10);
+    setTimeout((function () { e.target.parentNode.focus(); }), 10);
+
+    this.chRef.detectChanges();
+    this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
+  }
+
+  // append only changes needs 1 way bind to form
+  changedA(e: any): void {
+    this.form[this.field] = e.target ? e.target.value : e;
 
     this.chRef.detectChanges();
     this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
