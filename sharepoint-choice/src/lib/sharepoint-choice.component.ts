@@ -252,6 +252,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
   }
 
+  dateSet(e: any): void {
+    this.form[this.field] = e.target ? e.target.value : e;
+
+    this.chRef.detectChanges();
+    this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
+  }
+
   // field required based on spec but required is not needed for hidden/disabled items
   required(): boolean {
     if (this.disabled || this.elRef.nativeElement.hidden || !this.get('Required'))
@@ -525,6 +532,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // on single selection change
   selChangeS(v: string): void {
     this.form[this.field] = v;
+
+    this.chRef.detectChanges();
+    this.change.emit({field: this.field, value: this.form[this.field]?.results ?? this.form[this.field]});
   }
 
   /* 
