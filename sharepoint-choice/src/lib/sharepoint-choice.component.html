@@ -26,7 +26,7 @@
              [(ngModel)]="form[field]"
              [required]="required()"
              name="{{prefix ?? ''}}{{field}}"
-             (change)="changed($event)">
+             (change)="changed()">
     </label>
     }
     @case ('MultiChoice') {
@@ -78,7 +78,7 @@
            [style.width.%]="!disabled || inChoices() ? 50 : 100"
            maxlength="250"
            (click)="$event.target.select()"
-           (change)="changed($event)"
+           (change)="changed()"
            [hidden]="inChoices()">
     }
     @else {
@@ -90,7 +90,7 @@
              [(ngModel)]="form[field]"
              [required]="required()"
              name="{{prefix ?? ''}}{{field}}"
-             (change)="changed($event)">
+             (change)="changed()">
       {{select?.none}}
     </label>
     }
@@ -102,7 +102,7 @@
              [(ngModel)]="form[field]"
              [required]="required()"
              name="{{prefix ?? ''}}{{field}}"
-             (change)="changed($event)">
+             (change)="changed()">
       {{i}}
     </label>
     }
@@ -121,7 +121,7 @@
            name="{{prefix ?? ''}}{{field}}"
            [min]="get('Min')"
            [max]="get('Max')"
-           (change)="changed($event)"
+           (change)="changed()"
            placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
     }
     @case ('Number') {
@@ -134,7 +134,7 @@
            name="{{prefix ?? ''}}{{field}}"
            [min]="get('Min')"
            [max]="get('Max')"
-           (change)="changed($event)"
+           (change)="changed()"
            placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
     }
     @case ('DateTime') {
@@ -145,7 +145,7 @@
            (ngModelChange)="form[field] = $event"
            [required]="required()"
            name="{{prefix ?? ''}}{{field}}"
-           (change)="changed($event)"
+           (change)="changed()"
            [min]="get('Min')"
            [max]="get('Max')"
            placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
@@ -157,7 +157,7 @@
            (ngModelChange)="form[field] = $event"
            [required]="required()"
            name="{{prefix ?? ''}}{{field}}"
-           (change)="changed($event)"
+           (change)="changed()"
            [min]="get('Min')"
            [max]="get('Max')"
            placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
@@ -171,7 +171,7 @@
            [required]="required()"
            name="{{prefix ?? ''}}{{field}}"
            [maxlength]="get('MaxLength')"
-           (change)="changed($event)"
+           (change)="changed()"
            (keyup)="onUpText($event.key)"
            (click)="onUpText(undefined)"
            placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
@@ -205,7 +205,7 @@
     <textarea [(ngModel)]="form[field]"
               [required]="required()"
               name="{{prefix ?? ''}}{{field}}"
-              (change)="changed($event)"
+              (change)="changed()"
               [style]="(text?.height ? 'height: '+text?.height+'px' : '')"
               placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."></textarea>
     }
@@ -225,7 +225,7 @@
       <ngx-editor [editor]="editor"
                   [(ngModel)]="form[field]"
                   placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."
-                  (ngModelChange)="changed($event)"
+                  (ngModelChange)="changed()"
                   name="{{prefix ?? ''}}{{field}}"
                   [required]="required()"
                   [outputFormat]="'html'">
@@ -263,13 +263,13 @@
            name="{{prefix ?? ''}}{{field}}_Url"
            placeholder="https://"
            pattern="^.+\:\/\/.+$|^mailto\:.+$"
-           (change)="changed($event)"
+           (change)="changed()"
            style="width:50%">
     <input [disabled]="disabled"
            [(ngModel)]="form[field].Description"
            name="{{prefix ?? ''}}{{field}}_Desc"
            maxlength="250"
-           (change)="changed($event)"
+           (change)="changed()"
            style="width:50%">
     }
     @case ('Attachments') {
@@ -365,7 +365,7 @@
                       [spec]="loadOrGenerateSpec(file?.doctype, 'Choice')"
                       [field]="file?.doctype || 'DocType'"
                       [prefix]="field+'_'+i"
-                      (change)="changed($event)"
+                      (change)="changed()"
                       [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
           </app-choice>
         </td>
@@ -410,7 +410,7 @@
           <input [disabled]="disabled"
                  [hidden]="f.ServerRelativeUrl"
                  [(ngModel)]="f.ListItemAllFields.Title"
-                 (change)="changed($event)"
+                 (change)="changed()"
                  style="width: calc( 100% - 38px );"
                  name="{{prefix ?? ''}}{{field}}_Name_{{i}}"
                  [title]="f.FileName + ' - ' + f.Length">
@@ -428,7 +428,7 @@
                       [spec]="loadOrGenerateSpec(file?.notes)"
                       [field]="file?.notes || 'Notes'"
                       [prefix]="field+'_'+i"
-                      (change)="changed($event)"
+                      (change)="changed()"
                       [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
           </app-choice>
         </td>
@@ -443,7 +443,7 @@
                       [text]="{
                         height: 35
                       }"
-                      (change)="changed($event)"
+                      (change)="changed()"
                       [override]='"{\"Title\":\"\"}"'>
           </app-choice>
         </td>
@@ -492,7 +492,7 @@
                  type="checkbox"
                  [disabled]="disabled || f.Deleted || (field != 'Attachments' && file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402"
                  [(ngModel)]="f.Checked"
-                 (change)="changed($event)"
+                 (change)="changed()"
                  name="{{prefix ?? ''}}{{field}}_Check_{{i}}">
 
           <a [hidden]="!f.ServerRelativeUrl || !file?.download"
@@ -511,7 +511,7 @@
                  [(ngModel)]="f.ListItemAllFields.Title"
                  style="width: calc( 100% - 38px );"
                  name="{{prefix ?? ''}}{{field}}_Name_{{i}}"
-                 (change)="changed($event)"
+                 (change)="changed()"
                  [title]="f.FileName + ' - ' + f.Length">
           }
 
@@ -529,7 +529,7 @@
                       [spec]="loadOrGenerateSpec(file?.doctype, 'Choice')"
                       [field]="file?.doctype || 'DocType'"
                       [prefix]="field+'_'+i"
-                      (change)="changed($event)"
+                      (change)="changed()"
                       [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
           </app-choice>
         </div>
@@ -542,7 +542,7 @@
                       [spec]="loadOrGenerateSpec(file?.notes)"
                       [field]="file?.notes || 'Notes'"
                       [prefix]="field+'_'+i"
-                      (change)="changed($event)"
+                      (change)="changed()"
                       [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
           </app-choice>
         </div>
@@ -553,7 +553,7 @@
                       [spec]="file?.spec || spec"
                       [field]="file?.spec?.[k]?.InternalName"
                       [prefix]="field+'_'+i"
-                      (change)="changed($event)"
+                      (change)="changed()"
                       [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402"
                       [text]="{
                         height: 75
