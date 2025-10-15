@@ -39,7 +39,7 @@ div[data-automation-id="CanvasControl"] {
   #s4-titlerow,
   #s4-ribbonrow,
   #suiteBarDelta #suiteBarTop > * > * {
-      display: none !important;
+    display: none !important;
   }
   .desktop {
     display: none;
@@ -65,11 +65,11 @@ div[data-automation-id="CanvasControl"] {
   position: relative;
 }
 
-[ng-version] h3 {
-  clear: both;
-}
-
 [ng-version], .choice {
+  h3 {
+    clear: both;
+  }
+  
   input,
   select,
   textarea {
@@ -124,7 +124,7 @@ div[data-automation-id="CanvasControl"] {
     box-shadow: 0 1px 3px rgba(0, 0, 0, .24);
   }
 
-  button.primary {
+  .primary {
     background-color: #20476b;
     color: #fff;
   }
@@ -134,7 +134,7 @@ div[data-automation-id="CanvasControl"] {
     color: white;
   }
 
-  button.primary:hover {
+  .primary:hover {
     color: #fff;
     background-color: #16314a;
   }
@@ -215,7 +215,7 @@ a.fc-event {
     }
   }
 
-  div.people > span {
+  .people > span {
     display: inline-block;
     padding: 4px;
     border: 1px solid #eee;
@@ -360,12 +360,13 @@ a.fc-event {
   }
 }
 
-.table {
+.table, .files {
   border: none;
   width: 100%;
+  border-spacing: 0;
 
   tr:nth-child(odd) {
-    background-color: #f5f5f5;
+    background-color: #e6e6e6;
   }
 
   tr:hover {
@@ -396,7 +397,7 @@ a.fc-event {
     }
   }
 
-  tr.top {
+  tr:first-child {
     position: sticky;
     top: 0;
   }
@@ -412,7 +413,7 @@ a.fc-event {
     z-index: 1;
   }
 
-  tr.foot {
+  tr:last-child {
     position: sticky;
     bottom: 0px;
   }
@@ -420,19 +421,9 @@ a.fc-event {
 
 .files {
   margin-top: 20px;
-  border: none;
-  width: 100%;
-  border-spacing: 0;
-
-  td,
-  th {
-    padding: 8px;
-  }
-
+  
   tr {
     th {
-      font-weight: bold;
-      vertical-align: top;
       white-space: nowrap;
     }
 
@@ -446,12 +437,7 @@ a.fc-event {
       vertical-align: bottom;
     }
   }
-  
-  tr:nth-child(odd) {
-    background: #e6e6e6;
-  }
 }
-
 .files > div {
   padding: 8px
 }
@@ -702,14 +688,6 @@ a.fc-event {
     text-align: center;
     padding: 40px;
   }
-}
-
-.SLA15 {
-  background-color: palegoldenrod;
-}
-
-.SLA30 {
-  background-color: palevioletred;
 }
 
 .Accent1 {
