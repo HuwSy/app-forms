@@ -365,9 +365,9 @@ export class SharepointChoiceUtils {
         continue;
       }
 
-      // convert back to direct array and ensure no nulls selected, should never occur but does on some browsers?
+      // convert back to direct array and ensure no nulls selected, should never occur but does on some browsers? and deduplicate data
       if (typeof save[key] == "object" && save[key].results) {
-        save[key] = save[key].results.filter((i: any) => i);
+        save[key] = save[key].results.filter((i: any) => i).filter((item: any, pos: number, arr: any) => arr.indexOf(item) == pos);
         continue;
       }
     }
@@ -595,3 +595,4 @@ export class SharepointChoiceUtils {
     }
   }
 }
+
