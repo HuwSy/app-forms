@@ -368,8 +368,20 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       // if the field is empty (not set null) and its not a person field (+Id) then set the default value only if there is one
       if (this.form[this.field] === undefined && !this.form[this.field + 'Id']) {
         let d = this.get('DefaultValue');
-        if (d)
-          this.form[this.field] = d;
+        if (d && p == 'MultiChoice')
+          this.form[this.field].results = [d];
+        else if (d && p == 'UserMulti')
+          this.form[this.field + "Id"].results = [d];
+        else if (d && p == 'User')
+          this.form[this.field + "Id"] = d;
+        else if (d)
+          this.form[this.field] = (
+            p == "DateTime" ? new Date(d) :
+            p == "Integer" ? parseInt(d) :
+            p == "Number" ? parseFloat(d) :
+            p == "Boolean" ? (d == '1' ? true : false) :
+            d
+          );
       }
 
       // always disable read only fields initially, may get overridden later but thats the consumers responsibility
