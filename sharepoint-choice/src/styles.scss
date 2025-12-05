@@ -419,6 +419,144 @@ a.fc-event {
   }
 }
 
+.table-wrapper {
+  overflow: auto;
+  position: relative;
+  max-width: 100%;
+}
+.table {
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 9;
+
+    background-color: #ddd;
+
+    tr:first-child {
+      position: inherit;
+    }
+    tr:last-child {
+      position: inherit;
+    }
+
+    th {
+      padding: 4px 25px 4px 8px;
+      vertical-align: middle;
+      border-width: 0 1px;
+      border-style: dotted;
+      border-color: #bbb;
+      min-width: 35px;
+      font-weight: normal;
+      white-space: nowrap;
+      position: relative;
+      user-select: none;
+      cursor: pointer;
+
+      i {
+        position: absolute;
+        right: 16px;
+        cursor: pointer;
+      }
+      i:last-of-type {
+        right: 2px;
+      }
+
+      .options {
+        min-width: 100px;
+        position: absolute;
+        background: white;
+        border: 1px solid black;
+        padding: 4px;
+        z-index: 10;
+        margin-top: 10px;
+        left: 0;
+        border-radius: 2px;
+        box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
+
+        * {
+          width: 100%;
+        }
+
+        button {
+          margin: auto;
+        }
+      }
+
+      .resize {
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 5px;
+        height: 100%;
+        cursor: ew-resize;
+      }
+    }
+
+    tr:first-child th[rowSpan="2"] {
+      border-bottom: 1px dotted #bbb;
+    }
+
+    tr:last-child th {
+      border-bottom: 1px dotted #bbb;
+    }
+  }
+
+  tbody {
+    tr:first-child {
+      position: inherit;
+    }
+    tr:last-child {
+      position: inherit;
+    }
+
+    tr:nth-child(odd) {
+      background-color: transparent;
+    }
+    tr:nth-child(even) {
+      background-color: transparent;
+    }
+
+    tr:hover {
+      background-color: #ddd !important;
+    }
+
+    tr.loading {
+      background-color: transparent !important;
+    }
+
+    td {
+      padding: 4px;
+      border-bottom: 1px dotted #bbb;
+    }
+
+    td.center {
+      text-align: center;
+    }
+
+    td:first-child {
+      border-right: 1px dotted #bbb;
+    }
+    
+    tr.loading td {
+      position: relative;
+      height: calc(100vh - 450px);
+      border-right: 0;
+    }
+  }
+
+  tfoot {
+    tr:first-child {
+      position: inherit;
+    }
+    tr:last-child {
+      position: inherit;
+    }
+
+    position: sticky;
+    bottom: 0px;
+  }
+}
+
 .files {
   margin-top: 20px;
   
@@ -467,8 +605,12 @@ a.fc-event {
     border: 1px solid #20476b;
     border-radius: 4px 4px 0 0;
     margin-left: 0;
-    margin-bottom: -1px;
     cursor: pointer;
+    
+    position: relative;
+    overflow: hidden;
+    height: 36px;
+    margin-bottom: -6px;
   }
 
   li[hidden] {
@@ -751,6 +893,38 @@ del {
   color: #555;
 }
 
+.editor {
+  position: relative;
+
+  div {
+    position: absolute;
+    top: -35px;
+    right: 0;
+    color: #20476b;
+    padding: 7px 10px;
+    border: 1px solid #20476b;
+    border-radius: 4px 4px 0 0;
+    cursor: pointer;
+  }
+}
+
+.cols {
+  list-style-type: none;
+  padding-left: 0;
+
+  input {
+    float: right;
+  }
+
+  li {
+    clear: both;
+  }
+
+  li:hover {
+    background-color: #f0f0f0;
+  }
+}
+
 .Overlay {
   position: fixed;
   top: 0px;
@@ -774,9 +948,16 @@ del {
 
     .Close {
       float: right;
+      cursor: pointer;
 
       * {
         font-weight: bold;
+      }
+    }
+
+    .Actions {
+      * {
+        text-align: right;
       }
     }
 
