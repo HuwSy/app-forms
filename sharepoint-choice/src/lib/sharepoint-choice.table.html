@@ -27,7 +27,7 @@
 <table class="table">
   <thead>
     <tr>
-      @for (col of columns; track $index) {
+      @for (col of columns; track $index; let colIndex = $index) {
       <th [style.minWidth.px]="col.width"
           [title]="col.headerTooltip || col.headerName || ''"
           (click)="changeSort(col)"
@@ -43,17 +43,20 @@
         @if (col.filter != null && col.filter != undefined) {
         <i (click)="col.filtervisible = !col.filtervisible;$event.stopPropagation()"
            [style.color]="filter[col.field] ? 'darkorange' : 'black'">&#9776;</i>
-        <div [hidden]="!col.filtervisible" class="options">
+        @if (col.filtervisible) {
+        <div class="options">
         @switch (col.filter) {
         @case ('text') {
         <input type="text"
                 (click)="$event.stopPropagation()"
+                [name]="'ColFlt_'+colIndex"
                 (keyup)="changeFilter(col, 'contains', $event)"
                 (change)="changeFilter(col, 'contains', $event)"
                 [value]="filter[col.field]?.contains" />
         }
         @case ('select') {
         <select (click)="$event.stopPropagation()"
+                [name]="'ColFlt_'+colIndex"
                 (change)="changeFilter(col, 'equals', $event)"
                 [value]="filter[col.field]?.equals">
           <option value="">-- All --</option>
@@ -68,6 +71,7 @@
         Equals:<br>
         <input type="text"
                 (click)="$event.stopPropagation()"
+                [name]="'ColFlt_'+colIndex"
                 (keyup)="changeFilter(col, 'equals', $event)"
                 (change)="changeFilter(col, 'equals', $event)"
                 [value]="filter[col.field]?.equals" />
@@ -75,6 +79,7 @@
         From:<br>
         <input type="text"
                 (click)="$event.stopPropagation()"
+                [name]="'ColFlt_S'+colIndex"
                 (keyup)="changeFilter(col, 'greater', $event)"
                 (change)="changeFilter(col, 'greater', $event)"
                 [value]="filter[col.field]?.greater" />
@@ -82,6 +87,7 @@
         To:<br>
         <input type="text"
                 (click)="$event.stopPropagation()"
+                [name]="'ColFlt_E'+colIndex"
                 (keyup)="changeFilter(col, 'less', $event)"
                 (change)="changeFilter(col, 'less', $event)"
                 [value]="filter[col.field]?.less" />
@@ -90,6 +96,7 @@
         From:<br>
         <input type="date"
                 (click)="$event.stopPropagation()"
+                [name]="'ColFlt_S'+colIndex"
                 (keyup)="changeFilter(col, 'greater', $event)"
                 (change)="changeFilter(col, 'greater', $event)"
                 [value]="filter[col.field]?.greater" />
@@ -97,6 +104,7 @@
         To:<br>
         <input type="date"
                 (click)="$event.stopPropagation()"
+                [name]="'ColFlt_E'+colIndex"
                 (keyup)="changeFilter(col, 'less', $event)"
                 (change)="changeFilter(col, 'less', $event)"
                 [value]="filter[col.field]?.less" />
@@ -105,6 +113,7 @@
           <div><button (click)="col.filtervisible = false;$event.stopPropagation()">Close</button></div>
         </div>
         }
+        }
         <span class="resize" (mousedown)="startResize($event, col);$event.stopPropagation()" (click)="$event.stopPropagation()"></span>
       </th>
       }
@@ -112,7 +121,7 @@
     <tr>
       @for (parent of columns; track $index) {
       @if (parent.children?.length || 1 > 1) {
-      @for (col of parent.children; track $index) {
+      @for (col of parent.children; track $index; let colIndex = $index) {
       <th [style.minWidth.px]="col.width"
           [title]="col.headerTooltip || col.headerName || ''"
           (click)="changeSort(col)">
@@ -124,19 +133,22 @@
         <i>&darr;</i>
         }
         @if (col.filter) {
-        <i (click)="col.filterhidden = !col.filterhidden;$event.stopPropagation()"
+        <i (click)="col.filtervisible = !col.filtervisible;$event.stopPropagation()"
            [style.color]="filter[col.field] ? 'darkorange' : 'black'">&#9776;</i>
-        <div [hidden]="!col.filterhidden" class="options">
+        @if (col.filtervisible) {
+        <div class="options">
         @switch (col.filter) {
         @case ('text') {
         <input type="text"
                 (click)="$event.stopPropagation()"
+                [name]="'ColFlt_'+colIndex"
                 (keyup)="changeFilter(col, 'contains', $event)"
                 (change)="changeFilter(col, 'contains', $event)"
                 [value]="filter[col.field]?.contains" />
         }
         @case ('select') {
         <select (click)="$event.stopPropagation()"
+                [name]="'ColFlt_'+colIndex"
                 (change)="changeFilter(col, 'equals', $event)"
                 [value]="filter[col.field]?.equals">
           <option value="">-- All --</option>
@@ -151,6 +163,7 @@
         Equals:<br>
         <input type="text"
                 (click)="$event.stopPropagation()"
+                [name]="'ColFlt_'+colIndex"
                 (keyup)="changeFilter(col, 'equals', $event)"
                 (change)="changeFilter(col, 'equals', $event)"
                 [value]="filter[col.field]?.equals" />
@@ -158,6 +171,7 @@
         From:<br>
         <input type="text"
                 (click)="$event.stopPropagation()"
+                [name]="'ColFlt_S'+colIndex"
                 (keyup)="changeFilter(col, 'greater', $event)"
                 (change)="changeFilter(col, 'greater', $event)"
                 [value]="filter[col.field]?.greater" />
@@ -165,6 +179,7 @@
         To:<br>
         <input type="text"
                 (click)="$event.stopPropagation()"
+                [name]="'ColFlt_E'+colIndex"
                 (keyup)="changeFilter(col, 'less', $event)"
                 (change)="changeFilter(col, 'less', $event)"
                 [value]="filter[col.field]?.less" />
@@ -173,12 +188,15 @@
         From:<br>
         <input type="date"
                 (click)="$event.stopPropagation()"
+                [name]="'ColFlt_S'+colIndex"
                 (keyup)="changeFilter(col, 'greater', $event)"
                 (change)="changeFilter(col, 'greater', $event)"
                 [value]="filter[col.field]?.greater" />
         <br>
         To:<br>
         <input type="date"
+                (click)="$event.stopPropagation()"
+                [name]="'ColFlt_E'+colIndex"
                 (keyup)="changeFilter(col, 'less', $event)"
                 (change)="changeFilter(col, 'less', $event)"
                 [value]="filter[col.field]?.less" />
@@ -186,6 +204,7 @@
         }
           <div><button (click)="col.filtervisible = false;$event.stopPropagation()">Close</button></div>
         </div>
+        }
         }
         <span class="resize" (mousedown)="startResize($event, col);$event.stopPropagation()" (click)="$event.stopPropagation()"></span>
       </th>
@@ -312,6 +331,7 @@
   </div>
   <select [(ngModel)]="pageSize"
           style="float: left;"
+          name="PageSize"
           (change)="pageNumber = 1">
     <option [value]="10">10</option>
     <option [value]="25">25</option>
@@ -332,10 +352,10 @@
         X
       </div>
     </h3>
-    @for (heading of flds(); track $index) {
+    @for (heading of flds(); track $index; let colIndex = $index) {
     <ul class="cols">
       @if (heading.children) {
-      @for (child of heading.children; track $index) {
+      @for (child of heading.children; track $index; let childIndex = $index) {
       @if (child.field && typeof child.hide !== 'function') {
       <li>
         {{heading.headerName || ''}}
@@ -343,7 +363,8 @@
         {{child.headerName || child.field}}
         <input type="checkbox"
                (click)="toggleColumn(child)"
-               [(ngModel)]="child.hide" />
+               [(ngModel)]="child.hide"
+               [name]="'HideCol_'+colIndex+'_'+childIndex"/>
       </li>
       }
       }
@@ -353,7 +374,8 @@
         {{heading.headerName || heading.field}}
         <input type="checkbox"
                (click)="toggleColumn(heading)"
-               [(ngModel)]="heading.hide" />
+               [(ngModel)]="heading.hide"
+               [name]="'HideCol_'+colIndex" />
       </li>
       }
     </ul>
