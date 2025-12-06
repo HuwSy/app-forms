@@ -1,6 +1,7 @@
-
 @let results = rows(selectedTab);
 @let columns = flds(selectedTab);
+@let maxpage = ceil(results.length / pageSize)
+
 <ul class="Tabs"
     style="position: relative;">
   @for (s of allTabs; track $index) {
@@ -122,7 +123,7 @@
         @if (sortContains(col.field)) {
         <i>&darr;</i>
         }
-        @if (col.filter != null && col.filter != undefined) {
+        @if (col.filter) {
         <i (click)="col.filterhidden = !col.filterhidden;$event.stopPropagation()"
            [style.color]="filter[col.field] ? 'darkorange' : 'black'">&#9776;</i>
         <div [hidden]="!col.filterhidden" class="options">
@@ -202,16 +203,16 @@
     </tr>
   }
   @else if (results.length == 0) {
-    <tr>
+    <tr class="loading">
       <td colspan="999">
         No data to display
       </td>
     </tr>
   }
   @else {
-    @for (row of results.slice((this.pageNumber - 1) * this.pageSize, this.pageNumber * this.pageSize); track $index) {
+    @for (row of results.slice((this.pageNumber - 1) * this.pageSize, this.pageNumber * this.pageSize); track $index; let rowIndex = $index) {
     <tr>
-      @for (col of columns; track $index; let rowIndex = $index) {
+      @for (col of columns; track $index) {
       @if (col.children?.length || 1 > 1) {
       @for (child of col.children; track $index) {
       @if (child.cellRenderer) {
@@ -299,11 +300,15 @@
 </div>
 <div>
   <div style="float: right;">
+    <button (click)="pageNumber = 1"
+            [disabled]="pageNumber <= 2">&lt;&lt;</button>
     <button (click)="pageNumber = pageNumber - 1"
             [disabled]="pageNumber <= 1">&lt;</button>
-    Page {{pageNumber}} of {{ceil(results.length / pageSize)}}
+    Page {{pageNumber}} of {{maxpage}}
     <button (click)="pageNumber = pageNumber + 1"
-            [disabled]="pageNumber >= (results.length / pageSize)">&gt;</button>
+            [disabled]="pageNumber >= maxpage">&gt;</button>
+    <button (click)="pageNumber = maxpage"
+            [disabled]="pageNumber >= maxpage - 1">&gt;&gt;</button>
   </div>
   <select [(ngModel)]="pageSize"
           style="float: left;"
