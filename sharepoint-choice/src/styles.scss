@@ -112,6 +112,7 @@ div[data-automation-id="CanvasControl"] {
     border-bottom-style: dotted;
   }
 
+  .button,
   button {
     color: #20476b;
     padding: 7px 10px;
@@ -129,6 +130,7 @@ div[data-automation-id="CanvasControl"] {
     color: #fff;
   }
 
+  .button:hover,
   button:hover {
     background-color: #16314a;
     color: white;
@@ -139,6 +141,7 @@ div[data-automation-id="CanvasControl"] {
     background-color: #16314a;
   }
 
+  .button:disabled,
   button:disabled {
     border-color: #ddd;
     color: #ddd !important;
@@ -263,18 +266,6 @@ a.fc-event {
     max-height: 200px;
     overflow: auto;
   }
-}
-
-.gui-structure-header.gui-header-top {
-  position: sticky;
-  top: 0px;
-  z-index: 1;
-}
-.ag-cell a {
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
-}
 
 .AutoComplete,
 .ToolTip {
@@ -971,4 +962,5 @@ del {
       }
     }
   }
+}
 }
