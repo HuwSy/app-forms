@@ -29,7 +29,7 @@ export class SharepointChoiceTable {
   // site unique name used to store column visibility preferences
   @Input() siteName: string = 'https://default.site/sites/default';
 
-  @Input() rowClicked: Function = (row: any) => {};
+  @Input() rowClicked: Function = (row: any, event: any) => {};
   @Input() tableHeight: string = 'calc(100vh - 330px)';
 
   /*
@@ -56,7 +56,7 @@ export class SharepointChoiceTable {
       field: 'title',
       headerTooltip: 'some tooltip',
       nowrap: true,
-      cellClicked: (row) => {
+      cellClicked: (value, row, event) => {
         row.selected = !row.selected;
       },
       // must be string template not HTMLElement
@@ -313,3 +313,4 @@ export class SharepointChoiceTable {
   }
 
 }
+
