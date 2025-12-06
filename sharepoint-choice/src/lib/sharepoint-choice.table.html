@@ -240,35 +240,35 @@
           [style.cursor]="col.cellClicked ? 'pointer' : 'default'"
           [class]="{'center': col.center}"
           [innerHTML]="child.cellRenderer(fieldValue(row, child.field), row, rowIndex)"
-          (click)="child.cellClicked ? child.cellClicked(row) : rowClicked(row)"></td>
+          (click)="child.cellClicked ? child.cellClicked(fieldValue(row, col.field), row, $event) : rowClicked(row, $event)"></td>
       }
       @else if (col.filter == 'date' || fieldValue(row, child.field)?.toJSON) {
       <td [title]="fieldValue(row, child.field) || ''" 
           [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
           [style.cursor]="col.cellClicked ? 'pointer' : 'default'"
           class="center"
-          (click)="child.cellClicked ? child.cellClicked(row) : rowClicked(row)">{{fieldValue(row, child.field) | date:'dd MMM yy'}}</td>
+          (click)="child.cellClicked ? child.cellClicked(fieldValue(row, col.field), row, $event) : rowClicked(row, $event)">{{fieldValue(row, child.field) | date:'dd MMM yy'}}</td>
       }
       @else if (col.filter == 'number' || typeof fieldValue(row, child.field) == 'number') {
       <td [title]="fieldValue(row, child.field) || ''"
           [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
           [style.cursor]="col.cellClicked ? 'pointer' : 'default'"
           class="center"
-          (click)="child.cellClicked ? child.cellClicked(row) : rowClicked(row)">{{fieldValue(row, child.field) | number:'1.0-2'}}</td>
+          (click)="child.cellClicked ? child.cellClicked(fieldValue(row, col.field), row, $event) : rowClicked(row, $event)">{{fieldValue(row, child.field) | number:'1.0-2'}}</td>
       }
       @else if (typeof fieldValue(row, child.field) == 'boolean') {
       <td [title]="fieldValue(row, child.field) || ''"
           [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
           [style.cursor]="col.cellClicked ? 'pointer' : 'default'"
           class="center"
-          (click)="child.cellClicked ? child.cellClicked(row) : rowClicked(row)">{{fieldValue(row, child.field) ? '✔' : ''}}</td>
+          (click)="child.cellClicked ? child.cellClicked(fieldValue(row, col.field), row, $event) : rowClicked(row, $event)">{{fieldValue(row, child.field) ? '✔' : ''}}</td>
       }
       @else {
       <td [title]="fieldValue(row, child.field) || ''"
           [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
           [style.cursor]="col.cellClicked ? 'pointer' : 'default'"
           [class]="{'center': col.center}"
-          (click)="child.cellClicked ? child.cellClicked(row) : rowClicked(row)">{{fieldValue(row, child.field)}}</td>
+          (click)="child.cellClicked ? child.cellClicked(fieldValue(row, col.field), row, $event) : rowClicked(row, $event)">{{fieldValue(row, child.field)}}</td>
       }
       }
       }
@@ -279,35 +279,35 @@
           [style.cursor]="col.cellClicked ? 'pointer' : 'default'"
           [class]="{'center': col.center}"
           [innerHTML]="col.cellRenderer(fieldValue(row, col.field), row, rowIndex)"
-          (click)="col.cellClicked ? col.cellClicked(row) : rowClicked(row)"></td>
+          (click)="col.cellClicked ? col.cellClicked(fieldValue(row, col.field), row, $event) : rowClicked(row, $event)"></td>
       }
       @else if (col.filter == 'date' || fieldValue(row, col.field)?.toJSON) {
       <td [title]="fieldValue(row, col.field) || ''"
           [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
           [style.cursor]="col.cellClicked ? 'pointer' : 'default'"
           class="center"
-          (click)="col.cellClicked ? col.cellClicked(row) : rowClicked(row)">{{fieldValue(row, col.field) | date:'dd MMM yy'}}</td>
+          (click)="col.cellClicked ? col.cellClicked(fieldValue(row, col.field), row, $event) : rowClicked(row, $event)">{{fieldValue(row, col.field) | date:'dd MMM yy'}}</td>
       }
       @else if (col.filter == 'number' || typeof fieldValue(row, col.field) == 'number') {
       <td [title]="fieldValue(row, col.field) || ''"
           [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
           [style.cursor]="col.cellClicked ? 'pointer' : 'default'"
           class="center"
-          (click)="col.cellClicked ? col.cellClicked(row) : rowClicked(row)">{{fieldValue(row, col.field) | number:'1.0-2'}}</td>
+          (click)="col.cellClicked ? col.cellClicked(fieldValue(row, col.field), row, $event) : rowClicked(row, $event)">{{fieldValue(row, col.field) | number:'1.0-2'}}</td>
       }
       @else if (typeof fieldValue(row, col.field) == 'boolean') {
       <td [title]="fieldValue(row, col.field) || ''"
           [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
           [style.cursor]="col.cellClicked ? 'pointer' : 'default'"
           class="center"
-          (click)="col.cellClicked ? col.cellClicked(row) : rowClicked(row)">{{fieldValue(row, col.field) ? '✔' : ''}}</td>
+          (click)="col.cellClicked ? col.cellClicked(fieldValue(row, col.field), row, $event) : rowClicked(row, $event)">{{fieldValue(row, col.field) ? '✔' : ''}}</td>
       }
       @else {
       <td [title]="fieldValue(row, col.field) || ''"
           [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
           [style.cursor]="col.cellClicked ? 'pointer' : 'default'"
           [class]="{'center': col.center}"
-          (click)="col.cellClicked ? col.cellClicked(row) : rowClicked(row)">{{fieldValue(row, col.field)}}</td>
+          (click)="col.cellClicked ? col.cellClicked(fieldValue(row, col.field), row, $event) : rowClicked(row, $event)">{{fieldValue(row, col.field)}}</td>
       }
       }
       }
@@ -383,3 +383,4 @@
   </div>
 </div>
 }
+
