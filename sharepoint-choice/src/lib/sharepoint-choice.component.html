@@ -1,18 +1,22 @@
+@let title = get('Title');
+@let desc = get('Description');
+@let req = required();
+
 <div class="choice"
-     [ngClass]="{noTitle: !get('Title')}"
-     title="{{(!get('Description') ? get('Title') : '')}}">
-  @if (get('Title')) {
-  <span title="{{(!get('Description') ? '' : get('Title'))}}">{{get('Title')}}</span>
+     [ngClass]="{noTitle: !title}"
+     title="{{(!desc ? (title ?? '') : '')}}">
+  @if (title) {
+  <span title="{{(!desc ? '' : title)}}">{{title}}</span>
   }
 
-  @if (get('Description')) {
+  @if (desc) {
   <i (mouseenter)="showHideTooltip(true)"
      (mouseleave)="showHideTooltip(false)">(i)</i>
   <div class="ToolTip"
-       [hidden]="!tooltip">{{get('Description')}}</div>
+       [hidden]="!tooltip">{{desc}}</div>
   }
 
-  @if (get('Required')) {
+  @if (req) {
   <span class="Required">*</span>
   }
 
@@ -24,7 +28,7 @@
              [disabled]="disabled"
              type="checkbox"
              [(ngModel)]="form[field]"
-             [required]="required()"
+             [required]="req"
              name="{{prefix ?? ''}}{{field}}"
              (change)="changed()">
     </label>
@@ -41,7 +45,7 @@
             class="{{multiLargeorSmall()}}"
             [disabled]="disabled"
             [ngModel]="form[field].results"
-            [required]="required()"
+            [required]="req"
             name="{{prefix ?? ''}}{{field}}">
       @for (i of choices(); track $index) {
       <option [value]="i">{{i}}</option>
@@ -53,7 +57,7 @@
     <select [disabled]="disabled"
             (ngModelChange)="selChangeS($event)"
             [ngModel]="form[field]"
-            [required]="required()"
+            [required]="req"
             name="{{prefix ?? ''}}{{field}}"
             [style.width.%]="!inChoices() ? 50 : 100"
             [hidden]="disabled && !inChoices()">
@@ -73,7 +77,7 @@
     <input [disabled]="disabled"
            type="text"
            [(ngModel)]="form[field]"
-           [required]="required()"
+           [required]="req"
            name="{{prefix ?? ''}}{{field}}_Other"
            [style.width.%]="!disabled || inChoices() ? 50 : 100"
            maxlength="250"
@@ -88,7 +92,7 @@
              [disabled]="disabled"
              type="radio"
              [(ngModel)]="form[field]"
-             [required]="required()"
+             [required]="req"
              name="{{prefix ?? ''}}{{field}}"
              (change)="changed()">
       {{select?.none}}
@@ -100,7 +104,7 @@
              [disabled]="disabled"
              type="radio"
              [(ngModel)]="form[field]"
-             [required]="required()"
+             [required]="req"
              name="{{prefix ?? ''}}{{field}}"
              (change)="changed()">
       {{i}}
@@ -108,7 +112,7 @@
     }
     <input style="display:none !important;"
            type="text"
-           [required]="required()"
+           [required]="req"
            [value]="validator()"
            name="{{prefix ?? ''}}{{field}}_Validator">
     }
@@ -117,7 +121,7 @@
     <input [disabled]="disabled"
            type="number"
            [(ngModel)]="form[field]"
-           [required]="required()"
+           [required]="req"
            name="{{prefix ?? ''}}{{field}}"
            [min]="get('Min')"
            [max]="get('Max')"
@@ -130,7 +134,7 @@
            pattern="-{0,1}[0-9,]*\.{0,1}[0-9,]*"
            [ngModel]="niceNumber()"
            (ngModelChange)="numberSet($event)"
-           [required]="required()"
+           [required]="req"
            name="{{prefix ?? ''}}{{field}}"
            [min]="get('Min')"
            [max]="get('Max')"
@@ -143,7 +147,7 @@
            type="date"
            [ngModel]="form[field] | date:'yyyy-MM-dd'"
            (ngModelChange)="dateSet($event)"
-           [required]="required()"
+           [required]="req"
            name="{{prefix ?? ''}}{{field}}"
            (change)="changed()"
            [min]="get('Min')"
@@ -155,7 +159,7 @@
            type="datetime-local"
            [ngModel]="form[field] | date:'yyyy-MM-ddTHH:mm'"
            (ngModelChange)="dateSet($event)"
-           [required]="required()"
+           [required]="req"
            name="{{prefix ?? ''}}{{field}}"
            (change)="changed()"
            [min]="get('Min')"
@@ -168,7 +172,7 @@
            type="text"
            [pattern]="text?.pattern || '.*'"
            [(ngModel)]="form[field]"
-           [required]="required()"
+           [required]="req"
            name="{{prefix ?? ''}}{{field}}"
            [maxlength]="get('MaxLength')"
            (change)="changed()"
@@ -203,14 +207,14 @@
     @if (!get('RichText')) {
     @if (!get('AppendOnly')) {
     <textarea [(ngModel)]="form[field]"
-              [required]="required()"
+              [required]="req"
               name="{{prefix ?? ''}}{{field}}"
               (change)="changed()"
               [style]="(text?.height ? 'height: '+text?.height+'px' : '')"
               placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."></textarea>
     }
     @else {
-    <textarea [required]="required()"
+    <textarea [required]="req"
               name="{{prefix ?? ''}}{{field}}"
               (change)="changedA($event)"
               [style]="(text?.height ? 'height: '+text?.height+'px' : '')"
@@ -227,7 +231,7 @@
                   placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."
                   (ngModelChange)="changed()"
                   name="{{prefix ?? ''}}{{field}}"
-                  [required]="required()"
+                  [required]="req"
                   [outputFormat]="'html'">
       </ngx-editor>
       }
@@ -237,7 +241,7 @@
                   placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."
                   (ngModelChange)="changedA($event)"
                   name="{{prefix ?? ''}}{{field}}"
-                  [required]="required()"
+                  [required]="req"
                   [outputFormat]="'html'">
       </ngx-editor>
       }
@@ -259,7 +263,7 @@
     @case ('URL') {
     <input [disabled]="disabled"
            [(ngModel)]="form[field].Url"
-           [required]="required()"
+           [required]="req"
            name="{{prefix ?? ''}}{{field}}_Url"
            placeholder="https://"
            pattern="^.+\:\/\/.+$|^mailto\:.+$"
@@ -613,7 +617,7 @@
 
       <input style="display:none !important;"
              type="text"
-             [required]="required()"
+             [required]="req"
              [value]="validator('Attachments')"
              name="{{prefix ?? ''}}{{field}}_Validator">
     </div>
@@ -636,7 +640,7 @@
            placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
     <input style="display:none !important;"
            type="text"
-           [required]="required()"
+           [required]="req"
            [value]="validator('UserMulti')"
            name="{{prefix ?? ''}}{{field}}_Validator">
 
@@ -678,7 +682,7 @@
            placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
     <input style="display:none !important;"
            type="text"
-           [required]="required()"
+           [required]="req"
            [value]="validator('User')"
            name="{{prefix ?? ''}}{{field}}_Validator">
 
