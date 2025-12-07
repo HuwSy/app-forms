@@ -16,22 +16,23 @@ import { FormsModule } from '@angular/forms';
   }]
 })
 export class SharepointChoiceTable {
-  // all tabs in desired order passed in, if only one then no tabs shown
+  // all tabs in desired order passed in, if only one tab then no tabs shown
   @Input() allTabs: string[] = [];
   // default to first tab if not passed in
   @Input() selectedTab: string = this.allTabs.length > 0 ? this.allTabs[0] : '';
 
   @Input() loading: boolean = true;
-  @Input() pageSize: number = 100;
+  @Input() pageSize: number = 1000;
+  
   // all data passed in, keyed by tab name
   @Input() allData: any = {};
   @Input() allCols: any[] = [];
-  // site unique name used to store column visibility preferences
+  
+  // site unique name used to store column visibility filter sort preferences
   @Input() siteName: string = 'https://default.site/sites/default';
 
   @Input() rowClicked: Function = (row: any, event: any) => {};
   @Input() tableHeight: string = 'calc(100vh - 330px)';
-
   /*
     <app-table [allTabs]="tabs"
                [selectedTab]="tabs[0]"
@@ -311,6 +312,4 @@ export class SharepointChoiceTable {
   ceil(number: number): number {
     return Math.ceil(number);
   }
-
 }
-
