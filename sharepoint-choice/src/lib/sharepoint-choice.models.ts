@@ -18,10 +18,7 @@ export interface SharepointChoiceAttachment {
 }
 
 export interface SharepointChoiceList {
-  'odata.context'?: {
-    web: any; // PnP Web context
-  };
-  [fieldName: string]: SharepointChoiceField | { web: any } | undefined;
+  [fieldName: string]: SharepointChoiceField | undefined;
 }
 
 export interface SharepointChoiceField {
@@ -125,3 +122,4 @@ export interface SharepointChoiceColumn {
   hide?: boolean | ((tab: string) => boolean); // hide column, or function to determine hide state based on selected tab
   _filtervisible?: boolean; // internal use to track filter visibility
 }
+
