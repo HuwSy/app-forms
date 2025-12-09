@@ -123,7 +123,7 @@ export class SharepointChoiceUtils {
 
   // get list fields in the appropriate format for use in <sharepoint-choice spec=""> attributes
   public async fields(listTitle: string): Promise<SharepointChoiceList> {
-    let spec: SharepointChoiceList = { };
+    let spec: SharepointChoiceList = { '__metadata': this.context };
 
     try {
       // even though the main fields are in the selection not all are returned such as Format, so parse the SchemaXml for the rest
@@ -601,4 +601,5 @@ export class SharepointChoiceUtils {
     }
   }
 }
+
 
