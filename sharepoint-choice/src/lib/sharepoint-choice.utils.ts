@@ -52,10 +52,12 @@ export class SharepointChoiceUtils {
   private async mockClassicContext() {
     let w: any = window;
     // no classic sp context then mock one up
-    if (!w._spPageContextInfo)
-      w._spPageContextInfo = {};
-    // no user in context or a different web then mock it in
-    if (!w._spPageContextInfo.userLoginName || w._spPageContextInfo.webAbsoluteUrl != this.context) {
+    if (!w._spPageContextInfo || w._spPageContextInfo.webAbsoluteUrl != this.context)
+      w._spPageContextInfo = {
+        webAbsoluteUrl: this.context
+      };
+    // no user in context
+    if (!w._spPageContextInfo.userLoginName) {
       let web = await this.sp.web();
       let user = await this.sp.web.currentUser();
       w._spPageContextInfo = {
@@ -121,7 +123,7 @@ export class SharepointChoiceUtils {
 
   // get list fields in the appropriate format for use in <sharepoint-choice spec=""> attributes
   public async fields(listTitle: string): Promise<SharepointChoiceList> {
-    let spec: SharepointChoiceList = { 'odata.context': this.sp };
+    let spec: SharepointChoiceList = { };
 
     try {
       // even though the main fields are in the selection not all are returned such as Format, so parse the SchemaXml for the rest
@@ -599,3 +601,4 @@ export class SharepointChoiceUtils {
     }
   }
 }
+
