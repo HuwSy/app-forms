@@ -1177,6 +1177,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       var id = res.Id;
       if (!id) {
         let spc = new SharepointChoiceUtils();
+        //let sp = Web([spc.sp.web, this.spec['__metadata']]);
         let u = await spc.sp.web.ensureUser(res.Key);
         id = u.Id;
       }
@@ -1287,6 +1288,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       return;
 
     let spc = new SharepointChoiceUtils();
+    //let url = this.spec['__metadata'];
     // ensure up to date digest for http posting
     var token: Response = await fetch(spc.context + '/_api/contextinfo', {
       method: 'POST',
@@ -1330,3 +1332,4 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
+
