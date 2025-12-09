@@ -1164,18 +1164,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // select user
   async selectedUser(res: SharepointChoiceUser|null): Promise<void> {
-    if (!this.spec['odata.context'])
-      return;
-
-    // ensure correct schema
-    if (this.get('TypeAsString') == 'UserMulti' && (!this.form[this.field + 'Id'] || !this.form[this.field + 'Id'].__metadata))
-      this.form[this.field + 'Id'] = {
-        __metadata: { type: "Collection(Edm.Int32)" },
-        results: !this.form[this.field + 'Id'] ? [] : this.form[this.field + 'Id'].results ? this.form[this.field + 'Id'].results : typeof this.form[this.field + 'Id'] == "object" ? this.form[this.field + 'Id'] : [this.form[this.field + 'Id']]
-      }
-    if (this.get('TypeAsString') == 'User' && this.form[this.field + 'Id'] && this.form[this.field + 'Id'].results)
-      this.form[this.field + 'Id'] = this.form[this.field + 'Id'].results.length > 0 ? this.form[this.field + 'Id'].results[0] : null;
-
     // use click item
     if (res) {
       // already selected, do nothing
@@ -1186,25 +1174,29 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       if (this.get('TypeAsString') == 'User' && this.display.length > 0 && this.display[0].Key == res.Key)
         return;
 
-      // setup context late to adapt to changes
-      var u = await this.spec['odata.context'].web.ensureUser(res.Key);
+      var id = res.Id;
+      if (!id) {
+        let spc = new SharepointChoiceUtils();
+        let u = await spc.sp.web.ensureUser(res.Key);
+        id = u.Id;
+      }
 
       // add to field
       if (this.get('TypeAsString') == 'UserMulti') {
-        this.form[this.field + 'Id'].results.push(u.Id);
+        this.form[this.field + 'Id'].results.push(id);
         this.display.push({
           DisplayText: res.DisplayText,
           Key: res.Key,
-          Id: u.Id,
+          Id: id,
           Title: res.Title ?? res.DisplayText,
           LoginName: res.LoginName ?? res.Key,
         });
       } else {
-        this.form[this.field + 'Id'] = u.Id;
+        this.form[this.field + 'Id'] = id;
         this.display = [{
           DisplayText: res.DisplayText,
           Key: res.Key,
-          Id: u.Id,
+          Id: id,
           Title: res.Title ?? res.DisplayText,
           LoginName: res.LoginName ?? res.Key,
         }];
@@ -1220,8 +1212,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // load list data only has IDs so expand the object
   displayUser(user?: number): string {
-    if (!this.spec['odata.context'] || !user)
-      return user?.toString() || '';
+    if (!user)
+      return '';
 
     var u = this.display.filter((x: SharepointChoiceUser) => {
       return x.Id == user
@@ -1237,7 +1229,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (this.loading.indexOf(user) < 0 && typeof user == "number" && user > 0) {
       this.loading.push(user);
       // load the user
-      this.spec['odata.context'].web.getUserById(user)().then((u: SharepointChoiceUser) => {
+      let spc = new SharepointChoiceUtils();
+      spc.sp.web.getUserById(user)().then((u: SharepointChoiceUser) => {
         // update the display table
         this.display.push({
           DisplayText: u.Title,
@@ -1246,11 +1239,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           Title: u.Title ?? u.DisplayText,
           LoginName: u.LoginName ?? u.Key,
         });
-        // touch results to force display update
-        if (this.form[this.field + 'Id'].results) {
-          this.form[this.field + 'Id'].results.push(0);
-          this.form[this.field + 'Id'].results.pop();
-        }
 
         this.chRef.detectChanges();
       });
@@ -1264,14 +1252,12 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (!usr) {
       this.form[this.field + 'Id'] = null;
       this.display = [];
-      return;
+    } else {
+      this.form[this.field + 'Id'].results.splice(this.form[this.field + 'Id'].results.indexOf(usr), 1);
+      this.display = this.display.filter((x: SharepointChoiceUser) => {
+        return x.Id != usr
+      });
     }
-
-    this.form[this.field + 'Id'].results.splice(this.form[this.field + 'Id'].results.indexOf(usr), 1);
-    this.display = this.display.filter((x: SharepointChoiceUser) => {
-      return x.Id != usr
-    });
-
     this.changed();
   }
 
@@ -1297,15 +1283,12 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   async onUpUserSearch(text: string): Promise<void> {
-    if (!this.spec['odata.context'])
-      return;
     if (!this.name)
       return;
 
-    var url = (await this.spec['odata.context'].web()).ServerRelativeUrl;
-
+    let spc = new SharepointChoiceUtils();
     // ensure up to date digest for http posting
-    var token: Response = await fetch(url + '/_api/contextinfo', {
+    var token: Response = await fetch(spc.context + '/_api/contextinfo', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1314,7 +1297,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     });
     let digest = await token.json();
     // query users api, no pnp endpoint for this
-    var search: Response = await fetch(url + '/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.ClientPeoplePickerSearchUser', {
+    var search: Response = await fetch(spc.context + '/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.ClientPeoplePickerSearchUser', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
