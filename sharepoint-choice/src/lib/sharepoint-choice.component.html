@@ -1,6 +1,8 @@
 @let title = get('Title');
+@let internal = friendlyName(get('InternalName'));
 @let desc = get('Description');
 @let req = required();
+@let type = get('TypeAsString');
 
 <div class="choice"
      [ngClass]="{noTitle: !title}"
@@ -21,7 +23,7 @@
   }
 
   <div>
-    @switch (get('TypeAsString')) {
+    @switch (type) {
     @case ('Boolean') {
     <label>
       <input style="width: auto; height: auto;"
@@ -29,14 +31,15 @@
              type="checkbox"
              [(ngModel)]="form[field]"
              [required]="req"
-             name="{{prefix ?? ''}}{{field}}"
+             name="SharepointChoice{{prefix}}{{field}}"
              (change)="changed()">
     </label>
     }
     @case ('MultiChoice') {
+    @let c = choices();
     @if (!disabled) {
-    <input placeholder="Filter or search {{get('Title') || friendlyName(get('InternalName'))}} below"
-           name="{{prefix ?? ''}}{{field}}_Search"
+    <input placeholder="Filter or search {{title || internal}} below"
+           name="SharepointChoice{{prefix}}{{field}}_Search"
            [(ngModel)]="filterMulti"><br>
     }
     <select (mousedown)="false"
@@ -46,44 +49,45 @@
             [disabled]="disabled"
             [ngModel]="form[field].results"
             [required]="req"
-            name="{{prefix ?? ''}}{{field}}">
-      @for (i of choices(); track $index) {
+            name="SharepointChoice{{prefix}}{{field}}">
+      @for (i of c; track $index) {
       <option [value]="i">{{i}}</option>
       }
     </select>
     }
     @case ('Choice') {
+    @let c = choices();
     @if (get('Format') != 'RadioButtons') {
     <select [disabled]="disabled"
             (ngModelChange)="selChangeS($event)"
             [ngModel]="form[field]"
             [required]="req"
-            name="{{prefix ?? ''}}{{field}}"
-            [style.width.%]="!inChoices() ? 50 : 100"
-            [hidden]="disabled && !inChoices()">
+            name="SharepointChoice{{prefix}}{{field}}"
+            [style.width.%]="!inChoices(c) ? 50 : 100"
+            [hidden]="disabled && !inChoices(c)">
       <option disabled
               selected
-              hidden>Please select {{get('Title') || friendlyName(get('InternalName'))}}</option>
+              hidden>Please select {{title || internal}}</option>
       @if (select?.none) {
       <option [value]="null">{{select?.none}}</option>
       }
-      @for (i of choices(); track $index) {
+      @for (i of c; track $index) {
       <option [value]="i">{{i}}</option>
       }
       @if (select?.other || get('FillInChoice')) {
-      <option [value]="inChoices() ? 'Please select...' : form[field]">{{select?.other || 'Other'}}, please specify...</option>
+      <option [value]="inChoices(c) ? 'Please select...' : form[field]">{{select?.other || 'Other'}}, please specify...</option>
       }
     </select>
     <input [disabled]="disabled"
            type="text"
            [(ngModel)]="form[field]"
            [required]="req"
-           name="{{prefix ?? ''}}{{field}}_Other"
-           [style.width.%]="!disabled || inChoices() ? 50 : 100"
+           name="SharepointChoice{{prefix}}{{field}}_Other"
+           [style.width.%]="!disabled || inChoices(c) ? 50 : 100"
            maxlength="250"
            (click)="$event.target.select()"
            (change)="changed()"
-           [hidden]="inChoices()">
+           [hidden]="inChoices(c)">
     }
     @else {
     @if (select?.none) {
@@ -93,19 +97,19 @@
              type="radio"
              [(ngModel)]="form[field]"
              [required]="req"
-             name="{{prefix ?? ''}}{{field}}"
+             name="SharepointChoice{{prefix}}{{field}}"
              (change)="changed()">
       {{select?.none}}
     </label>
     }
-    @for (i of choices(); track $index) {
+    @for (i of c; track $index) {
     <label class="radio">
       <input [value]="i"
              [disabled]="disabled"
              type="radio"
              [(ngModel)]="form[field]"
              [required]="req"
-             name="{{prefix ?? ''}}{{field}}"
+             name="SharepointChoice{{prefix}}{{field}}"
              (change)="changed()">
       {{i}}
     </label>
@@ -114,7 +118,7 @@
            type="text"
            [required]="req"
            [value]="validator()"
-           name="{{prefix ?? ''}}{{field}}_Validator">
+           name="SharepointChoice{{prefix}}{{field}}_Validator">
     }
     }
     @case ('Integer') {
@@ -122,11 +126,11 @@
            type="number"
            [(ngModel)]="form[field]"
            [required]="req"
-           name="{{prefix ?? ''}}{{field}}"
+           name="SharepointChoice{{prefix}}{{field}}"
            [min]="get('Min')"
            [max]="get('Max')"
            (change)="changed()"
-           placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
+           placeholder="{{title || internal}}...">
     }
     @case ('Number') {
     <input [disabled]="disabled"
@@ -135,11 +139,11 @@
            [ngModel]="niceNumber()"
            (ngModelChange)="numberSet($event)"
            [required]="req"
-           name="{{prefix ?? ''}}{{field}}"
+           name="SharepointChoice{{prefix}}{{field}}"
            [min]="get('Min')"
            [max]="get('Max')"
            (change)="changed()"
-           placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
+           placeholder="{{title || internal}}...">
     }
     @case ('DateTime') {
     @if (get('DisplayFormat') != 1) {
@@ -148,11 +152,11 @@
            [ngModel]="form[field] | date:'yyyy-MM-dd'"
            (ngModelChange)="dateSet($event)"
            [required]="req"
-           name="{{prefix ?? ''}}{{field}}"
+           name="SharepointChoice{{prefix}}{{field}}"
            (change)="changed()"
            [min]="get('Min')"
            [max]="get('Max')"
-           placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
+           placeholder="{{title || internal}}...">
     }
     @else {
     <input [disabled]="disabled"
@@ -160,11 +164,11 @@
            [ngModel]="form[field] | date:'yyyy-MM-ddTHH:mm'"
            (ngModelChange)="dateSet($event)"
            [required]="req"
-           name="{{prefix ?? ''}}{{field}}"
+           name="SharepointChoice{{prefix}}{{field}}"
            (change)="changed()"
            [min]="get('Min')"
            [max]="get('Max')"
-           placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
+           placeholder="{{title || internal}}...">
     }
     }
     @case ('Text') {
@@ -173,12 +177,12 @@
            [pattern]="text?.pattern || '.*'"
            [(ngModel)]="form[field]"
            [required]="req"
-           name="{{prefix ?? ''}}{{field}}"
+           name="SharepointChoice{{prefix}}{{field}}"
            [maxlength]="get('MaxLength')"
            (change)="changed()"
            (keyup)="onUpText($event.key)"
            (click)="onUpText(undefined)"
-           placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
+           placeholder="{{title || internal}}...">
     <div class="MaxLength"
          [hidden]="remaining(255) >= 5">Maximum {{remaining(255)}} characters remaining</div>
 
@@ -203,34 +207,36 @@
     }
     }
     @case ('Note') {
+    @let append = get('AppendOnly');
+    @let rich = get('RichText');
     @if (!disabled) {
-    @if (!get('RichText')) {
-    @if (!get('AppendOnly')) {
+    @if (!rich) {
+    @if (!append) {
     <textarea [(ngModel)]="form[field]"
               [required]="req"
-              name="{{prefix ?? ''}}{{field}}"
+              name="SharepointChoice{{prefix}}{{field}}"
               (change)="changed()"
               [style]="(text?.height ? 'height: '+text?.height+'px' : '')"
-              placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."></textarea>
+              placeholder="{{title || internal}}..."></textarea>
     }
     @else {
     <textarea [required]="req"
-              name="{{prefix ?? ''}}{{field}}"
+              name="SharepointChoice{{prefix}}{{field}}"
               (change)="changedA($event)"
               [style]="(text?.height ? 'height: '+text?.height+'px' : '')"
-              placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."></textarea>
+              placeholder="{{title || internal}}..."></textarea>
     }
     }
     @else if (editor) {
     <div class="NgxEditor__Wrapper">
       <ngx-editor-menu [editor]="editor"
                        [toolbar]="toolbar"></ngx-editor-menu>
-      @if (!get('AppendOnly')) {
+      @if (!append) {
       <ngx-editor [editor]="editor"
                   [(ngModel)]="form[field]"
-                  placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."
+                  placeholder="{{title || internal}}..."
                   (ngModelChange)="changed()"
-                  name="{{prefix ?? ''}}{{field}}"
+                  name="SharepointChoice{{prefix}}{{field}}"
                   [required]="req"
                   [outputFormat]="'html'">
       </ngx-editor>
@@ -238,9 +244,9 @@
       @else {
       <ngx-editor [editor]="editor"
                   [(ngModel)]="unused"
-                  placeholder="{{get('Title') || friendlyName(get('InternalName'))}}..."
+                  placeholder="{{title || internal}}..."
                   (ngModelChange)="changedA($event)"
-                  name="{{prefix ?? ''}}{{field}}"
+                  name="SharepointChoice{{prefix}}{{field}}"
                   [required]="req"
                   [outputFormat]="'html'">
       </ngx-editor>
@@ -251,7 +257,7 @@
          [hidden]="remaining() >= 15">Maximum {{remaining()}} characters remaining</div>
     }
     @else {
-    @if (!get('RichText')) {
+    @if (!rich) {
     <div style="max-height: 500px; overflow: auto;">{{form[field]}}</div>
     }
     @else {
@@ -264,25 +270,27 @@
     <input [disabled]="disabled"
            [(ngModel)]="form[field].Url"
            [required]="req"
-           name="{{prefix ?? ''}}{{field}}_Url"
+           name="SharepointChoice{{prefix}}{{field}}_Url"
            placeholder="https://"
            pattern="^.+\:\/\/.+$|^mailto\:.+$"
            (change)="changed()"
            style="width:50%">
     <input [disabled]="disabled"
            [(ngModel)]="form[field].Description"
-           name="{{prefix ?? ''}}{{field}}_Desc"
+           name="SharepointChoice{{prefix}}{{field}}_Desc"
            maxlength="250"
            (change)="changed()"
            style="width:50%">
     }
     @case ('Attachments') {
+    @let files = attachments();
+    @let keys = additionalKeys(file?.spec);
     @if (!file?.uploadonly) {
-    @if (attachments().length > 0) {
+    @if (files.length > 0) {
     <div [hidden]="!file?.doctype || !hasChecked()">
       Update selected:
       <select (change)="setClasses($event)"
-              name="{{prefix ?? ''}}{{field}}_Cat">
+              name="SharepointChoice{{prefix}}{{field}}_Cat">
         <option disabled
                 selected
                 hidden>{{file?.doctype}}</option>
@@ -307,7 +315,7 @@
           </span>
           <select style="width:30px;border:none;margin-left:8px;"
                   [(ngModel)]="filter"
-                  name="{{prefix ?? ''}}{{field}}_Filter">
+                  name="SharepointChoice{{prefix}}{{field}}_Filter">
             <option value>All</option>
 
             @for (v of usedTypes(); track $index) {
@@ -333,10 +341,10 @@
           </span>
         </th>
         }
-        @for (k of additionalKeys(file?.spec); track $index) {
+        @for (k of keys; track $index) {
         <th>
           <span>
-            {{file?.spec?.[k]?.Title || friendlyName(file?.spec?.[k]?.InternalName)}}
+            {{getFieldSpec(k)?.Title || friendlyName(getFieldSpec(k)?.InternalName)}}
           </span>
         </th>
         }
@@ -354,102 +362,107 @@
         <th style="width: 0;"></th>
         }
       </tr>
-      @for (f of attachments(); track $index; let i = $index) {
+      @for (f of files; track $index; let i = $index) {
+      @let fileSizeOver = !f || !f.ServerRelativeUrl ? false : f.ServerRelativeUrl.length > 402;
+      @let listItem = f.ListItemAllFields || {};
       <tr>
         <td [hidden]="!file?.check">
           <input type="checkbox"
-                 [disabled]="disabled || f.Deleted || (field != 'Attachments' && file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402"
+                 [disabled]="disabled || f.Deleted || (field != 'Attachments' && file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver"
                  [(ngModel)]="f.Checked"
-                 name="{{prefix ?? ''}}{{field}}_Checked_{{i}}">
+                 name="SharepointChoice{{prefix}}{{field}}_Checked_{{i}}">
         </td>
         @if (field != 'Attachments' && file?.doctype) {
         <td style="white-space: nowrap"
             [style]="width()">
-          <app-choice [form]="f.ListItemAllFields"
+          <app-choice [form]="listItem"
                       [spec]="loadOrGenerateSpec(file?.doctype, 'Choice')"
                       [field]="file?.doctype || 'DocType'"
                       [prefix]="field+'_'+i"
                       (change)="changed()"
-                      [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
+                      [disabled]="disabled || f.Deleted || (file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver">
           </app-choice>
         </td>
         }
         @if (f.Deleted) {
         <td>
-          <span style="color: red; text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
+          <span style="color: red; text-decoration: line-through">{{listItem['Title'] || f.FileName}}</span>
 
           <a style="color: green; padding-left: 8px;cursor: pointer;"
              (click)="delete(f, false)"
              title="Undelete"
-             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">+</a>
+             [hidden]="disabled || fileSizeOver">+</a>
         </td>
         }
-        @else if (field != 'Attachments' && file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) {
+        @else if (field != 'Attachments' && file?.archive && listItem[(file?.archive || 'Archive')]) {
         <td>
-          <span style="text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
+          <span style="text-decoration: line-through">{{listItem['Title'] || f.FileName}}</span>
 
           <a style="color: green; padding-left: 8px;cursor: pointer;"
              (click)="delete(f, false)"
              title="Undelete"
-             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">+</a>
+             [hidden]="disabled || fileSizeOver">+</a>
           <a style="color: red; padding-left: 8px;cursor: pointer;"
              (click)="delete(f, true)"
              title="Delete"
-             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">x</a>
+             [hidden]="disabled || fileSizeOver">x</a>
         </td>
         }
         @else {
         <td style="position: relative">
           <a [hidden]="!f.ServerRelativeUrl || !file?.download"
              download="{{f.FileName}}"
-             href="{{f.ServerRelativeUrl}}">{{f.ListItemAllFields?.Title || f.FileName}}</a>
+             href="{{f.ServerRelativeUrl}}">{{listItem['Title'] || f.FileName}}</a>
           <a [hidden]="!f.ServerRelativeUrl || file?.download"
              (click)="newTab(f, $event)"
-             style="cursor:pointer">{{f.ListItemAllFields?.Title || f.FileName}}</a>
+             style="cursor:pointer">{{listItem['Title'] || f.FileName}}</a>
 
           @if (field == 'Attachments') {
           <a [hidden]="f.ServerRelativeUrl">{{f.FileName}}</a>
           }
-          @else if (f.ListItemAllFields) {
+          @else if (listItem) {
           <input [disabled]="disabled"
                  [hidden]="f.ServerRelativeUrl"
-                 [(ngModel)]="f.ListItemAllFields.Title"
+                 [(ngModel)]="listItem['Title']"
                  (change)="changed()"
                  style="width: calc( 100% - 38px );"
-                 name="{{prefix ?? ''}}{{field}}_Name_{{i}}"
+                 name="SharepointChoice{{prefix}}{{field}}_Name_{{i}}"
                  [title]="f.FileName + ' - ' + f.Length">
           }
 
           <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;"
              (click)="delete(f, true)"
              title="Delete"
-             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">x</a>
+             [hidden]="disabled || fileSizeOver">x</a>
         </td>
         }
         @if (field != 'Attachments' && file?.notes) {
         <td>
-          <app-choice [form]="f.ListItemAllFields"
+          <app-choice [form]="listItem"
                       [spec]="loadOrGenerateSpec(file?.notes)"
                       [field]="file?.notes || 'Notes'"
                       [prefix]="field+'_'+i"
                       (change)="changed()"
-                      [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
+                      [disabled]="disabled || f.Deleted || (file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver">
           </app-choice>
         </td>
         }
-        @for (k of additionalKeys(file?.spec); track $index) {
+        @for (k of keys; track $index) {
         <td>
-          <app-choice [form]="f.ListItemAllFields"
+          @let fs = getFieldSpec(k);
+          @if (fs?.InternalName) {
+          <app-choice [form]="listItem"
                       [spec]="file?.spec || spec"
-                      [field]="file?.spec?.[k]?.InternalName"
+                      [field]="fs?.InternalName ?? ''"
                       [prefix]="field+'_'+i"
-                      [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402"
+                      [disabled]="disabled || f.Deleted || (file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver"
                       [text]="{
-                        height: 35
-                      }"
+                          height: 35
+                        }"
                       (change)="changed()"
-                      [override]='"{\"Title\":\"\"}"'>
+                      [override]='"{{\"Title\":\"\"}}"'>
           </app-choice>
+          }
         </td>
         }
         <td>
@@ -458,7 +471,7 @@
       </tr>
       }
       <tr>
-        <td colspan="99">Shown files: {{attachments().length}}</td>
+        <td colspan="99">Shown files: {{files.length}}</td>
       </tr>
     </table>
 
@@ -467,57 +480,59 @@
          (dragleave)="leave($event)"
          (drop)="drop($event)"
          [ngClass]="{'FilesOver': filesOver}">
-      @for (f of attachments(); track $index; let i = $index) {
+      @for (f of files; track $index; let i = $index) {
+      @let fileSizeOver = !f || !f.ServerRelativeUrl ? false : f.ServerRelativeUrl.length > 402;
+      @let listItem = f.ListItemAllFields || {};
       <div>
         @if (f.Deleted) {
         <div>
-          <span style="color: red; text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
+          <span style="color: red; text-decoration: line-through">{{listItem['Title'] || f.FileName}}</span>
 
           <a style="color: green; padding-left: 8px;cursor: pointer;"
              (click)="delete(f, false)"
              title="Undelete"
-             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">+</a>
+             [hidden]="disabled || fileSizeOver">+</a>
         </div>
         }
-        @else if (field != 'Attachments' && file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) {
+        @else if (field != 'Attachments' && file?.archive && listItem[(file?.archive || 'Archive')]) {
         <div>
-          <span style="text-decoration: line-through">{{f.ListItemAllFields?.Title || f.FileName}}</span>
+          <span style="text-decoration: line-through">{{listItem['Title'] || f.FileName}}</span>
 
           <a style="color: green; padding-left: 8px;cursor: pointer;"
              (click)="delete(f, false)"
              title="Undelete"
-             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">+</a>
+             [hidden]="disabled || fileSizeOver">+</a>
           <a style="color: red; padding-left: 8px;cursor: pointer;"
              (click)="delete(f, true)"
              title="Delete"
-             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">x</a>
+             [hidden]="disabled || fileSizeOver">x</a>
         </div>
         }
         @else {
         <div style="position: relative;">
           <input [hidden]="!file?.check"
                  type="checkbox"
-                 [disabled]="disabled || f.Deleted || (field != 'Attachments' && file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402"
+                 [disabled]="disabled || f.Deleted || (field != 'Attachments' && file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver"
                  [(ngModel)]="f.Checked"
                  (change)="changed()"
-                 name="{{prefix ?? ''}}{{field}}_Check_{{i}}">
+                 name="SharepointChoice{{prefix}}{{field}}_Check_{{i}}">
 
           <a [hidden]="!f.ServerRelativeUrl || !file?.download"
              download="{{f.FileName}}"
-             href="{{f.ServerRelativeUrl}}">{{f.ListItemAllFields?.Title || f.FileName}}</a>
+             href="{{f.ServerRelativeUrl}}">{{listItem['Title'] || f.FileName}}</a>
           <a [hidden]="!f.ServerRelativeUrl || file?.download"
              (click)="newTab(f, $event)"
-             style="cursor:pointer">{{f.ListItemAllFields?.Title || f.FileName}}</a>
+             style="cursor:pointer">{{listItem['Title'] || f.FileName}}</a>
 
           @if (field == 'Attachments') {
           <a [hidden]="f.ServerRelativeUrl">{{f.FileName}}</a>
           }
-          @else if (f.ListItemAllFields) {
+          @else if (listItem) {
           <input [disabled]="disabled"
                  [hidden]="f.ServerRelativeUrl"
-                 [(ngModel)]="f.ListItemAllFields.Title"
+                 [(ngModel)]="listItem['Title']"
                  style="width: calc( 100% - 38px );"
-                 name="{{prefix ?? ''}}{{field}}_Name_{{i}}"
+                 name="SharepointChoice{{prefix}}{{field}}_Name_{{i}}"
                  (change)="changed()"
                  [title]="f.FileName + ' - ' + f.Length">
           }
@@ -525,19 +540,19 @@
           <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;"
              (click)="delete(f, true)"
              title="Delete"
-             [hidden]="disabled || f.ServerRelativeUrl?.length > 402">x</a>
+             [hidden]="disabled || fileSizeOver">x</a>
         </div>
 
         @if (field != 'Attachments' && file?.doctype) {
         <div class="choice">
           {{friendlyName(file?.doctype)}}
 
-          <app-choice [form]="f.ListItemAllFields"
+          <app-choice [form]="listItem"
                       [spec]="loadOrGenerateSpec(file?.doctype, 'Choice')"
                       [field]="file?.doctype || 'DocType'"
                       [prefix]="field+'_'+i"
                       (change)="changed()"
-                      [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
+                      [disabled]="disabled || f.Deleted || (file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver">
           </app-choice>
         </div>
         }
@@ -545,27 +560,30 @@
         <div class="choice">
           {{friendlyName(file?.notes)}}
 
-          <app-choice [form]="f.ListItemAllFields"
+          <app-choice [form]="listItem"
                       [spec]="loadOrGenerateSpec(file?.notes)"
                       [field]="file?.notes || 'Notes'"
                       [prefix]="field+'_'+i"
                       (change)="changed()"
-                      [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402">
+                      [disabled]="disabled || f.Deleted || (file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver">
           </app-choice>
         </div>
         }
-        @for (k of additionalKeys(file?.spec); track $index) {
+        @for (k of keys; track $index) {
         <div>
-          <app-choice [form]="f.ListItemAllFields"
+          @let fs = getFieldSpec(k);
+          @if (fs?.InternalName) {
+          <app-choice [form]="listItem"
                       [spec]="file?.spec || spec"
-                      [field]="file?.spec?.[k]?.InternalName"
+                      [field]="fs?.InternalName ?? ''"
                       [prefix]="field+'_'+i"
                       (change)="changed()"
-                      [disabled]="disabled || f.Deleted || (file?.archive && f.ListItemAllFields[(file?.archive || 'Archive')]) || f.ServerRelativeUrl?.length > 402"
+                      [disabled]="disabled || f.Deleted || (file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver"
                       [text]="{
                         height: 75
                       }">
           </app-choice>
+          }
         </div>
         }
         }
@@ -612,14 +630,14 @@
              style="display: none !important;"
              multiple
              (change)="add($event.target)"
-             name="{{prefix ?? ''}}{{field}}" />
+             name="SharepointChoice{{prefix}}{{field}}" />
       <button (click)="fileInput.click()">Browse file</button>
 
       <input style="display:none !important;"
              type="text"
              [required]="req"
              [value]="validator('Attachments')"
-             name="{{prefix ?? ''}}{{field}}_Validator">
+             name="SharepointChoice{{prefix}}{{field}}_Validator">
     </div>
     }
     }
@@ -633,16 +651,16 @@
     </div>
     <input type="text"
            [(ngModel)]="name"
-           name="{{prefix ?? ''}}{{field}}"
+           name="SharepointChoice{{prefix}}{{field}}"
            (keyup)="onUpUser($event.key)"
            (click)="onUpUser(undefined)"
            [hidden]="disabled"
-           placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
+           placeholder="{{title || internal}}...">
     <input style="display:none !important;"
            type="text"
            [required]="req"
            [value]="validator('UserMulti')"
-           name="{{prefix ?? ''}}{{field}}_Validator">
+           name="SharepointChoice{{prefix}}{{field}}_Validator">
 
     @if (!disabled && users.length > 0) {
     <div style="position: relative; padding: 0;">
@@ -675,16 +693,16 @@
     </div>
     <input type="text"
            [(ngModel)]="name"
-           name="{{prefix ?? ''}}{{field}}"
+           name="SharepointChoice{{prefix}}{{field}}"
            (keyup)="onUpUser($event.key)"
            (click)="onUpUser(undefined)"
            [hidden]="disabled || form[field + 'Id']"
-           placeholder="{{get('Title') || friendlyName(get('InternalName'))}}...">
+           placeholder="{{title || internal}}...">
     <input style="display:none !important;"
            type="text"
            [required]="req"
            [value]="validator('User')"
-           name="{{prefix ?? ''}}{{field}}_Validator">
+           name="SharepointChoice{{prefix}}{{field}}_Validator">
 
     @if (!disabled && users.length > 0) {
     <div style="position: relative; padding: 0;">
@@ -712,7 +730,7 @@
     }
     @default {
     {{form[field] && form[field].results ? form[field].results.join(', ') : form[field]}}
-    <div style="opacity:0.85">Error,{{required() ? ' required' : ''}} field type '{{get('TypeAsString')}}' not yet editable...</div>
+    <div style="opacity:0.85">Error,{{req ? ' required' : ''}} field type '{{type}}' not yet editable...</div>
     }
     }
   </div>

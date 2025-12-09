@@ -142,4 +142,3 @@ export class SharepointChoiceLogging implements ErrorHandler {
     })
   }
 }
-

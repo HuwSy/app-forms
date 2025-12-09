@@ -1,6 +1,7 @@
-import { Component, Input, ErrorHandler } from '@angular/core';
+import { Component, Input, ErrorHandler, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { SharepointChoiceColumn, SharepointChoiceFilter, SharepointChoiceTabs, SharepointChoiceRow } from './sharepoint-choice.models';
 
 @Component({
   selector: 'app-table',
@@ -16,139 +17,172 @@ import { FormsModule } from '@angular/forms';
   }]
 })
 export class SharepointChoiceTable {
-  // all tabs in desired order passed in, if only one tab then no tabs shown
-  @Input() allTabs: string[] = [];
-  // default to first tab if not passed in
-  @Input() selectedTab: string = this.allTabs.length > 0 ? this.allTabs[0] : '';
-
-  @Input() loading: boolean = true;
-  @Input() pageSize: number = 1000;
-  
-  // all data passed in, keyed by tab name
-  @Input() allData: any = {};
-  @Input() allCols: any[] = [];
-  
   // site unique name used to store column visibility filter sort preferences
-  @Input() siteName: string = 'https://default.site/sites/default';
+  @Input() prefix: string = document.location.href.split('?')[0].split('#')[0];
 
-  @Input() rowClicked: Function = (row: any, event: any) => {};
-  @Input() tableHeight: string = 'calc(100vh - 330px)';
-  /*
-    <app-table [allTabs]="tabs"
-               [selectedTab]="tabs[0]"
-               [allData]="allData"
-               [allCols]="allCols"
-               [siteName]="context"
-               [tableHeight]="'calc(100vh - 330px)'">
-    </app-table>
-  */
-  /* tabs
-    [ 'tab1', 'tab2', ... ]
-  */
-  /* data
-    { 
-      tab1: [ { title: 'item1', ... }, { title: 'item2', ... } ],
-      tab2: [ { title: 'itemA', ... }, { title: 'itemB', ... } ]
-    }
-  */
-  /* cols
-    {
-      headerName: 'Col title',
-      field: 'title',
-      headerTooltip: 'some tooltip',
-      nowrap: true,
-      cellClicked: (value, row, event) => {
-        row.selected = !row.selected;
-      },
-      // must be string template not HTMLElement
-      cellRenderer: (val, row, index) => {
-        if (row.data == 1)
-          return val;
+  // all data passed in keyed by tab name, not using getter/setter to avoid deep copy and memory issues
+  @Input() allData?: SharepointChoiceTabs = {};
 
-        return `
-          ${
-            row.selected
-            ? '<span>✔</span>'
-            : '<span style="font-size: 20px;">☐</span>'
-          }
-          ${val}
-        `;
-      },
-      filter: 'text'
+  // all columns via getter/setter to avoid chance propogation back outwards of hide state etc
+  @Input() set allCols(value: SharepointChoiceColumn[]) {
+    this._allCols = value || [];
+  }
+  get allCols(): SharepointChoiceColumn[] {
+    return this._allCols;
+  }
+  private _allCols: SharepointChoiceColumn[] = [];
+
+  // all tabs via getter/setter to allow dynamic getter based on data if no tabs or invalid tabs passed in
+  @Input() set allTabs(value: string[]) {
+    this._allTabs = value || [];
+  }
+  get allTabs(): string[] {
+    var tabs = Object.keys(this.allData || {}).filter(k => k && k != 'undefined' && k != 'null');
+    // if this._allTabs has at least one valid tab then use it else use dynamic tabs from data
+    if (this._allTabs.length > 0 || tabs.length == 0) {
+      let validTabs = this._allTabs.filter(t => tabs.includes(t));
+      if (validTabs.length > 0 || tabs.length == 0)
+        return this._allTabs;
     }
-  */
+    return tabs;
+  }
+  private _allTabs: string[] = [];
+
+  // selected tab else use stored value or first tab
+  @Input() set selectedTab(value: string | undefined) {
+    this._selectedTab = value;
+  }
+  get selectedTab(): string | undefined {
+    return this._selectedTab && this.allTabs.includes(this._selectedTab)
+      ? this._selectedTab
+      : this.getStorage(`Tab`) || this.allTabs[0];
+  }
+  private _selectedTab?: string;
+
+  // page size via getter/setter to allow storage
+  @Input() set pageSize(value: number) {
+    this._pageSize = value;
+  }
+  get pageSize(): number {
+    return this._pageSize || this.getStorage(`Size`) || 250;
+  }
+  private _pageSize?: number;
+
+  // simple variables not needing getter/setter
+  @Input() loading: boolean = true;
+  @Input() tableHeight: string = 'calc(100vh - 360px)';
+  @Input() allowSelection: boolean = false;
+
+  // events
+  @Output() selected = new EventEmitter<SharepointChoiceRow[]>();
+  @Output() rowClicked = new EventEmitter<{ row: SharepointChoiceRow, target: HTMLElement|EventTarget|null }>();
 
   pageNumber = 1;
   editColumns = false;
-  sort:any = [];
-  filter:any = {};
 
   changeTab(tab: string): void {
     this.selectedTab = tab;
     this.pageNumber = 1;
+    this.setStorage(`Tab`, this.selectedTab);
+    this.selected.emit([]);
   }
 
-  changeSort(col) {
+  changeSort(col: SharepointChoiceColumn): void {
+    var sort = this.getStorage(`Sort-${this.selectedTab}`) ?? [];
     if (col.sortable === false || !col.field)
       return;
-    var asc = this.sort.indexOf(col.field);
-    var desc = this.sort.indexOf('!' + col.field);
+    var asc = sort.indexOf(col.field);
+    var desc = sort.indexOf('!' + col.field);
     if (asc == -1 && desc == -1) {
-      if (this.sort.length >= 3)
-        this.sort.splice(0, 1);
-      this.sort.push(col.field);
+      sort.push(col.field);
     } else if (asc >= 0)
-      this.sort[asc] = '!' + col.field;
+      sort[asc] = '!' + col.field;
     else
-      this.sort = this.sort.filter(s => s != ('!' + col.field));
+      sort = sort.filter((s: string) => s != ('!' + col.field));
+    this.setStorage(`Sort-${this.selectedTab}`, sort);
   }
 
-  niceName(col): string {
+  niceName(col: SharepointChoiceColumn): string {
     var h = col.field?.substring(col.field?.lastIndexOf('.') + 1);
-    return col.headerName ? col.headerName : (h?.charAt(0).toUpperCase() + h?.slice(1)).replace(/([a-z])([A-Z])/g, '$1 $2');
+    return col.headerName ? col.headerName : h ? (h.charAt(0).toUpperCase() + h.slice(1)).replace(/([a-z])([A-Z])/g, '$1 $2') : '';
   }
 
-  sortContains(field: string): boolean {
-    return this.sort.includes(field);
+  filterOpts(field?: string): SharepointChoiceFilter {
+    var filter = this.selectedTab ? this.getStorage(`Filter-${this.selectedTab}`) ?? {} : {};
+    return {
+      equals: filter[field ?? '']?.equals ?? null,
+      contains: filter[field ?? '']?.contains ?? null,
+      greater: filter[field ?? '']?.greater ?? null,
+      less: filter[field ?? '']?.less ?? null
+    };
   }
 
-  changeFilter(col, op: string, event: Event): void {
-    var value:any = null;
+  sortContains(field?: string): boolean {
+    if (!field || !this.selectedTab)
+      return false;
+    var sort = this.getStorage(`Sort-${this.selectedTab}`) ?? [];
+    return sort.includes(field);
+  }
+
+  changeFilter(col: SharepointChoiceColumn, op: string, event: Event): void {
+    if (!col.field || !this.selectedTab)
+      return;
+    var filter = this.getStorage(`Filter-${this.selectedTab}`) ?? {};
+    var value: any = null;
     if (event && event.target) {
       value = event.target['value'];
       if (event.target['type'] == 'date' && value)
         value = new Date(value);
     }
 
-    if (!this.filter[col.field])
-      this.filter[col.field] = {};
-    
+    if (!filter[col.field])
+      filter[col.field] = {};
+
     if (value === undefined || value === null || value === '') {
-      delete this.filter[col.field][op];
-      if (Object.keys(this.filter[col.field]).length == 0)
-        delete this.filter[col.field];
+      delete filter[col.field][op];
+      if (Object.keys(filter[col.field]).length == 0)
+        delete filter[col.field];
     } else
-      this.filter[col.field][op] = value;
+      filter[col.field][op] = value;
+    this.setStorage(`Filter-${this.selectedTab}`, filter);
   }
 
-  toggleColumn(col: any): void {
+  getStorage(key: string): any {
+    var s = localStorage.getItem(`SharepointTable-${this.prefix}`) || '{}';
+    return JSON.parse(s)[key];
+  }
+
+  setStorage(key: string, value: any) {
+    var s = JSON.parse(localStorage.getItem(`SharepointTable-${this.prefix}`) || '{}');
+    s[key] = value;
+    localStorage.setItem(`SharepointTable-${this.prefix}`, JSON.stringify(s));
+  }
+
+  toggleFilter(col: SharepointChoiceColumn, event: Event): void {
+    if (!col.field || !this.selectedTab)
+      return;
+    col._filtervisible = !col._filtervisible;
+    event.stopPropagation();
+  }
+
+  toggleColumn(col: SharepointChoiceColumn): void {
     if (typeof col.hide == 'function' || !col.field)
       return;
 
     // because visibility is toggled after click function triggered then we need to reverse the value here
     let hide = !col.hide;
 
-    var cols = (localStorage.getItem(`Choice-Filter-${this.siteName}-${this.selectedTab}`) || '').split(',').filter(c => c);
+    var cols = this.getStorage(`Hide-${this.selectedTab}`) || [];
     if (hide)
       cols.push(col.field);
     else
-      cols = cols.filter(c => c != col.field);
-    localStorage.setItem(`Choice-Filter-${this.siteName}-${this.selectedTab}`, cols.join(','));
+      cols = cols.filter((c: string) => c != col.field);
+    this.setStorage(`Hide-${this.selectedTab}`, cols);
   }
 
   flds(tab?: string) {
     // load the column visibility from storage and update allCols, only set hidden dont
-    var cols = (localStorage.getItem(`Choice-Filter-${this.siteName}-${this.selectedTab}`) || '').split(',').filter(c => c);
+    var cols = this.getStorage(`Hide-${this.selectedTab}`) || [];
     var all = this.allCols ?? [];
     all.forEach(c => {
       // top level column def
@@ -157,7 +191,7 @@ export class SharepointChoiceTable {
           c.hide = true;
       }
       // load children
-      c.children?.forEach((i: any) => {
+      c.children?.forEach((i: SharepointChoiceColumn) => {
         if (cols.includes(i.field ?? '') && typeof i.hide != 'function')
           i.hide = true;
       });
@@ -169,7 +203,7 @@ export class SharepointChoiceTable {
     }).map(c => {
       if (c.children) {
         let nc = { ...c };
-        nc.children = nc.children.filter(ch => !ch.hide || (typeof ch.hide == 'function' && !ch.hide(tab)));
+        nc.children = nc.children?.filter(ch => !ch.hide || (typeof ch.hide == 'function' && !ch.hide(tab)));
         return nc;
       }
       return c;
@@ -180,11 +214,11 @@ export class SharepointChoiceTable {
     });
   }
 
-  startResize(event: MouseEvent, col: any): void {
+  startResize(event: MouseEvent, col: SharepointChoiceColumn): void {
     event.preventDefault();
     event.stopPropagation();
     const startX = event.pageX;
-    const startWidth = col.width || col.renderwidth || 100;
+    const startWidth = col.width || 100;
 
     const onMouseMove = (e: MouseEvent) => {
       const newWidth = startWidth + (e.pageX - startX);
@@ -198,7 +232,9 @@ export class SharepointChoiceTable {
     document.addEventListener('mouseup', onMouseUp);
   }
 
-  fieldValue(row: any, field: string): any {
+  fieldValue(row: SharepointChoiceRow, field?: string): any {
+    if (!field)
+      return null;
     try {
       var f = field.split('.');
       var c = row[f[0]];
@@ -210,22 +246,28 @@ export class SharepointChoiceTable {
     }
   }
 
-  distinctContent(field: string): any[] {
+  distinctContent(field?: string): any[] {
+    if (!field || !this.allData || !this.selectedTab || !this.allData[this.selectedTab])
+      return [];
     let values: any[] = [];
-    (this.allData[this.selectedTab] ?? []).forEach(d => {
+    this.allData[this.selectedTab].forEach(d => {
       var c = this.fieldValue(d, field);
-      if (c != null && !values.includes(c))
+      if (c !== null && c !== undefined && c !== '' && !values.includes(c))
         values.push(c);
     });
     return values;
   }
 
-  rows(tab: string): any[] {
-    return (this.allData[tab] ?? [])
-      .filter((row: any) => {
+  rows(tab?: string): SharepointChoiceRow[] {
+    if (!this.allData || !tab || !this.allData[tab])
+      return [];
+    var sort = this.getStorage(`Sort-${tab}`) ?? [];
+    var filter = this.getStorage(`Filter-${tab}`) ?? {};
+    return this.allData[tab]
+      .filter((row: SharepointChoiceRow) => {
         // apply all filters
-        for (let field in this.filter) { 
-          let ops = this.filter[field];
+        for (let field in filter) {
+          let ops = filter[field];
           for (let op in ops) {
             let value = ops[op];
             if (value == null || value == '')
@@ -250,66 +292,54 @@ export class SharepointChoiceTable {
         }
         return true;
       })
-      .sort((a: any, b: any) => {
-        let s = this.sort[2];
-        if (!s)
-          return 0;
-        let desc = s.startsWith('!');
-        let field = desc ? s.substring(1) : s;
-        let f = field.split('.');
-        let aValue = a[f[0]];
-        let bValue = b[f[0]];
-        for (let i = 1; i < f.length; i++) {
-          aValue = aValue ? aValue[f[i]] : null;
-          bValue = bValue ? bValue[f[i]] : null;
+      .sort((a: SharepointChoiceRow, b: SharepointChoiceRow) => {
+        for (let s of sort) {
+          if (!s)
+            continue;
+
+          let desc = s.startsWith('!');
+          let field = desc ? s.substring(1) : s;
+          let aValue = this.fieldValue(a, field);
+          let bValue = this.fieldValue(b, field);
+
+          if (aValue === null && bValue === null)
+            continue;
+          if (aValue === null)
+            return 1;
+          if (bValue === null)
+            return -1;
+          if (aValue < bValue)
+            return desc ? 1 : -1;
+          if (aValue > bValue)
+            return desc ? -1 : 1;
         }
-        if (aValue < bValue)
-          return desc ? 1 : -1;
-        if (aValue > bValue)
-          return desc ? -1 : 1;
-        return 0;
-      })
-      .sort((a: any, b: any) => {
-        let s = this.sort[1];
-        if (!s)
-          return 0;
-        let desc = s.startsWith('!');
-        let field = desc ? s.substring(1) : s;
-        let f = field.split('.');
-        let aValue = a[f[0]];
-        let bValue = b[f[0]];
-        for (let i = 1; i < f.length; i++) {
-          aValue = aValue ? aValue[f[i]] : null;
-          bValue = bValue ? bValue[f[i]] : null;
-        }
-        if (aValue < bValue)
-          return desc ? 1 : -1;
-        if (aValue > bValue)
-          return desc ? -1 : 1;
-        return 0;
-      })
-      .sort((a: any, b: any) => {
-        let s = this.sort[0];
-        if (!s)
-          return 0;
-        let desc = s.startsWith('!');
-        let field = desc ? s.substring(1) : s;
-        let f = field.split('.');
-        let aValue = a[f[0]];
-        let bValue = b[f[0]];
-        for (let i = 1; i < f.length; i++) {
-          aValue = aValue ? aValue[f[i]] : null;
-          bValue = bValue ? bValue[f[i]] : null;
-        }
-        if (aValue < bValue)
-          return desc ? 1 : -1;
-        if (aValue > bValue)
-          return desc ? -1 : 1;
+
         return 0;
       });
   }
 
   ceil(number: number): number {
     return Math.ceil(number);
+  }
+
+  setPageSize(): void {
+    this.pageNumber = 1;
+    this.setStorage(`Size`, this.pageSize);
+  }
+
+  handleCellClick(cellClicked: Function | undefined, row: SharepointChoiceRow, event: Event): void {
+    if (cellClicked) {
+      cellClicked(row, event.target);
+    } else {
+      this.rowClicked.emit({ row, target: event.target });
+    }
+  }
+
+  selectionChanged(row: SharepointChoiceRow): void {
+    if (!this.allowSelection || !this.selectedTab)
+      return;
+    row.selected = !row.selected;
+    let selectedRows = this.rows(this.selectedTab).filter(r => r.selected);
+    this.selected.emit(selectedRows);
   }
 }

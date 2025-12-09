@@ -11,6 +11,7 @@ import "@pnp/sp/folders";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { PermissionKind } from "@pnp/sp/security";
 import { App } from './App';
+import { SharepointChoicePermission, SharepointChoiceForm, SharepointChoiceList, SharepointChoiceField, SharepointChoiceAttachment } from "./sharepoint-choice.models";
 
 ///<summary>
 /// This is to be used in place of specific pnp.sp function when using these form fields to aid in data transforms and a few other fringe cases outlined in the method coments 
@@ -28,7 +29,7 @@ export class SharepointChoiceUtils {
     let w: any = window;
     // if no mock or null or empty or incomplete context try to get this from the current page url
     if (!this.context)
-      this.context = (w._spPageContextInfo ? w._spPageContextInfo.webAbsoluteUrl : null) || 
+      this.context = (w._spPageContextInfo ? w._spPageContextInfo.webAbsoluteUrl : null) ||
         document.location.href.replace(/(\/SitePages\/|\/Pages\/|\/_layouts\/|\/Lists\/|#|\?).*$/i, '');
 
     this.context = this.context?.replace(/\/$/, '');
@@ -70,9 +71,9 @@ export class SharepointChoiceUtils {
 
   // get the current user and permissions to a flat object for easier use in [disabled]="permission['']" etc
   // NOTE: this will only detect direct assignments or users added to a mail enabled global security group
-  public async permissions(): Promise<any> {
-    let p: any = {};
+  public async permissions(): Promise<{userId: number, perms: SharepointChoicePermission}> {
     let w: any = window;
+    let p: SharepointChoicePermission = {};
 
     try {
       let web = await this.sp.web();
@@ -103,11 +104,11 @@ export class SharepointChoiceUtils {
       p = { Error: true };
     }
 
-    return { userId: w._spPageContextInfo.userId, perms: p }
+    return { userId: w._spPageContextInfo.userId as number, perms: p }
   }
 
   // check permission against object
-  public async hasPermission(object: any, permissions: any[PermissionKind]): Promise<boolean> {
+  public async hasPermission(object: any, permissions: PermissionKind[]): Promise<boolean> {
     try {
       let perm = await object.getCurrentUserEffectivePermissions();
       for (let permission of permissions) {
@@ -119,8 +120,8 @@ export class SharepointChoiceUtils {
   }
 
   // get list fields in the appropriate format for use in <sharepoint-choice spec=""> attributes
-  public async fields(listTitle: string): Promise<any> {
-    let spec: any = { 'odata.context': this.sp };
+  public async fields(listTitle: string): Promise<SharepointChoiceList> {
+    let spec: SharepointChoiceList = { 'odata.context': this.sp };
 
     try {
       // even though the main fields are in the selection not all are returned such as Format, so parse the SchemaXml for the rest
@@ -140,7 +141,7 @@ export class SharepointChoiceUtils {
           // prevent reparsing anywhere else
           x.SchemaXml = "";
         }
-        spec[x.InternalName] = x;
+        spec[x.InternalName] = x as SharepointChoiceField;
       });
     } catch (e) {
       spec['Title'] = { TypeAsString: 'Text', MaxLength: 16, Description: 'Tooltip' };
@@ -149,7 +150,7 @@ export class SharepointChoiceUtils {
     return spec;
   }
 
-  private async cleanLoadKeys(d: any, listTitle?: string, id?: number) {
+  private async cleanLoadKeys(d: SharepointChoiceForm, listTitle?: string, id?: number) {
     for (var key in d) {
       // people fields return twice
       if (key.endsWith('StringId') && (d[key.replace(/StringId$/, 'Id')] || d[key.replace(/StringId$/, 'Id')] === null)) {
@@ -159,7 +160,7 @@ export class SharepointChoiceUtils {
 
       // if there are attachments start loading
       if (key == 'Attachments' && listTitle && id) {
-        if (d[key] === true)
+        if (d[key]) // this will be a boolean off the sp api so coerce truethiness and get results if true
           d[key] = { results: await this.sp.web.lists.getByTitle(listTitle).items.getById(id).attachmentFiles() };
         else
           d[key] = { results: [] };
@@ -210,8 +211,8 @@ export class SharepointChoiceUtils {
   }
 
   // load list item data and parse any data types appropriate for use in <sharepoint-choice ngModel=""> attributes
-  public async data(id: number, listTitle: string): Promise<any> {
-    let d: any = {};
+  public async data(id: number, listTitle: string): Promise<SharepointChoiceForm> {
+    let d: SharepointChoiceForm = {};
 
     try {
       d = await this.sp.web.lists.getByTitle(listTitle).items.getById(id)();
@@ -330,7 +331,7 @@ export class SharepointChoiceUtils {
     }
   }
 
-  private cleanSaveKeys(save: any, uned: any): any {
+  private cleanSaveKeys(save: SharepointChoiceForm, uned?: SharepointChoiceForm): void {
     if (!uned)
       uned = {};
 
@@ -339,7 +340,7 @@ export class SharepointChoiceUtils {
     for (let key of Object.keys(save)) {
       if (save[key] === '')
         save[key] = null;
-      
+
       if ((save[key] === null && uned[key] !== null) || key == "Id")
         continue;
 
@@ -367,13 +368,13 @@ export class SharepointChoiceUtils {
 
       // convert back to direct array and ensure no nulls selected, should never occur but does on some browsers? and deduplicate data
       if (typeof save[key] == "object" && save[key].results) {
-        save[key] = save[key].results.filter((i: any) => i).filter((item: any, pos: number, arr: any) => arr.indexOf(item) == pos);
+        save[key] = save[key].results.filter((i: string|number) => i).filter((item: string|number, pos: number, arr: (string|number)[]) => arr.indexOf(item) == pos);
         continue;
       }
     }
   }
 
-  private hasData(save) : boolean {
+  private hasData(save:SharepointChoiceForm): boolean {
     for (var key in save)
       if (key != "Id")
         return true;
@@ -382,7 +383,7 @@ export class SharepointChoiceUtils {
   }
 
   // patch save list item data and parse any data types appropriate for use in <sharepoint-choice ngModel=""> attributes
-  public async save(formDataIncIdToUpdate: any, uneditedDataToBuildPatch: any, listTitle: string): Promise<number> {
+  public async save(formDataIncIdToUpdate: SharepointChoiceForm, uneditedDataToBuildPatch: SharepointChoiceForm, listTitle: string): Promise<number> {
     var save = JSON.parse(JSON.stringify(formDataIncIdToUpdate));
     var errors: Array<string> = [];
     try {
@@ -398,9 +399,9 @@ export class SharepointChoiceUtils {
 
       // process attachments as deletes then uploads
       if (formDataIncIdToUpdate.Attachments && formDataIncIdToUpdate.Attachments.results && formDataIncIdToUpdate.Attachments.results.length > 0) {
-        var deletes = formDataIncIdToUpdate.Attachments.results.filter((a: any) => {
+        var deletes = formDataIncIdToUpdate.Attachments.results.filter((a: SharepointChoiceAttachment) => {
           return a.Deleted
-        }).map((a: any) => {
+        }).map((a: SharepointChoiceAttachment) => {
           return a.FileName;
         });
 
@@ -411,21 +412,24 @@ export class SharepointChoiceUtils {
             errors.push(`Error deleting attachment ${deletes[i]} for item ${save.Id} in list ${listTitle} with error ${e}`);
           }
 
-        var adds = formDataIncIdToUpdate.Attachments.results.filter((a: any) => {
+        var adds = formDataIncIdToUpdate.Attachments.results.filter((a: SharepointChoiceAttachment) => {
           return !a.Deleted && !a.ServerRelativeUrl
-        }).map((a: any) => {
+        }).map((a: SharepointChoiceAttachment) => {
           return {
             name: a.FileName,
             content: a.Data
           };
         });
 
-        for (let a = 0; a < adds.length; a++)
+        for (let a = 0; a < adds.length; a++) {
+          if (adds[a].content == undefined)
+            continue;
           try {
-            await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).attachmentFiles.add(adds[a].name, adds[a].content);
+            await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).attachmentFiles.add(adds[a].name, adds[a].content ?? '');
           } catch (e) {
             errors.push(`Error adding attachment ${adds[a].name} for item ${save.Id} in list ${listTitle} with error ${e}`);
           }
+        }
       }
     } catch (e) {
       window.alert('Error saving data:\n\n' + e);
@@ -470,20 +474,20 @@ export class SharepointChoiceUtils {
     return root.ServerRelativeUrl;
   }
 
-  public async getFiles(path: string, additional: string | undefined): Promise<any> {
+  public async getFiles(path: string, additional: string | undefined): Promise<SharepointChoiceAttachment[]> {
     if (path.indexOf("://") >= 0)
       path = path.substring(path.indexOf('/', 9));
     path = decodeURIComponent(path).replace(/\/$/, '');
 
     var files = await this.sp.web.getFolderByServerRelativePath(path + (additional ? '/' + additional : '')).files.orderBy('TimeCreated').expand('ListItemAllFields')();
 
-    var ret: Array<any> = [];
-    files.forEach(async (file: any) => {
+    var ret: SharepointChoiceAttachment[] = [];
+    files.forEach(async (file) => {
       await this.cleanLoadKeys(file['ListItemAllFields']);
 
       ret.push({
         FileName: file.Name,
-        TimeCreated: file.TimeCreated,
+        TimeCreated: new Date(file.TimeCreated),
         ServerRelativeUrl: file.ServerRelativeUrl,
         ListItemAllFields: file['ListItemAllFields'],
         OldListItemAllFields: JSON.parse(JSON.stringify(file['ListItemAllFields']))
@@ -493,7 +497,7 @@ export class SharepointChoiceUtils {
     return ret;
   }
 
-  public async relocateFolder(source: string, destination: string): Promise<string|null> {
+  public async relocateFolder(source: string, destination: string): Promise<string | null> {
     // ensure these are server relative paths
     var dst = decodeURIComponent(destination.includes("://") ? destination.substring(destination.indexOf("/", 9)) : destination);
     var src = decodeURIComponent(source.includes("://") ? source.substring(source.indexOf("/", 9)) : source);
@@ -517,7 +521,7 @@ export class SharepointChoiceUtils {
     return decodeURIComponent((await folder()).ServerRelativeUrl || destination);
   }
 
-  public async saveFiles(path: string, additional: string | undefined, url: any | undefined, files: any, metadata: any | undefined): Promise<void> {
+  public async saveFiles(path: string, additional: string | undefined, url: {Url: string, Description: string} | undefined, files: { results: SharepointChoiceAttachment[] }, metadata: SharepointChoiceForm | undefined): Promise<void> {
     if (path.indexOf("://") >= 0)
       path = path.substring(path.indexOf('/', 9));
     path = decodeURIComponent(path).replace(/\/$/, '');
@@ -595,4 +599,3 @@ export class SharepointChoiceUtils {
     }
   }
 }
-
