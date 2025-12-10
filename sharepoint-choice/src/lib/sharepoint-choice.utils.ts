@@ -8,6 +8,7 @@ import "@pnp/sp/fields";
 import "@pnp/sp/attachments";
 import "@pnp/sp/files";
 import "@pnp/sp/folders";
+import "@pnp/sp/profile";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { PermissionKind } from "@pnp/sp/security";
 import { App } from './App';
@@ -601,5 +602,6 @@ export class SharepointChoiceUtils {
     }
   }
 }
+
 
 
