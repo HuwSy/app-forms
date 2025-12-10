@@ -1177,8 +1177,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       var id = res.Id;
       if (!id) {
         let spc = new SharepointChoiceUtils();
-        //let sp = Web([spc.sp.web, this.spec['__metadata']]);
-        let u = await spc.sp.web.ensureUser(res.Key);
+        let web = Web([spc.sp.web, this.spec['__metadata']]);
+        let u = await web.ensureUser(res.Key);
         id = u.Id;
       }
 
@@ -1231,7 +1231,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this.loading.push(user);
       // load the user
       let spc = new SharepointChoiceUtils();
-      spc.sp.web.getUserById(user)().then((u: SharepointChoiceUser) => {
+      let web = Web([spc.sp.web, this.spec['__metadata']]);
+      web.getUserById(user)().then((u: SharepointChoiceUser) => {
         // update the display table
         this.display.push({
           DisplayText: u.Title,
@@ -1264,9 +1265,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // trigger user search
   onUpUser(key:string|undefined): void {
-    if (!this.userKey)
-      return;
-
     if (key == "ArrowDown") {
       if (this.pos < this.users.length - 1)
         this.pos++;
@@ -1287,10 +1285,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (!this.name)
       return;
 
-    let spc = new SharepointChoiceUtils();
-    //let url = this.spec['__metadata'];
+    //let spc = new SharepointChoiceUtils();
+    //let web = 
+    let url = this.spec['__metadata'];
     // ensure up to date digest for http posting
-    var token: Response = await fetch(spc.context + '/_api/contextinfo', {
+    var token: Response = await fetch(url + '/_api/contextinfo', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1299,7 +1298,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     });
     let digest = await token.json();
     // query users api, no pnp endpoint for this
-    var search: Response = await fetch(spc.context + '/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.ClientPeoplePickerSearchUser', {
+    var search: Response = await fetch(url + '/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.ClientPeoplePickerSearchUser', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1332,4 +1331,5 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
+
 
