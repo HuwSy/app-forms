@@ -18,7 +18,7 @@ export interface SharepointChoiceAttachment {
 }
 
 export interface SharepointChoiceList {
-  [fieldName: string]: SharepointChoiceField | undefined;
+  [fieldName: string]: SharepointChoiceField;
 }
 
 export interface SharepointChoiceField {
@@ -42,11 +42,11 @@ export interface SharepointChoiceField {
 }
 
 export interface SharepointChoiceUser {
-  Key: string;
-  Id: number;
-  DisplayText: string;
-  Title: string;
-  LoginName: string;
+  Key?: string;
+  Id?: number;
+  DisplayText?: string;
+  Title?: string;
+  LoginName?: string;
   EntityData? : {
     Email?: string;
   }
@@ -122,4 +122,5 @@ export interface SharepointChoiceColumn {
   hide?: boolean | ((tab: string) => boolean); // hide column, or function to determine hide state based on selected tab
   _filtervisible?: boolean; // internal use to track filter visibility
 }
+
 
