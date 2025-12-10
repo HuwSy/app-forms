@@ -1280,43 +1280,20 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (!this.name)
       return;
 
-    //let spc = new SharepointChoiceUtils();
-    //let web = 
-    let url = this.spec['__metadata'];
-    // ensure up to date digest for http posting
-    var token: Response = await fetch(url + '/_api/contextinfo', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json;odata=verbose'
-      }
-    });
-    let digest = await token.json();
-    // query users api, no pnp endpoint for this
-    var search: Response = await fetch(url + '/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.ClientPeoplePickerSearchUser', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json;odata=verbose',
-        'X-RequestDigest': digest.d.GetContextWebInformation.FormDigestValue
-      },
-      body: JSON.stringify({
-        queryParams: {
-          // set the user partial being searched
-          QueryString: this.name,
-          MaximumEntitySuggestions: 10,
-          AllowEmailAddresses: true,
-          AllowOnlyEmailAddresses: false,
-          PrincipalSource: 15,
-          PrincipalType: 1,
-          // set group each query to adapt to changes
-          SharePointGroupID: parseInt(this.get('SelectionGroup') || '0')
-        }
-      })
-    });
-    let res = await search.json();
-    this.users = [];
-    let allUsers = JSON.parse(res.d.ClientPeoplePickerSearchUser);
+    let search = {
+      // set the user partial being searched
+      QueryString: this.name,
+      MaximumEntitySuggestions: 10,
+      AllowEmailAddresses: true,
+      AllowOnlyEmailAddresses: false,
+      PrincipalSource: 15,
+      PrincipalType: 1,
+      // set group each query to adapt to changes
+      SharePointGroupID: parseInt(this.get('SelectionGroup') || '0')
+    };
+    
+    let spc = new SharepointChoiceUtils();
+    let allUsers = await spc.sp.profiles.clientPeoplePickerSearchUser(search);
     allUsers.filter((x: SharepointChoiceUser) => {
       return x.EntityData?.Email && !x.Key.includes('_adm') && !x.Key.includes('adm_')
     }).forEach((user: SharepointChoiceUser) => {
@@ -1326,6 +1303,3 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
-
-
-
