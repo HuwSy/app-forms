@@ -316,8 +316,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         }
       }
 
-      // if the field is empty (not set null) and its not a person field (+Id) then set the default value only if there is one
-      if (this.form[this.field] === undefined && !this.form[this.field + 'Id']) {
+      // if the field is empty (not set null) then set the default value only if there is one
+      if (this.form[this.field] === undefined && this.form[this.field + 'Id'] === undefined) {
         let d = this.get('DefaultValue');
         if (d && p == 'MultiChoice')
           this.form[this.field].results = [d];
@@ -607,11 +607,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         Choices: this.file?.doctypes || []
       };
     return s;
-  }
-
-  getFieldSpec(key: string): SharepointChoiceField | undefined {
-    const value = this.file?.spec?.[key];
-    return value && typeof value === 'object' && 'web' in value === false ? value : undefined;
   }
 
   usedTypes(): Array<string> {
@@ -1331,5 +1326,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.chRef.detectChanges();
   }
 }
+
 
 
