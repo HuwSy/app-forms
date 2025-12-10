@@ -344,7 +344,8 @@
         @for (k of keys; track $index) {
         <th>
           <span>
-            {{getFieldSpec(k)?.Title || friendlyName(getFieldSpec(k)?.InternalName)}}
+            @let fs = file?.spec?.[k];
+            {{fs?.Title || friendlyName(fs?.InternalName)}}
           </span>
         </th>
         }
@@ -449,7 +450,7 @@
         }
         @for (k of keys; track $index) {
         <td>
-          @let fs = getFieldSpec(k);
+          @let fs = file?.spec?.[k];
           @if (fs?.InternalName) {
           <app-choice [form]="listItem"
                       [spec]="file?.spec || spec"
@@ -571,7 +572,7 @@
         }
         @for (k of keys; track $index) {
         <div>
-          @let fs = getFieldSpec(k);
+          @let fs = file?.spec?.[k];
           @if (fs?.InternalName) {
           <app-choice [form]="listItem"
                       [spec]="file?.spec || spec"
@@ -752,4 +753,5 @@
     }
   </ul>
   }
+
 </div>
