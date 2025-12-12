@@ -292,21 +292,28 @@ export class SharepointChoiceTable {
     document.addEventListener('mouseup', onMouseUp);
   }
 
-  // handle cell click or row clicks
+  // handle cell click or row clicks, return true or false to clear cache or not. emitter cant await and wont trigger cache clear
   async handleCellClick(cellClicked: Function | undefined, row: SharepointChoiceRow, event: Event): Promise<void> {
     if (cellClicked) {
       let c = cellClicked(row, event.target);
-      if (c instanceof Promise)
-        await c;
+      if (c instanceof Promise) {
+        if (!await c)
+          return;
+      } else if (!c)
+        return;
     } else {
       if (this.rowClicked) {
         // unfortunately emit doesnt support await
         this.rowClicked.emit({ row, target: event.target });
+        return;
       }
       if (this.rowClicking) {
         let c = this.rowClicking(row, event.target);
-        if (c instanceof Promise)
-          await c;
+        if (c instanceof Promise) {
+          if (!await c)
+            return;
+        } else if (!c)
+          return;
       }
     }
     // Clear cache in case callback modified row data that affects filtering/sorting
@@ -465,3 +472,4 @@ export class SharepointChoiceTable {
   }
 
 }
+
