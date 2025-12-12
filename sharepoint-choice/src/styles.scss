@@ -339,6 +339,10 @@ a.fc-event {
     overflow: auto;
     position: relative;
     max-width: 100%;
+    /* Performance optimizations for large tables */
+    contain: layout style;
+    transform: translateZ(0); /* Force GPU acceleration */
+    will-change: scroll-position;
   }
 
   .table,
@@ -393,6 +397,8 @@ a.fc-event {
       z-index: 9;
 
       background-color: #ddd;
+      /* Optimize header rendering */
+      will-change: transform;
 
       tr:first-child {
         position: inherit;
@@ -453,6 +459,7 @@ a.fc-event {
           width: 5px;
           height: 100%;
           cursor: ew-resize;
+          z-index: 9;
         }
       }
 
@@ -482,8 +489,13 @@ a.fc-event {
         background-color: #ddd !important;
       }
 
+      tr.selected {
+        background-color: rgba(1,1,1,0.1);
+      }
+
       tr.loading {
-        background-color: transparent !important;
+        opacity: 0.5;
+        pointer-events: none;
       }
 
       td {
@@ -894,23 +906,6 @@ a.fc-event {
     }
   }
 
-  .cols {
-    list-style-type: none;
-    padding-left: 0;
-
-    input {
-      float: right;
-    }
-
-    li {
-      clear: both;
-    }
-
-    li:hover {
-      background-color: #f0f0f0;
-    }
-  }
-
   .Saving {
     position: fixed;
     top: 0;
@@ -951,7 +946,7 @@ a.fc-event {
 
       max-height: 75vh;
       min-width: 30vw;
-      width: 500px;
+      width: 700px;
       max-width: 90vw;
 
       .Close {
