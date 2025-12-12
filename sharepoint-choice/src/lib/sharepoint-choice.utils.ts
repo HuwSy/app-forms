@@ -8,7 +8,7 @@ import "@pnp/sp/fields";
 import "@pnp/sp/attachments";
 import "@pnp/sp/files";
 import "@pnp/sp/folders";
-import "@pnp/sp/profile";
+import "@pnp/sp/profiles";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { PermissionKind } from "@pnp/sp/security";
 import { App } from './App';
@@ -19,21 +19,24 @@ import { SharepointChoicePermission, SharepointChoiceForm, SharepointChoiceList,
 ///</summary>
 export class SharepointChoiceUtils {
   // context can be read and updated
-  public context?: string = '';
+  public context: string = '';
   public sp: SPFI;
 
   // attempt to establish correct context url for the site from one of the available sources then setup logging for this class
   constructor(
     context?: string
   ) {
-    this.context = context;
     let w: any = window;
     // if no mock or null or empty or incomplete context try to get this from the current page url
-    if (!this.context)
-      this.context = (w._spPageContextInfo ? w._spPageContextInfo.webAbsoluteUrl : null) ||
-        document.location.href.replace(/(\/SitePages\/|\/Pages\/|\/_layouts\/|\/Lists\/|#|\?).*$/i, '');
+    this.context = context
+      || (w._spPageContextInfo ? w._spPageContextInfo.webAbsoluteUrl : null)
+      || document.location.href.replace(/(\/SitePages\/|\/Pages\/|\/_layouts\/|\/Lists\/|#|\?).*$/i, '');
 
-    this.context = this.context?.replace(/\/$/, '');
+    // ensure full url
+    if (!this.context.startsWith("https://"))
+      this.context = document.location.origin + "/" + this.context.replace(/^\//, '');
+
+    this.context = this.context.replace(/\/$/, '');
 
     this.sp = spfi().using(SPBrowser({ baseUrl: this.context }));
 
@@ -74,9 +77,12 @@ export class SharepointChoiceUtils {
 
   // get the current user and permissions to a flat object for easier use in [disabled]="permission['']" etc
   // NOTE: this will only detect direct assignments or users added to a mail enabled global security group
-  public async permissions(): Promise<{userId: number, perms: SharepointChoicePermission}> {
+  public async permissions(): Promise<SharepointChoicePermission> {
     let w: any = window;
-    let p: SharepointChoicePermission = {};
+    let permission: SharepointChoicePermission = {
+      userId: w._spPageContextInfo.userId as number,
+      perms: {}
+    };
 
     try {
       let web = await this.sp.web();
@@ -85,9 +91,9 @@ export class SharepointChoiceUtils {
       // this doesnt work well with ad and aad groups assignments
       let perm = await this.sp.web.currentUser.groups();
       perm.forEach(x => {
-        p[x.LoginName] = true;
+        permission.perms[x.LoginName] = true;
         if (x.LoginName.startsWith(`${web.Title} `))
-          p[x.LoginName.replace(`${web.Title} `, '')] = true;
+          permission.perms[x.LoginName.replace(`${web.Title} `, '')] = true;
       });
 
       // ad and aad groups within sp groups dont always expose groups above
@@ -97,17 +103,21 @@ export class SharepointChoiceUtils {
         if (sec.Hidden && sec.IsApplicationList) {
           let per = await this.sp.web.lists.getByTitle('Security').items.select("Title").top(5000)();
           per.forEach(s => {
-            p[s.Title] = true;
+            permission.perms[s.Title] = true;
             if (s.Title.startsWith(`${web.Title} `))
-              p[s.Title.replace(`${web.Title} `, '')] = true;
+              permission.perms[s.Title.replace(`${web.Title} `, '')] = true;
           })
         }
       } catch (e) { }
     } catch (e) {
-      p = { Error: true };
+      permission.perms = { Error: true };
     }
 
-    return { userId: w._spPageContextInfo.userId as number, perms: p }
+    // retry here after mocking context should have completed
+    if (!permission.userId)
+      permission.userId = w._spPageContextInfo.userId as number;
+
+    return permission
   }
 
   // check permission against object
@@ -124,11 +134,11 @@ export class SharepointChoiceUtils {
 
   // get list fields in the appropriate format for use in <sharepoint-choice spec=""> attributes
   public async fields(listTitle: string): Promise<SharepointChoiceList> {
-    let spec: SharepointChoiceList = { '__metadata': this.context };
+    let spec: SharepointChoiceList = {};
 
     try {
       // even though the main fields are in the selection not all are returned such as Format, so parse the SchemaXml for the rest
-      let selectFields = 'Title,InternalName,TypeAsString,Required,Choices,MaxLength,Description,DisplayFormat,AppendOnly,SelectionGroup,Format,FillInChoice,RichText,ReadOnlyField,DefaultValue,SchemaXml'.split(',');
+      let selectFields = 'Title,InternalName,TypeAsString,Scope,Required,Choices,MaxLength,Description,DisplayFormat,AppendOnly,SelectionGroup,Format,FillInChoice,RichText,ReadOnlyField,DefaultValue,SchemaXml'.split(',');
       let arr = await this.sp.web.lists.getByTitle(listTitle).fields.select(...selectFields)();
       arr.forEach(x => {
         if (x.SchemaXml) {
@@ -144,10 +154,12 @@ export class SharepointChoiceUtils {
           // prevent reparsing anywhere else
           x.SchemaXml = "";
         }
+        // override scope to current context as it will be used for cross site apps
+        x.Scope = this.context;
         spec[x.InternalName] = x as SharepointChoiceField;
       });
     } catch (e) {
-      spec['Title'] = { TypeAsString: 'Text', MaxLength: 16, Description: 'Tooltip' };
+      spec['Title'] = { TypeAsString: 'Text', InternalName: 'Title', MaxLength: 16, Description: 'Tooltip', Scope: this.context };
     }
 
     return spec;
@@ -363,21 +375,30 @@ export class SharepointChoiceUtils {
         continue;
       }
 
-      // convert JSON
-      if (typeof save[key] == "object" && !save[key].results && !save[key].Url) {
-        save[key] = JSON.stringify(save[key]);
+      // if Url with issues
+      if (typeof save[key] == "object" && (save[key].Url !== undefined || save[key].Description !== undefined)) {
+        if (!save[key].Description)
+          save[key].Description = save[key].Url;
+        if (!save[key].Url)
+          save[key] = null;
         continue;
       }
 
       // convert back to direct array and ensure no nulls selected, should never occur but does on some browsers? and deduplicate data
-      if (typeof save[key] == "object" && save[key].results) {
-        save[key] = save[key].results.filter((i: string|number) => i).filter((item: string|number, pos: number, arr: (string|number)[]) => arr.indexOf(item) == pos);
+      if (typeof save[key] == "object" && save[key].results !== undefined) {
+        save[key] = save[key].results?.filter((i: string | number) => i).filter((item: string | number, pos: number, arr: (string | number)[]) => arr.indexOf(item) == pos) ?? [];
+        continue;
+      }
+
+      // convert JSON
+      if (typeof save[key] == "object") {
+        save[key] = JSON.stringify(save[key]);
         continue;
       }
     }
   }
 
-  private hasData(save:SharepointChoiceForm): boolean {
+  private hasData(save: SharepointChoiceForm): boolean {
     for (var key in save)
       if (key != "Id")
         return true;
@@ -524,15 +545,18 @@ export class SharepointChoiceUtils {
     return decodeURIComponent((await folder()).ServerRelativeUrl || destination);
   }
 
-  public async saveFiles(path: string, additional: string | undefined, url: {Url: string, Description: string} | undefined, files: { results: SharepointChoiceAttachment[] }, metadata: SharepointChoiceForm | undefined): Promise<void> {
+  public async saveFiles(path: string, additional: string | undefined, url: { Url: string, Description: string } | undefined, files: { results: SharepointChoiceAttachment[] }, metadata: SharepointChoiceForm | undefined): Promise<void> {
     if (path.indexOf("://") >= 0)
       path = path.substring(path.indexOf('/', 9));
     path = decodeURIComponent(path).replace(/\/$/, '');
 
     // common metadata for folder and each file, unless overridden at a file level
     var commonmeta = metadata ? JSON.parse(JSON.stringify(metadata)) : {};
-    if (url)
+    if (url && url.Url) {
+      if (!url.Description)
+        url.Description = url.Url;
       commonmeta['Request'] = url;
+    }
 
     var errors: Array<string> = [];
     try {
@@ -602,6 +626,3 @@ export class SharepointChoiceUtils {
     }
   }
 }
-
-
-

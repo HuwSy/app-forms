@@ -1,13 +1,14 @@
-@let results = rows(selectedTab);
-@let columns = flds(selectedTab);
-@let maxpage = ceil(results.length / pageSize);
+@let currentRows = !selectedTab ? [] : rows(selectedTab);
+@let data = currentRows.slice((pageNumber - 1) * pageSize, pageNumber * pageSize);
+@let maxpage = ceil(currentRows.length / pageSize);
+@let columns = !selectedTab ? [] : fields(selectedTab);
 
 @if (allTabs.length > 1) {
 <ul class="Tabs"
     style="position: relative;">
-  @for (s of allTabs; track $index) {
-  @let count = s == selectedTab ? results.length : rows(s).length;
-  <li (click)="changeTab(s)"
+  @for (s of allTabs; track s) {
+  @let count = s == selectedTab ? currentRows.length : rows(s).length;
+  <li (click)="tabChange(s)"
       [ngClass]="{Active: s == selectedTab}"
       [style.maxWidth]="'calc(90% / '+allTabs.length+')'"
       [title]="s">
@@ -25,7 +26,8 @@
   </div>
 </div>
 <div class="table-wrapper"
-     [style.maxHeight]="tableHeight">
+     [style.maxHeight]="tableHeight"
+     [style.visibility]="hasLoadedData ? 'visible' : 'hidden'">
   <table class="table">
     <thead>
       <tr>
@@ -35,23 +37,23 @@
           #
         </th>
         }
-        @for (col of columns; track $index; let colIndex = $index) {
-        @let filter = filterOpts(col.field);
+        @for (col of columns; track col.field || col.headerName || $index; let colIndex = $index) {
+        @let filter = filterContains(col.field);
         <th [style.minWidth.px]="col.width"
             [title]="col.headerTooltip || col.headerName || ''"
             [style.cursor]="col.sortable === false ? 'default' : 'pointer'"
-            (click)="changeSort(col)"
+            (click)="sortChange(col)"
             [colSpan]="col.children?.length || 1"
             [rowSpan]="(col.children?.length || 1) == 1 ? 2 : 1">
           {{niceName(col)}}
-          @if (sortContains('!'+col.field)) {
+          @if (sortContains(col.field, 'desc')) {
           <i>&uarr;</i>
           }
-          @if (sortContains(col.field)) {
+          @if (sortContains(col.field, 'asc')) {
           <i>&darr;</i>
           }
           @if (col.filter) {
-          <i (click)="toggleFilter(col, $event)"
+          <i (click)="filterToggle(col, $event)"
              [style.color]="filter.equals || filter.greater || filter.less || filter.contains ? 'darkorange' : 'black'">&#9776;</i>
           @if (col._filtervisible) {
           <div class="options">
@@ -59,10 +61,10 @@
             @case ('select') {
             <select (click)="$event.stopPropagation()"
                     [name]="'ColFlt_'+colIndex"
-                    (change)="changeFilter(col, 'equals', $event)"
+                    (change)="filterChange(col, 'equals', $event)"
                     [ngModel]="filter.equals">
               <option value="">-- All --</option>
-              @for (option of distinctContent(col.field); track $index) {
+              @for (option of filterDistinct(col.field); track option) {
               <option [value]="option">{{option}}</option>
               }
             </select>
@@ -72,24 +74,24 @@
             <input type="text"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_'+colIndex"
-                   (keyup)="changeFilter(col, 'equals', $event)"
-                   (change)="changeFilter(col, 'equals', $event)"
+                   (keyup)="filterChange(col, 'equals', $event)"
+                   (change)="filterChange(col, 'equals', $event)"
                    [ngModel]="filter.equals" />
             <br>
             From:<br>
             <input type="text"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_S'+colIndex"
-                   (keyup)="changeFilter(col, 'greater', $event)"
-                   (change)="changeFilter(col, 'greater', $event)"
+                   (keyup)="filterChange(col, 'greater', $event)"
+                   (change)="filterChange(col, 'greater', $event)"
                    [ngModel]="filter.greater" />
             <br>
             To:<br>
             <input type="text"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_E'+colIndex"
-                   (keyup)="changeFilter(col, 'less', $event)"
-                   (change)="changeFilter(col, 'less', $event)"
+                   (keyup)="filterChange(col, 'less', $event)"
+                   (change)="filterChange(col, 'less', $event)"
                    [ngModel]="filter.less" />
             }
             @case ('date') {
@@ -97,28 +99,28 @@
             <input type="date"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_S'+colIndex"
-                   (keyup)="changeFilter(col, 'greater', $event)"
-                   (change)="changeFilter(col, 'greater', $event)"
+                   (keyup)="filterChange(col, 'greater', $event)"
+                   (change)="filterChange(col, 'greater', $event)"
                    [ngModel]="filter.greater" />
             <br>
             To:<br>
             <input type="date"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_E'+colIndex"
-                   (keyup)="changeFilter(col, 'less', $event)"
-                   (change)="changeFilter(col, 'less', $event)"
+                   (keyup)="filterChange(col, 'less', $event)"
+                   (change)="filterChange(col, 'less', $event)"
                    [ngModel]="filter.less" />
             }
             @default {
             <input type="text"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_'+colIndex"
-                   (keyup)="changeFilter(col, 'contains', $event)"
-                   (change)="changeFilter(col, 'contains', $event)"
+                   (keyup)="filterChange(col, 'contains', $event)"
+                   (change)="filterChange(col, 'contains', $event)"
                    [ngModel]="filter.contains" />
             }
             }
-            <div><button (click)="toggleFilter(col, $event)">Close</button></div>
+            <div><button (click)="filterToggle(col, $event)">Close</button></div>
           </div>
           }
           }
@@ -129,23 +131,23 @@
         }
       </tr>
       <tr>
-        @for (parent of columns; track $index) {
+        @for (parent of columns; track parent.field || parent.headerName || $index) {
         @if (parent.children?.length || 1 > 1) {
-        @for (col of parent.children; track $index; let colIndex = $index) {
-        @let filter = filterOpts(col.field);
+        @for (col of parent.children; track col.field || col.headerName || $index; let colIndex = $index) {
+        @let filter = filterContains(col.field);
         <th [style.minWidth.px]="col.width"
             [title]="col.headerTooltip || col.headerName || ''"
             [style.cursor]="col.sortable === false ? 'default' : 'pointer'"
-            (click)="changeSort(col)">
+            (click)="sortChange(col)">
           {{niceName(col)}}
-          @if (sortContains('!'+col.field)) {
+          @if (sortContains(col.field, 'desc')) {
           <i>&uarr;</i>
           }
-          @if (sortContains(col.field)) {
+          @if (sortContains(col.field, 'asc')) {
           <i>&darr;</i>
           }
           @if (col.filter) {
-          <i (click)="toggleFilter(col, $event)"
+          <i (click)="filterToggle(col, $event)"
              [style.color]="filter.equals || filter.greater || filter.less || filter.contains ? 'darkorange' : 'black'">&#9776;</i>
           @if (col._filtervisible) {
           <div class="options">
@@ -153,10 +155,10 @@
             @case ('select') {
             <select (click)="$event.stopPropagation()"
                     [name]="'ColFlt_'+colIndex"
-                    (change)="changeFilter(col, 'equals', $event)"
+                    (change)="filterChange(col, 'equals', $event)"
                     [ngModel]="filter.equals">
               <option value="">-- All --</option>
-              @for (option of distinctContent(col.field); track $index) {
+              @for (option of filterDistinct(col.field); track option) {
               <option [value]="option">{{option}}</option>
               }
             </select>
@@ -166,24 +168,24 @@
             <input type="text"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_'+colIndex"
-                   (keyup)="changeFilter(col, 'equals', $event)"
-                   (change)="changeFilter(col, 'equals', $event)"
+                   (keyup)="filterChange(col, 'equals', $event)"
+                   (change)="filterChange(col, 'equals', $event)"
                    [ngModel]="filter.equals" />
             <br>
             From:<br>
             <input type="text"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_S'+colIndex"
-                   (keyup)="changeFilter(col, 'greater', $event)"
-                   (change)="changeFilter(col, 'greater', $event)"
+                   (keyup)="filterChange(col, 'greater', $event)"
+                   (change)="filterChange(col, 'greater', $event)"
                    [ngModel]="filter.greater" />
             <br>
             To:<br>
             <input type="text"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_E'+colIndex"
-                   (keyup)="changeFilter(col, 'less', $event)"
-                   (change)="changeFilter(col, 'less', $event)"
+                   (keyup)="filterChange(col, 'less', $event)"
+                   (change)="filterChange(col, 'less', $event)"
                    [ngModel]="filter.less" />
             }
             @case ('date') {
@@ -191,28 +193,28 @@
             <input type="date"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_S'+colIndex"
-                   (keyup)="changeFilter(col, 'greater', $event)"
-                   (change)="changeFilter(col, 'greater', $event)"
+                   (keyup)="filterChange(col, 'greater', $event)"
+                   (change)="filterChange(col, 'greater', $event)"
                    [ngModel]="filter.greater" />
             <br>
             To:<br>
             <input type="date"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_E'+colIndex"
-                   (keyup)="changeFilter(col, 'less', $event)"
-                   (change)="changeFilter(col, 'less', $event)"
+                   (keyup)="filterChange(col, 'less', $event)"
+                   (change)="filterChange(col, 'less', $event)"
                    [ngModel]="filter.less" />
             }
             @default {
             <input type="text"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_'+colIndex"
-                   (keyup)="changeFilter(col, 'contains', $event)"
-                   (change)="changeFilter(col, 'contains', $event)"
+                   (keyup)="filterChange(col, 'contains', $event)"
+                   (change)="filterChange(col, 'contains', $event)"
                    [ngModel]="filter.contains" />
             }
             }
-            <div><button (click)="toggleFilter(col, $event)">Close</button></div>
+            <div><button (click)="filterToggle(col, $event)">Close</button></div>
           </div>
           }
           }
@@ -226,23 +228,23 @@
       </tr>
     </thead>
     <tbody>
-      @if (results.length == 0) {
-      <tr class="loading">
-        <td colspan="999">
-          No data to display
+      @if (data.length == 0 && !loading) {
+      <tr>
+        <td colspan="999" style="min-height: 100px;">
+          No data to display for page {{pageNumber}} of {{maxpage}}
+        </td>
+      </tr>
+      }
+      @else if (currentRows.length == 0 && loading) {
+      <tr>
+        <td colspan="999" style="min-height: 100px;">
+          Loading...
         </td>
       </tr>
       }
       @else {
-      @if (loading) {
-      <tr class="loading">
-        <td colspan="999">
-          <div class="spin"></div>
-        </td>
-      </tr>
-      }
-      @for (row of results.slice((this.pageNumber - 1) * this.pageSize, this.pageNumber * this.pageSize); track $index; let rowIndex = $index) {
-      <tr>
+      @for (row of data; track row['id'] || row['reference'] || $index; let rowIndex = $index) {
+      <tr [class]="{'selected': row.selected, 'loading': loading }">
         @if (allowSelection) {
         @if (row.selected) {
         <td style="cursor: pointer;"
@@ -253,40 +255,41 @@
             (click)="selectionChanged(row)">☐</td>
         }
         }
-        @for (col of columns; track $index) {
+        @for (col of columns; track col.field || col.headerName || $index) {
         @if (col.children?.length || 1 > 1) {
-        @for (child of col.children; track $index) {
+        @for (child of col.children; track child.field || child.headerName || $index) {
         @let value = fieldValue(row, child.field);
-        @if (child.cellRenderer) {
+        @switch (getCellType(child, value)) {
+        @case ('renderer') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
             [class]="{'center': child.center}"
-            [innerHTML]="child.cellRenderer(value, row, rowIndex)"
+            [innerHTML]="child.cellRenderer!(value, row, rowIndex)"
             (click)="handleCellClick(child.cellClicked, row, $event)"></td>
         }
-        @else if (child.filter == 'date' || value?.toJSON) {
+        @case ('date') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
             (click)="handleCellClick(child.cellClicked, row, $event)">{{value | date:'dd MMM yy'}}</td>
         }
-        @else if (child.filter == 'number' || typeof value == 'number') {
+        @case ('number') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
             (click)="handleCellClick(child.cellClicked, row, $event)">{{value | number:'1.0-2'}}</td>
         }
-        @else if (typeof value == 'boolean') {
+        @case ('boolean') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
-            (click)="handleCellClick(child.cellClicked, row, $event)">{{value ? '✔' : ''}}</td>
+            (click)="handleCellClick(child.cellClicked, row, $event)">{{formatBoolean(value)}}</td>
         }
-        @else {
+        @default {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
@@ -295,43 +298,46 @@
         }
         }
         }
+        }
         @else {
         @let value = fieldValue(row, col.field);
-        @if (col.cellRenderer) {
+        @switch (getCellType(col, value)) {
+        @case ('renderer') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
             [class]="{'center': col.center}"
-            [innerHTML]="col.cellRenderer(value, row, rowIndex)"
+            [innerHTML]="col.cellRenderer!(value, row, rowIndex)"
             (click)="handleCellClick(col.cellClicked, row, $event)"></td>
         }
-        @else if (col.filter == 'date' || value?.toJSON) {
+        @case ('date') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
             (click)="handleCellClick(col.cellClicked, row, $event)">{{value | date:'dd MMM yy'}}</td>
         }
-        @else if (col.filter == 'number' || typeof value == 'number') {
+        @case ('number') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
             (click)="handleCellClick(col.cellClicked, row, $event)">{{value | number:'1.0-2'}}</td>
         }
-        @else if (typeof value == 'boolean') {
+        @case ('boolean') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
-            (click)="handleCellClick(col.cellClicked, row, $event)">{{value ? '✔' : ''}}</td>
+            (click)="handleCellClick(col.cellClicked, row, $event)">{{formatBoolean(value)}}</td>
         }
-        @else {
+        @default {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
             [class]="{'center': col.center}"
             (click)="handleCellClick(col.cellClicked, row, $event)">{{value}}</td>
+        }
         }
         }
         }
@@ -354,15 +360,17 @@
             [disabled]="pageNumber >= maxpage - 1">&gt;&gt;</button>
   </div>
   <select [(ngModel)]="pageSize"
-          style="float: left;"
+          style="float: right;"
           name="PageSize"
-          (change)="setPageSize()">
+          (change)="this.pageNumber = 1">
     <option [value]="10">10</option>
     <option [value]="25">25</option>
     <option [value]="50">50</option>
     <option [value]="100">100</option>
     <option [value]="250">250</option>
     <option [value]="500">500</option>
+    <option [value]="1000">1000</option>
+    <option [value]="100000">Show All</option>
   </select>
 </div>
 
@@ -370,40 +378,63 @@
 <div class="Overlay">
   <div class="Modal">
     <h3>
-      Hide columns for {{selectedTab}}
+      Hide columns
       <div class="Close"
            (click)="editColumns = false">
         X
       </div>
     </h3>
-    @for (heading of flds(); track $index; let colIndex = $index) {
-    <ul class="cols">
+    <table class="table">
+      <tr>
+        <th>
+          Column
+        </th>
+        @for (t of allTabs; track t) {
+        <th [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : '#f7f7f7'">
+          {{t}}
+        </th>
+        }
+      </tr>
+    @for (heading of allCols; track heading.field || heading.headerName || $index; let colIndex = $index) {
       @if (heading.children) {
-      @for (child of heading.children; track $index; let childIndex = $index) {
-      @if (child.field && typeof child.hide !== 'function') {
-      <li>
-        {{heading.headerName || ''}}
-        -
-        {{child.headerName || child.field}}
-        <input type="checkbox"
-               (click)="toggleColumn(child)"
-               [(ngModel)]="child.hide"
-               [name]="'HideCol_'+colIndex+'_'+childIndex" />
-      </li>
+      @for (child of heading.children; track child.field || child.headerName || $index; let childIndex = $index) {
+      @if (child.field) {
+      <tr>
+        <td>
+          {{niceName(heading)}} - {{niceName(child)}}
+        </td>
+        @for (t of allTabs; track t) {
+          <td>
+            <input type="checkbox"
+                  (click)="columnToggle(child, t)"
+                  [ngModel]="isHidden(child, t)"
+                  [name]="'HideCol_'+colIndex+'_'+childIndex+'_'+t"
+                  [disabled]="typeof child.hide === 'function'" />
+          </td>
+        }
+      </tr>
       }
       }
       }
-      @else if (heading.field && typeof heading.hide !== 'function') {
-      <li>
-        {{heading.headerName || heading.field}}
-        <input type="checkbox"
-               (click)="toggleColumn(heading)"
-               [(ngModel)]="heading.hide"
-               [name]="'HideCol_'+colIndex" />
-      </li>
+      @else if (heading.field) {
+      <tr>
+        <td>
+          {{niceName(heading)}}
+        </td>
+        @for (t of allTabs; track t) {
+          <td>
+            <input type="checkbox"
+                  (click)="columnToggle(heading, t)"
+                  [ngModel]="isHidden(heading, t)"
+                  [name]="'HideCol_'+colIndex+'_'+t"
+                  [disabled]="typeof heading.hide === 'function'" />
+          </td>
+        }
+      </tr>
       }
-    </ul>
     }
+      <tr></tr>
+    </table>
   </div>
 </div>
 }

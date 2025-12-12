@@ -24,9 +24,11 @@ export interface SharepointChoiceList {
 export interface SharepointChoiceField {
   TypeAsString?: 'Text' | 'Note' | 'DateTime' | 'Number' | 'Integer' | 'Boolean' | 'Choice' | 'MultiChoice' | 'User' | 'UserMulti' | 'URL' | 'Attachments' | 'Lookup' | 'LookupMulti';
   InternalName?: string;
+  Scope?: string;
   Title?: string;
   Required?: boolean;
   ReadOnlyField?: boolean;
+  Description?: string;
   DefaultValue?: string;
   MaxLength?: number;
   Min?: number;
@@ -35,25 +37,22 @@ export interface SharepointChoiceField {
   Choices?: string[];
   SelectionGroup?: number;
   RichText?: boolean;
-  Description?: string;
   Format?: string;
   FillInChoice?: string;
   AppendOnly?: boolean;
 }
 
 export interface SharepointChoiceUser {
-  Key?: string;
-  Id?: number;
-  DisplayText?: string;
-  Title?: string;
-  LoginName?: string;
-  EntityData? : {
-    Email?: string;
-  }
+  Id: number;
+  Title: string;
+  LoginName: string;
 }
 
 export interface SharepointChoicePermission {
-  [key: string]: boolean;
+  userId: number;
+  perms: {
+    [key: string]: boolean;
+  };
 }
 
 export interface SharepointChoiceTabs {
@@ -69,11 +68,24 @@ export interface SharepointChoiceRowChild {
   [key: string]: string | number | boolean | Date | null | undefined;
 }
 
+export interface SharepointChoiceSort {
+  [tabName: string]: {
+    direction: 'asc' | 'desc';
+    field: string;
+  }[];
+}
+
 export interface SharepointChoiceFilter {
-  equals: string | number | boolean | Date | null;
-  contains: string | null;
-  greater: number | Date | null;
-  less: number | Date | null;
+  [tabName: string]: {
+    equals: string | number | boolean | Date | null;
+    contains: string | null;
+    greater: number | Date | null;
+    less: number | Date | null;
+  }[];
+}
+
+export interface SharepointChoiceHide {
+  [tabName: string]: string[];
 }
 
 export interface SharepointChoiceColumn {
@@ -114,7 +126,7 @@ export interface SharepointChoiceColumn {
           ${val}
         `;
   */
-  filter?: 'text' | 'number' | 'date' | 'select'; // filter type: 'text' | 'number' | 'date' | 'select'
+  filter?: 'text' | 'number' | 'date' | 'select' | 'none'; // filter type
   width?: number; // minwidth of the column
   children?: SharepointChoiceColumn[] // children columns, only 1 layer deep supported
   center?: boolean; // center align the column
@@ -122,5 +134,3 @@ export interface SharepointChoiceColumn {
   hide?: boolean | ((tab: string) => boolean); // hide column, or function to determine hide state based on selected tab
   _filtervisible?: boolean; // internal use to track filter visibility
 }
-
-

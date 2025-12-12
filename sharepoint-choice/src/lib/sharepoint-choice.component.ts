@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, Input, ElementRef, ChangeDetectorRef, ErrorHandler, Output, EventEmitter } from '@angular/core';
 import "@pnp/sp/webs";
 import { Web } from "@pnp/sp/webs";
+import { IPeoplePickerEntity } from "@pnp/sp/profiles";
 import { Editor, NgxEditorModule, Toolbar } from 'ngx-editor';
 import MsgReader from '@kenjiuno/msgreader';
 import { Attachment, readEml } from 'eml-parse-js';
@@ -83,7 +84,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   declare tooltip?: boolean;
   declare filesOver?: boolean;
   declare name?: string;
-  declare loading?: Array<number>;
+  declare loading: Array<number>;
   declare versionsDisplayed?: boolean;
 
   declare users: SharepointChoiceUser[];
@@ -146,6 +147,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // user(s)
     this.users = [];
     this.display = [];
+    this.loading = [];
   }
 
   // on init, destroy
@@ -205,7 +207,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.changed();
   }
 
-  dateSet(e: Date|string|null): void {
+  dateSet(e: Date | string | null): void {
     this.form[this.field] = e;
 
     this.changed();
@@ -411,7 +413,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   Common parts between text fields
   */
 
-  async onUpText(key:string|undefined): Promise<void> {
+  async onUpText(key: string | undefined): Promise<void> {
     if (!this.textKey)
       return;
 
@@ -435,13 +437,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (!this.text?.search)
       return;
 
-    this.results = await this.text.search(this.form[this.field], this.text.parent);
+    this.results = await this.text.search(text, this.text.parent);
 
     this.pos = -1;
     this.chRef.detectChanges();
   }
 
-  async selectedText(res: SharepointChoiceForm|null): Promise<void> {
+  async selectedText(res: SharepointChoiceForm | null): Promise<void> {
     if (!this.text?.search)
       return;
 
@@ -668,7 +670,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // add attachment to array
-  async add(file: HTMLInputElement|DataTransfer) {
+  async add(file: HTMLInputElement | DataTransfer) {
     if (!file.files || file.files.length == 0)
       return;
     // read the files into the files array
@@ -759,7 +761,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
       try {
         // must double url encode any / in the message id and attachment id
-        var getAttachment: {lastModifiedDateTime: string, contentBytes: string} = await spc.callApi(
+        var getAttachment: { lastModifiedDateTime: string, contentBytes: string } = await spc.callApi(
           undefined,
           undefined,
           undefined,
@@ -946,7 +948,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
       async function saveFile() {
         // completed getting slices then start patching the file
-        let docData:(Office.FileType.Text | Office.FileType.Compressed)[] = [];
+        let docData: (Office.FileType.Text | Office.FileType.Compressed)[] = [];
         for (let i = 0; i < docDataSlices.length; i++)
           docData = docData.concat(docDataSlices[i]);
 
@@ -1013,7 +1015,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       newName = `${s} (${i++}).${e}`;
     }
 
-    var file:SharepointChoiceAttachment = {
+    var file: SharepointChoiceAttachment = {
       FileName: newName,
       Data: data,
       Length: data.byteLength,
@@ -1158,83 +1160,67 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   */
 
   // select user
-  async selectedUser(res: SharepointChoiceUser|null): Promise<void> {
-    // use click item
-    if (res) {
-      // already selected, do nothing
-      if (this.get('TypeAsString') == 'UserMulti' && this.display.filter((x: SharepointChoiceUser) => {
-        return x.Key == res.Key
-      }).length > 0)
-        return;
-      if (this.get('TypeAsString') == 'User' && this.display.length > 0 && this.display[0].Key == res.Key)
-        return;
-
-      var id = res.Id;
-      if (!id) {
-        let spc = new SharepointChoiceUtils();
-        let web = Web([spc.sp.web, this.spec['__metadata']]);
-        let u = await web.ensureUser(res.Key);
-        id = u.Id;
-      }
+  async selectedUser(res: SharepointChoiceUser | null): Promise<void> {
+    let mark = false;
+    if (res
+      && (this.display.filter((x: SharepointChoiceUser) => {
+        return x.LoginName == res.LoginName
+      }).length == 0
+      )
+    ) {
+      let spc = new SharepointChoiceUtils();
+      var url = (this.spec[this.field] || {}).Scope || '';
+      let web = Web([spc.sp.web, url]);
+      let usr = {
+        Id: (await web.ensureUser(res.LoginName)).Id,
+        Title: res.Title,
+        LoginName: res.LoginName,
+      };
 
       // add to field
       if (this.get('TypeAsString') == 'UserMulti') {
-        this.form[this.field + 'Id'].results.push(id);
-        this.display.push({
-          DisplayText: res.DisplayText,
-          Key: res.Key,
-          Id: id,
-          Title: res.Title ?? res.DisplayText,
-          LoginName: res.LoginName ?? res.Key,
-        });
+        this.form[this.field + 'Id'].results.push(usr.Id);
+        this.display.push(usr);
       } else {
-        this.form[this.field + 'Id'] = id;
-        this.display = [{
-          DisplayText: res.DisplayText,
-          Key: res.Key,
-          Id: id,
-          Title: res.Title ?? res.DisplayText,
-          LoginName: res.LoginName ?? res.Key,
-        }];
+        this.form[this.field + 'Id'] = usr.Id;
+        this.display = [usr];
       }
+
+      mark = true;
     }
 
     // clear search fields
     this.name = '';
     this.users = [];
 
-    this.changed(true);
+    this.changed(mark);
   }
 
   // load list data only has IDs so expand the object
   displayUser(user?: number): string {
-    if (!user)
+    if (!user || user <= 0)
       return '';
 
     var u = this.display.filter((x: SharepointChoiceUser) => {
       return x.Id == user
     });
-    if (u.length > 0 && u[0].DisplayText)
-      return u[0].DisplayText;
-
-    // setup context late to adapt to changes
-    if (!this.loading)
-      this.loading = [];
+    if (u.length > 0 && u[0].Title)
+      return u[0].Title;
 
     // dont trigger a new load web request if the users aready loading
-    if (this.loading.indexOf(user) < 0 && typeof user == "number" && user > 0) {
+    if (this.loading.indexOf(user) < 0) {
       this.loading.push(user);
       // load the user
       let spc = new SharepointChoiceUtils();
-      let web = Web([spc.sp.web, this.spec['__metadata']]);
+      var url = (this.spec[this.field] || {}).Scope || '';
+      let web = Web([spc.sp.web, url]);
+      // do as .then to avoid async issues
       web.getUserById(user)().then((u: SharepointChoiceUser) => {
         // update the display table
         this.display.push({
-          DisplayText: u.Title,
-          Key: u.LoginName,
+          LoginName: u.LoginName,
           Id: u.Id,
-          Title: u.Title ?? u.DisplayText,
-          LoginName: u.LoginName ?? u.Key,
+          Title: u.Title
         });
 
         this.chRef.detectChanges();
@@ -1245,7 +1231,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // removes a user
-  removeUser(usr: number|null): void {
+  removeUser(usr: number | null): void {
     if (!usr) {
       this.form[this.field + 'Id'] = null;
       this.display = [];
@@ -1259,7 +1245,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // trigger user search
-  onUpUser(key:string|undefined): void {
+  onUpUser(key: string | undefined): void {
     if (key == "ArrowDown") {
       if (this.pos < this.users.length - 1)
         this.pos++;
@@ -1272,17 +1258,17 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       if (!this.name || this.name.length < 3)
         this.users = [];
       else
-        this.userKey.next(this.name);
+        this.userKey?.next(this.name);
     }
   }
 
   async onUpUserSearch(text: string): Promise<void> {
-    if (!this.name)
+    if (!text)
       return;
 
     let search = {
       // set the user partial being searched
-      QueryString: this.name,
+      QueryString: text,
       MaximumEntitySuggestions: 10,
       AllowEmailAddresses: true,
       AllowOnlyEmailAddresses: false,
@@ -1291,13 +1277,17 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       // set group each query to adapt to changes
       SharePointGroupID: parseInt(this.get('SelectionGroup') || '0')
     };
-    
+
     let spc = new SharepointChoiceUtils();
     let allUsers = await spc.sp.profiles.clientPeoplePickerSearchUser(search);
-    allUsers.filter((x: SharepointChoiceUser) => {
-      return x.EntityData?.Email && !x.Key.includes('_adm') && !x.Key.includes('adm_')
-    }).forEach((user: SharepointChoiceUser) => {
-      this.users = [...this.users, user];
+    allUsers.filter((x: IPeoplePickerEntity) => {
+      return x.EntityData?.Email && !x.Key?.includes('_adm') && !x.Key?.includes('adm_')
+    }).forEach((user: IPeoplePickerEntity) => {
+      this.users.push({
+        Title: user.DisplayText,
+        LoginName: user.Key || user.EntityData?.Email || '',
+        Id: parseInt(user.EntityData?.SPUserID || '0'),
+      });
     });
 
     this.chRef.detectChanges();

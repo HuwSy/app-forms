@@ -670,7 +670,7 @@
           @for (user of users; track $index; let i = $index) {
           <li (click)="selectedUser(user)"
               [style]="(pos == i ? 'background-color: rgba(0, 0, 0, 0.04);' : '')">
-            {{user.DisplayText}}
+            {{user.Title}}
           </li>
           }
         </ul>
@@ -712,7 +712,7 @@
           @for (user of users; track $index; let i = $index) {
           <li (click)="selectedUser(user)"
               [style]="(pos == i ? 'background-color: rgba(0, 0, 0, 0.04);' : '')">
-            {{user.DisplayText}}
+            {{user.Title}}
           </li>
           }
         </ul>
@@ -753,5 +753,4 @@
     }
   </ul>
   }
-
 </div>
