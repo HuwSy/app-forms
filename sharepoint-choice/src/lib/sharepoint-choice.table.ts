@@ -90,7 +90,7 @@ export class SharepointChoiceTable {
 
   // outbound events or pseudo callbacks for await support
   @Input() rowClicking: Function = async (row: SharepointChoiceRow, target: HTMLElement|EventTarget|null) => {};
-  @Output() selected = new EventEmitter<SharepointChoiceRow[]>();
+  @Output() selected = new EventEmitter<{ data: SharepointChoiceRow[], tab: string }>();
   @Output() rowClicked = new EventEmitter<{ row: SharepointChoiceRow, target: HTMLElement|EventTarget|null }>();
 
   // internal state
@@ -151,19 +151,19 @@ export class SharepointChoiceTable {
   tabChange(tab: string): void {
     this.selectedTab = tab;
     this.pageNumber = 1;
-    this.selected.emit([]);
+    this.selected.emit({ data: [], tab: this.selectedTab });
   }
 
   // selection change toggles row selected state and emits selected rows
   selectionChanged(row: SharepointChoiceRow): void {
     if (!this.selectedTab)
-      return this.selected.emit([]);
+      return this.selected.emit({ data: [], tab: this.selectedTab });
     row.selected = !row.selected;
     // if there is filtering on selected, clear cache to refresh rows
     if (!!(this.filter[this.selectedTab]?.['selected']))
       this._rowsCache.delete(this.selectedTab);
     let selectedRows = this.rows(this.selectedTab).filter(r => r.selected);
-    this.selected.emit(selectedRows);
+    this.selected.emit({ data: selectedRows, tab: this.selectedTab });
   }
 
   // sorts, filters, column visibility changes
@@ -463,4 +463,5 @@ export class SharepointChoiceTable {
   ceil(number: number): number {
     return Math.ceil(number);
   }
+
 }
