@@ -2,6 +2,7 @@ import { Component, Input, ErrorHandler, EventEmitter, Output } from '@angular/c
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SharepointChoiceColumn, SharepointChoiceFilter, SharepointChoiceSort, SharepointChoiceHide, SharepointChoiceTabs, SharepointChoiceRow } from './sharepoint-choice.models';
+import { SharepointChoiceComponent } from './sharepoint-choice.component';
 
 @Component({
   selector: 'app-table',
@@ -10,7 +11,8 @@ import { SharepointChoiceColumn, SharepointChoiceFilter, SharepointChoiceSort, S
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule
+    FormsModule,
+    SharepointChoiceComponent
   ],
   providers: [{
     provide: ErrorHandler
@@ -465,5 +467,6 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
