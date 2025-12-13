@@ -159,8 +159,9 @@ export interface SharepointChoiceColumn {
   center?: boolean; // center align the column
   sortable?: boolean; // disable sorting on this column
   hide?: boolean | ((tab: string) => boolean); // hide column, or function to determine hide state based on selected tab
-  spec?: SharepointChoiceField; // make the cell editable using app-choice, onchange will trigger cell clicked for any save actions etc
+  spec?: SharepointChoiceList; // make the cell editable using app-choice, onchange will trigger cell clicked for any save actions etc
   _filtervisible?: boolean; // internal use to track filter visibility
 }
+
 
 
