@@ -89,9 +89,9 @@ export class SharepointChoiceTable {
   @Input() allowSelection: boolean = false;
 
   // outbound events or pseudo callbacks for await support
-  @Input() rowClicking: Function = async (row: SharepointChoiceRow, target: HTMLElement|EventTarget|null) => {};
+  @Input() rowClicked: Function = async (row: SharepointChoiceRow, target: HTMLElement|EventTarget|null) => {};
   @Output() selected = new EventEmitter<{ data: SharepointChoiceRow[], tab: string }>();
-  @Output() rowClicked = new EventEmitter<{ row: SharepointChoiceRow, target: HTMLElement|EventTarget|null }>();
+  @Output() clicked = new EventEmitter<{ row: SharepointChoiceRow, target: HTMLElement|EventTarget|null }>();
 
   // internal state
   pageNumber = 1;
@@ -292,31 +292,24 @@ export class SharepointChoiceTable {
     document.addEventListener('mouseup', onMouseUp);
   }
 
-  // handle cell click or row clicks, return true or false to clear cache or not. emitter cant await and wont trigger cache clear
+  // handle cell click or row click, return true or falsey to clear cache or not. emitter cant await and wont trigger cache clear
   async handleCellClick(cellClicked: Function | undefined, row: SharepointChoiceRow, event: Event): Promise<void> {
-    if (cellClicked) {
-      let c = cellClicked(row, event.target);
-      if (c instanceof Promise) {
-        if (!await c)
-          return;
-      } else if (!c)
+    var c:any = null;
+    if (cellClicked)
+      c = cellClicked(row, event.target);
+    else if (this.rowClicked)
+      c = this.rowClicked(row, event.target);
+    else if (this.clicked)
+      this.clicked.emit({ row: row, target: event.target });
+
+    // if falsey return before cache
+    if (c instanceof Promise) {
+      if (!(await c))
         return;
-    } else {
-      if (this.rowClicked) {
-        // unfortunately emit doesnt support await
-        this.rowClicked.emit({ row, target: event.target });
-        return;
-      }
-      if (this.rowClicking) {
-        let c = this.rowClicking(row, event.target);
-        if (c instanceof Promise) {
-          if (!await c)
-            return;
-        } else if (!c)
-          return;
-      }
-    }
-    // Clear cache in case callback modified row data that affects filtering/sorting
+    } else if (!c)
+      return;
+    
+    // Clear cache in case callback modified row data that affects filtering/sorting etc
     if (this.selectedTab)
       this._rowsCache.delete(this.selectedTab);
   }
@@ -472,4 +465,5 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
