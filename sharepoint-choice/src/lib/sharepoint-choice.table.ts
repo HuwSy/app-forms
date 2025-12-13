@@ -327,7 +327,7 @@ export class SharepointChoiceTable {
     return s;
   }
 
-  spcf(row: SharepointChoiceRow, field:string) : SharepointChoiceForm {
+  spc(row: SharepointChoiceRow, field:string) : SharepointChoiceForm {
     var s = field.split('.');
     var f = row;
     for (let i = 0; i < s.length - 1: i++) {
@@ -487,6 +487,7 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
 
