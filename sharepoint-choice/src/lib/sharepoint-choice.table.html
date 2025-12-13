@@ -277,35 +277,35 @@
             [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
             [class]="{'center': child.center}"
             [innerHTML]="child.cellRenderer!(value, row, rowIndex)"
-            (click)="child.spec ? editing = true : handleCellClick(child.cellClicked, row, $event)"></td>
+            (click)="child.spec && child.field ? editing = true : handleCellClick(child.cellClicked, row, $event)"></td>
         }
         @case ('date') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
-            (click)="child.spec ? editing = true : handleCellClick(child.cellClicked, row, $event)">{{value | date:'dd MMM yy'}}</td>
+            (click)="child.spec && child.field ? editing = true : handleCellClick(child.cellClicked, row, $event)">{{value | date:'dd MMM yy'}}</td>
         }
         @case ('number') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
-            (click)="child.spec ? editing = true : handleCellClick(child.cellClicked, row, $event)">{{value | number:'1.0-2'}}</td>
+            (click)="child.spec && child.field ? editing = true : handleCellClick(child.cellClicked, row, $event)">{{value | number:'1.0-2'}}</td>
         }
         @case ('boolean') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
-            (click)="child.spec ? editing = true : handleCellClick(child.cellClicked, row, $event)">{{formatBoolean(value)}}</td>
+            (click)="child.spec && child.field ? editing = true : handleCellClick(child.cellClicked, row, $event)">{{formatBoolean(value)}}</td>
         }
         @default {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
             [class]="{'center': child.center}"
-            (click)="child.spec ? editing = true : handleCellClick(child.cellClicked, row, $event)">{{value}}</td>
+            (click)="child.spec && child.field ? editing = true : handleCellClick(child.cellClicked, row, $event)">{{value}}</td>
         }
         }
         }
@@ -331,35 +331,35 @@
             [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
             [class]="{'center': col.center}"
             [innerHTML]="col.cellRenderer!(value, row, rowIndex)"
-            (click)="col.spec ? editing = true : handleCellClick(col.cellClicked, row, $event)"></td>
+            (click)="col.spec && col.field ? editing = true : handleCellClick(col.cellClicked, row, $event)"></td>
         }
         @case ('date') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
-            (click)="col.spec ? editing = true : handleCellClick(col.cellClicked, row, $event)">{{value | date:'dd MMM yy'}}</td>
+            (click)="col.spec && col.field ? editing = true : handleCellClick(col.cellClicked, row, $event)">{{value | date:'dd MMM yy'}}</td>
         }
         @case ('number') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
-            (click)="col.spec ? editing = true : handleCellClick(col.cellClicked, row, $event)">{{value | number:'1.0-2'}}</td>
+            (click)="col.spec && col.field ? editing = true : handleCellClick(col.cellClicked, row, $event)">{{value | number:'1.0-2'}}</td>
         }
         @case ('boolean') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
-            (click)="col.spec ? editing = true : handleCellClick(col.cellClicked, row, $event)">{{formatBoolean(value)}}</td>
+            (click)="col.spec && col.field ? editing = true : handleCellClick(col.cellClicked, row, $event)">{{formatBoolean(value)}}</td>
         }
         @default {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
             [class]="{'center': col.center}"
-            (click)="col.spec ? editing = true : handleCellClick(col.cellClicked, row, $event)">{{value}}</td>
+            (click)="col.spec && col.field ? editing = true : handleCellClick(col.cellClicked, row, $event)">{{value}}</td>
         }
         }
         }
@@ -463,5 +463,6 @@
 </div>
 
 }
+
 
 
