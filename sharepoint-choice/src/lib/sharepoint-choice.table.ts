@@ -316,6 +316,26 @@ export class SharepointChoiceTable {
       this._rowsCache.delete(this.selectedTab);
   }
 
+  spcf(field:string): string {
+    return field.substring(field.lastIndexOf('.') + 1);
+  }
+
+  spcs(spec: SharepointChoiceField, field:string) : SharepointChoiceList {
+    var f = this.spcf(field);
+    var s : SharepointChoiceList = {};
+    s[f] = spec;
+    return s;
+  }
+
+  spcf(row: SharepointChoiceRow, field:string) : SharepointChoiceForm {
+    var s = field.split('.');
+    var f = row;
+    for (let i = 0; i < s.length - 1: i++) {
+      f = f[i];
+    }
+    return f as SharepointChoiceForm;
+  }
+
   isHidden(col: SharepointChoiceColumn, tab: string): boolean {
     if (typeof col.hide == 'function' && col.hide(tab))
       return true;
@@ -467,6 +487,7 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
 
