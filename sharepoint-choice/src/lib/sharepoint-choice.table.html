@@ -261,8 +261,8 @@
         @let editing = false;
         @if (editing) {
         <td>
-            <app-choice [field]="child.field"
-                        [form]="row"
+            <app-choice [field]="child.field.split('.')[1]"
+                        [form]="row[child.field.split('.')[0]"
                         [spec]="child.spec"
                         (change)="handleCellClick(child.cellClicked, row, $event); editing = false">
             </app-choice>
@@ -463,3 +463,4 @@
 </div>
 
 }
+
