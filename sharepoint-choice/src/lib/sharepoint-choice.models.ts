@@ -93,25 +93,52 @@ export interface SharepointChoiceColumn {
   field?: string; // datafield name in the data, supports dot notation for nested fields
   headerTooltip?: string; // tooltip for the header
   nowrap?: boolean; // enforce nowrap in cell content
-  cellClicked?: (row: SharepointChoiceRow, target: HTMLElement) => void | Promise<void>; // on click of the cell
+  cellClicked?: (row: SharepointChoiceRow, target: HTMLElement) => boolean | Promise<boolean>; // on click of the cell
   /*
+        // should consider this as general is cell editable?
         // example: toggle selection and add text input to edit title
         {
-          var input = document.createElement('input');
-          input.type = 'text';
-          input.value = row['title'];
-          input.onclick = (e) => {
-            e.stopPropagation();
+          // only trigger on cells
+          if (target.tagName != 'TD')
+            return false;
+          // if its already been triggered and added input do nothing
+          if (target.children.length > 0)
+            return false;
+          // return a promise thar the users action will resolve
+          return new Promise(resolve => {
+            var result = true;
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.value = row['title'];
+            input.name = 'title';
+            input.onclick = (e) => {
+              // prevent cell or row clicks
+              e.stopPropagation();
+            }
+            input.onchange = async (e) => {
+              row['title'] = input.value;
+              await this.someSaveFunction(row);
+              input.remove();
+              // manually update cell render but ignoring all render rules
+              target.innerHTML = row['title'];
+              // trigger cache clear to correctly rerender if result is still true (tab will set false if it moved to next cell)
+              resolve(result);
+            }
+            input.onkeyup = (k) => {
+              // if tab move next? on change above would trigger too after this so set result false to prevent cache change just now
+              if (k.key == 'Tab') {
+                let n = target.nextElementSibling;
+                if (n && n.tagName == "TD") {
+                  result = false;
+                  n.click();
+                }
+              }
+            }
+            target.innerHTML = '';
+            target.appendChild(input);
+            // begin editing without extra click
+            input.focus();
           }
-          input.onchange = async (e) => {
-            row['title'] = input.value;
-            await this.someSaveFunction(row);
-            input.remove();
-            target.innerHTML = row['title'];
-          }
-          target.innerHTML = '';
-          target.appendChild(input);
-          input.focus();
         }
       }
   */
@@ -133,4 +160,5 @@ export interface SharepointChoiceColumn {
   sortable?: boolean; // disable sorting on this column
   hide?: boolean | ((tab: string) => boolean); // hide column, or function to determine hide state based on selected tab
   _filtervisible?: boolean; // internal use to track filter visibility
+
 }
