@@ -261,9 +261,9 @@
         @let editing = false;
         @if (editing) {
         <td>
-            <app-choice [field]="child.field.split('.')[1]"
-                        [form]="row[child.field.split('.')[0]"
-                        [spec]="child.spec"
+            <app-choice [field]="spcf(child.field)"
+                        [form]="spc(row, child.field)"
+                        [spec]="spcs(child.spec, child.field)"
                         (change)="handleCellClick(child.cellClicked, row, $event); editing = false">
             </app-choice>
         </td>
@@ -315,9 +315,9 @@
         @let editing = false;
         @if (editing) {
         <td>
-            <app-choice [field]="col.field"
-                        [form]="row"
-                        [spec]="col.spec"
+            <app-choice [field]="spcf(col.field)"
+                        [form]="spc(row, col.field)"
+                        [spec]="spcs(col.spec, col.field)"
                         (change)="handleCellClick(col.cellClicked, row, $event);editing = false">
             </app-choice>
         </td>
@@ -463,4 +463,5 @@
 </div>
 
 }
+
 
