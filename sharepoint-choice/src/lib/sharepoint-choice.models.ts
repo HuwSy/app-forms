@@ -93,7 +93,7 @@ export interface SharepointChoiceColumn {
   field?: string; // datafield name in the data, supports dot notation for nested fields
   headerTooltip?: string; // tooltip for the header
   nowrap?: boolean; // enforce nowrap in cell content
-  cellClicked?: (row: SharepointChoiceRow, target: HTMLElement) => boolean | Promise<boolean>; // on click of the cell
+  cellClicked?: (row: SharepointChoiceRow, target: HTMLElement) => boolean | Promise<boolean>; // on click of the cell, will override row click
   /*
         // should consider this as general is cell editable?
         // example: toggle selection and add text input to edit title
@@ -159,6 +159,6 @@ export interface SharepointChoiceColumn {
   center?: boolean; // center align the column
   sortable?: boolean; // disable sorting on this column
   hide?: boolean | ((tab: string) => boolean); // hide column, or function to determine hide state based on selected tab
+  spec?: SharepointChoiceField; // make the cell editable using app-choice, onchange will trigger cell clicked for any save actions etc
   _filtervisible?: boolean; // internal use to track filter visibility
-
 }
