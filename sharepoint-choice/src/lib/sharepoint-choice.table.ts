@@ -89,6 +89,7 @@ export class SharepointChoiceTable {
   @Input() loading: boolean = false;
   @Input() tableHeight: string = 'calc(100vh - 360px)';
   @Input() allowSelection: boolean = false;
+  @Input() allEditing: boolean = false; // all with spec render as app-choice else edit per cell on click
 
   // outbound events or pseudo callbacks for await support
   @Input() rowClicked: Function = async (row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined) => {};
@@ -294,8 +295,8 @@ export class SharepointChoiceTable {
     document.addEventListener('mouseup', onMouseUp);
   }
 
-  // handle cell click or row click, return true or falsey to clear cache or not. emitter cant await and wont trigger cache clear
-  async handleCellClick(col: SharepointChoiceColumn, row: SharepointChoiceRow, event?: Event): Promise<boolean> {
+  // handle cell click or row click, return true or false to current cell editing, done via promise to avoid await in template
+  handleCellClick(col: SharepointChoiceColumn, row: SharepointChoiceRow, event?: Event): boolean | Promise<boolean> {
     if (col.spec && col.field && event)
       return true;
     
@@ -307,9 +308,19 @@ export class SharepointChoiceTable {
     else if (this.clicked)
       this.clicked.emit({ row: row, target: event?.target });
 
-    // clear display cache unless falsey
-    if (this.selectedTab && !((c && c instanceof Promise && !(await c)) || !c))
-      this._rowsCache.delete(this.selectedTab);
+    if (this.selectedTab && c) {
+      var ths = this;
+      if (c instanceof Promise)
+        return new Promise(resolve => {
+          c.then(r => {
+            if (r)
+              ths._rowsCache.delete(ths.selectedTab);
+            resolve(false);
+          });
+        });
+      else
+        this._rowsCache.delete(this.selectedTab);
+    }
     
     return false;
   }
@@ -485,6 +496,7 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
 
