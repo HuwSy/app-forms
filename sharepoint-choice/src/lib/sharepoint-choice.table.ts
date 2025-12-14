@@ -296,17 +296,17 @@ export class SharepointChoiceTable {
   }
 
   // handle cell click or row click, return true or false to current cell editing, done via promise to avoid await in template
-  handleCellClick(col: SharepointChoiceColumn, row: SharepointChoiceRow, event?: Event): boolean | Promise<boolean> {
-    if (col.spec && col.field && event)
+  handleCellClick(col: SharepointChoiceColumn, row: SharepointChoiceRow, event: any): boolean | Promise<boolean> {
+    if (col.spec && col.field && event.target.tagName == 'TD')
       return true;
     
     var c:any = null;
     if (col.cellClicked)
-      c = col.cellClicked(row, event?.target);
+      c = col.cellClicked(row, event.target);
     else if (this.rowClicked)
-      c = this.rowClicked(row, event?.target);
+      c = this.rowClicked(row, event.target);
     else if (this.clicked)
-      this.clicked.emit({ row: row, target: event?.target });
+      this.clicked.emit({ row: row, target: event.target });
 
     if (this.selectedTab && c) {
       var ths = this;
@@ -496,6 +496,7 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
 
