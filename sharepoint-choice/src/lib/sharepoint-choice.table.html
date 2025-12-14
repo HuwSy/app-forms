@@ -264,7 +264,7 @@
             <app-choice [field]="spcf(child.field)"
                         [form]="spc(row, child.field)"
                         [spec]="spcs(child.spec, child.field)"
-                        (change)="editing = handleCellClick(child, row)">
+                        (change)="editing = handleCellClick(child, row, $event)">
             </app-choice>
         </td>
         }
@@ -318,7 +318,7 @@
             <app-choice [field]="spcf(col.field)"
                         [form]="spc(row, col.field)"
                         [spec]="spcs(col.spec, col.field)"
-                        (change)="editing = handleCellClick(col, row)">
+                        (change)="editing = handleCellClick(col, row, $event)">
             </app-choice>
         </td>
         }
@@ -463,6 +463,7 @@
 </div>
 
 }
+
 
 
 
