@@ -42,7 +42,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // could also input hidden rather than elRef but that doesnt pick up non angular html hidden or parent hidden
   @Input() disabled: boolean = false; // get disabled state from outside
-  @Output() change = new EventEmitter<{ field: string, value: any }>(); // emit changes to parent through (change) binding
+  @Output() change = new EventEmitter<{ field: string, value: any, target: HTMLElement }>(); // emit changes to parent through (change) binding
 
   @Input() text?: { // override text for field
     pattern?: string, // regex pattern for validation
@@ -364,7 +364,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   changed(trigger: boolean = false): void {
     if (trigger)
       this.chRef.detectChanges();
-    this.change.emit({ field: this.field, value: this.form[this.field]?.results ?? this.form[this.field] });
+    this.change.emit({ field: this.field, value: this.form[this.field]?.results ?? this.form[this.field], target: this.elRef.nativeElement });
   }
 
   // on multi select, not using ctrl key
@@ -1292,4 +1292,5 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     this.chRef.detectChanges();
   }
+
 }
