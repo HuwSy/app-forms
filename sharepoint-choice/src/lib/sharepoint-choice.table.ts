@@ -297,9 +297,26 @@ export class SharepointChoiceTable {
 
   // handle cell click or row click, return true or false to current cell editing, done via then to avoid await in template as it doesnt impact outcome
   handleCellClick(col: SharepointChoiceColumn, row: SharepointChoiceRow, event: any): boolean {
-    if (col.spec && col.field && event.target.tagName != 'APP-CHOICE')
+    if (col.spec && col.field && event.target.tagName != 'APP-CHOICE') {
+      var target = event.target;
+      // ensure we are at the cell level not any inner nodes
+      while (target.tagName != 'TD')
+        target = target.parentNode;
+      // await then focus to edit
+      setTimeout(() => {
+        var el = target.nextElementSibling.getElementsByTagName('select');
+        if (!el || el.length == 0)
+          el = target.nextElementSibling.getElementsByTagName('input');
+        if (!el || el.length == 0)
+          el = target.nextElementSibling.getElementsByTagName('textarea');
+        if (el && el.length > 0)
+          el[0].focus();
+      }, 250);
+      // return to show app-choice
       return true;
-    
+    }
+
+    // if not editing trigger actions
     var c:any = null;
     if (col.cellClicked)
       c = col.cellClicked(row, event.target);
@@ -494,6 +511,7 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
 
