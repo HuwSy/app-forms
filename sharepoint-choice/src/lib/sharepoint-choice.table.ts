@@ -298,46 +298,48 @@ export class SharepointChoiceTable {
   // handle cell click or row click, return true or false to current cell editing, done via then to avoid await in template as it doesnt impact outcome
   handleCellClick(col: SharepointChoiceColumn, row: SharepointChoiceRow, event: any): boolean {
     if (col.spec && col.field && event.target.tagName != 'APP-CHOICE') {
+      // if its editable and not editing already, onchange from spc will return the component tag
       var target = event.target;
       // ensure we are at the cell level not any inner nodes
       while (target.tagName != 'TD')
         target = target.parentNode;
       // await then focus to edit
       setTimeout(() => {
-        var el = target.nextElementSibling.getElementsByTagName('select');
+        var el = target.getElementsByTagName('select');
         if (!el || el.length == 0)
-          el = target.nextElementSibling.getElementsByTagName('input');
+          el = target.getElementsByTagName('input');
         if (!el || el.length == 0)
-          el = target.nextElementSibling.getElementsByTagName('textarea');
+          el = target.getElementsByTagName('textarea');
         if (el && el.length > 0)
           el[0].focus();
       }, 250);
       // return to show app-choice
       return true;
-    }
-
-    // if not editing trigger actions
-    var c:any = null;
-    if (col.cellClicked)
-      c = col.cellClicked(row, event.target);
-    else if (this.rowClicked)
-      c = this.rowClicked(row, event.target);
-    else if (this.clicked)
-      this.clicked.emit({ row: row, target: event.target });
-
-    if (this.selectedTab && c) {
-      if (!(c instanceof Promise))
-        this._rowsCache.delete(this.selectedTab);
-      else {
-        var ths = this;
-        c.then(r => {
-          if (r)
-            ths._rowsCache.delete(ths.selectedTab);
-        });
+    } else {
+      // if not editable or upon change from edit trigger actions
+      var c:any = null;
+      // get the trigger functions in priority order
+      if (col.cellClicked)
+        c = col.cellClicked(row, event.target);
+      else if (this.rowClicked)
+        c = this.rowClicked(row, event.target);
+      else if (this.clicked)
+        this.clicked.emit({ row: row, target: event.target });
+      // if its got a function truethy outward reset cache
+      if (this.selectedTab && c) {
+        if (!(c instanceof Promise))
+          this._rowsCache.delete(this.selectedTab);
+        else {
+          var ths = this;
+          c.then(r => {
+            if (r)
+              ths._rowsCache.delete(ths.selectedTab);
+          });
+        }
       }
+      // ensure editing ends
+      return false;
     }
-    
-    return false;
   }
 
   spcf(field:string): string {
@@ -511,6 +513,7 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
 
