@@ -264,7 +264,7 @@
             <app-choice [field]="spcf(child.field)"
                         [form]="spc(row, child.field)"
                         [spec]="spcs(child.spec, child.field)"
-                        (change)="editing = handleCellClick(child, row, null)">
+                        (change)="editing = handleCellClick(child, row)">
             </app-choice>
         </td>
         }
@@ -274,7 +274,7 @@
         @case ('renderer') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="child.spec || child.cellClicked || rowClicked ? 'pointer' : 'default'"
             [class]="{'center': child.center}"
             [innerHTML]="child.cellRenderer!(value, row, rowIndex)"
             (click)="editing = handleCellClick(child, row, $event)"></td>
@@ -282,28 +282,28 @@
         @case ('date') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="child.spec || child.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
             (click)="editing = handleCellClick(child, row, $event)">{{value | date:'dd MMM yy'}}</td>
         }
         @case ('number') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="child.spec || child.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
             (click)="editing = handleCellClick(child, row, $event)">{{value | number:'1.0-2'}}</td>
         }
         @case ('boolean') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="child.spec || child.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
             (click)="editing = handleCellClick(child, row, $event)">{{formatBoolean(value)}}</td>
         }
         @default {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="child.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="child.spec || child.cellClicked || rowClicked ? 'pointer' : 'default'"
             [class]="{'center': child.center}"
             (click)="editing = handleCellClick(child, row, $event)">{{value}}</td>
         }
@@ -318,7 +318,7 @@
             <app-choice [field]="spcf(col.field)"
                         [form]="spc(row, col.field)"
                         [spec]="spcs(col.spec, col.field)"
-                        (change)="editing = handleCellClick(col, row, null)">
+                        (change)="editing = handleCellClick(col, row)">
             </app-choice>
         </td>
         }
@@ -328,7 +328,7 @@
         @case ('renderer') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="col.spec || col.cellClicked || rowClicked ? 'pointer' : 'default'"
             [class]="{'center': col.center}"
             [innerHTML]="col.cellRenderer!(value, row, rowIndex)"
             (click)="editing = handleCellClick(col, row, $event)"></td>
@@ -336,28 +336,28 @@
         @case ('date') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="col.spec || col.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
             (click)="editing = handleCellClick(col, row, $event)">{{value | date:'dd MMM yy'}}</td>
         }
         @case ('number') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="col.spec || col.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
             (click)="editing = handleCellClick(col, row, $event)">{{value | number:'1.0-2'}}</td>
         }
         @case ('boolean') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="col.spec || col.cellClicked || rowClicked ? 'pointer' : 'default'"
             class="center"
             (click)="editing = handleCellClick(col, row, $event)">{{formatBoolean(value)}}</td>
         }
         @default {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="col.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="col.spec || col.cellClicked || rowClicked ? 'pointer' : 'default'"
             [class]="{'center': col.center}"
             (click)="editing = handleCellClick(col, row, $event)">{{value}}</td>
         }
@@ -463,6 +463,7 @@
 </div>
 
 }
+
 
 
 
