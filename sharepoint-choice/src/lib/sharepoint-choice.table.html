@@ -259,7 +259,7 @@
         @if (col.children?.length || 1 > 1) {
         @for (child of col.children; track child.field || child.headerName || $index) {
         @let editing = false;
-        @if (editing === true) {
+        @if (child.spec && child.field && (allEditing || editing === true)) {
         <td>
             <app-choice [field]="spcf(child.field)"
                         [form]="spc(row, child.field)"
@@ -313,7 +313,7 @@
         }
         @else {
         @let editing = false;
-        @if (editing === true) {
+        @if (col.spec && col.field && (allEditing || editing === true)) {
         <td>
             <app-choice [field]="spcf(col.field)"
                         [form]="spc(row, col.field)"
@@ -463,6 +463,7 @@
 </div>
 
 }
+
 
 
 
