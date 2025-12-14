@@ -91,9 +91,9 @@ export class SharepointChoiceTable {
   @Input() allowSelection: boolean = false;
 
   // outbound events or pseudo callbacks for await support
-  @Input() rowClicked: Function = async (row: SharepointChoiceRow, target: HTMLElement|EventTarget|null) => {};
+  @Input() rowClicked: Function = async (row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined) => {};
   @Output() selected = new EventEmitter<{ data: SharepointChoiceRow[], tab: string }>();
-  @Output() clicked = new EventEmitter<{ row: SharepointChoiceRow, target: HTMLElement|EventTarget|null }>();
+  @Output() clicked = new EventEmitter<{ row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined }>();
 
   // internal state
   pageNumber = 1;
@@ -295,25 +295,23 @@ export class SharepointChoiceTable {
   }
 
   // handle cell click or row click, return true or falsey to clear cache or not. emitter cant await and wont trigger cache clear
-  async handleCellClick(cellClicked: Function | undefined, row: SharepointChoiceRow, event: Event): Promise<void> {
-    var c:any = null;
-    if (cellClicked)
-      c = cellClicked(row, event.target);
-    else if (this.rowClicked)
-      c = this.rowClicked(row, event.target);
-    else if (this.clicked)
-      this.clicked.emit({ row: row, target: event.target });
-
-    // if falsey return before cache
-    if (c instanceof Promise) {
-      if (!(await c))
-        return;
-    } else if (!c)
-      return;
+  async handleCellClick(col: SharepointChoiceColumn, row: SharepointChoiceRow, event?: Event): Promise<boolean> {
+    if (col.spec && col.field && event)
+      return true;
     
-    // Clear cache in case callback modified row data that affects filtering/sorting etc
-    if (this.selectedTab)
+    var c:any = null;
+    if (col.cellClicked)
+      c = col.cellClicked(row, event?.target);
+    else if (this.rowClicked)
+      c = this.rowClicked(row, event?.target);
+    else if (this.clicked)
+      this.clicked.emit({ row: row, target: event?.target });
+
+    // clear display cache unless falsey
+    if (this.selectedTab && !((c && c instanceof Promise && !(await c)) || !c))
       this._rowsCache.delete(this.selectedTab);
+    
+    return false;
   }
 
   spcf(field:string): string {
@@ -487,6 +485,7 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
 
