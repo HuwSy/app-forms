@@ -309,14 +309,15 @@ export class SharepointChoiceTable {
       this.clicked.emit({ row: row, target: event.target });
 
     if (this.selectedTab && c) {
-      var ths = this;
-      if (c instanceof Promise)
+      if (!(c instanceof Promise))
+        this._rowsCache.delete(this.selectedTab);
+      else {
+        var ths = this;
         c.then(r => {
           if (r)
             ths._rowsCache.delete(ths.selectedTab);
         });
-      else
-        this._rowsCache.delete(this.selectedTab);
+      }
     }
     
     return false;
@@ -493,6 +494,7 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
 
