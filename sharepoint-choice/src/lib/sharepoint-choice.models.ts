@@ -95,6 +95,29 @@ export interface SharepointChoiceColumn {
   nowrap?: boolean; // enforce nowrap in cell content
   cellClicked?: (row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined) => boolean | Promise<boolean>; // on click of the cell, will override row click
   /*
+        // example: on cell change via app-choice
+        {
+          // if not from app-choice edit return
+          if (!target || target.tagName != "APP-CHOICE")
+            return false;
+          // await any actions on the changed data
+          await this.someSaveFunction(row);
+          // trigger the next cell to be editable
+          target.parentNode.nextElementSibling.click();
+          // await then focus the bext cell edit
+          setTimeout(() => {
+            var el = target.parentNode.nextElementSibling.getElementsByTagName('select');
+            if (!el || el.length == 0)
+              el = target.parentNode.nextElementSibling.getElementsByTagName('input');
+            if (!el || el.length == 0)
+              el = target.parentNode.nextElementSibling.getElementsByTagName('textarea');
+            if (el && el.length > 0)
+              el[0].focus();
+          }, 100);
+          // dont trigger cache rebuild as this may wipe the editable state above
+          return false;
+        }
+        
         // example: toggle selection and add text input to edit non sp data
         {
           // only trigger on cells
@@ -158,9 +181,10 @@ export interface SharepointChoiceColumn {
   center?: boolean; // center align the column
   sortable?: boolean; // disable sorting on this column
   hide?: boolean | ((tab: string) => boolean); // hide column, or function to determine hide state based on selected tab
-  spec?: SharepointChoiceField; // make the cell editable using app-choice, onchange will trigger cell/row clicked for any save actions etc with target undefined as only distinguishing factor that its emitted post edit
+  spec?: SharepointChoiceField; // make the cell editable using app-choice, onchange will trigger cell/row clicked for any save actions etc with target tagname of app-choice as only distinguishing factor that its emitted post edit
   _filtervisible?: boolean; // internal use to track filter visibility
 }
+
 
 
 
