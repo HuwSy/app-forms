@@ -103,7 +103,11 @@ export interface SharepointChoiceColumn {
           // await any actions on the changed data
           await this.someSaveFunction(row);
           // trigger the next cell to be editable
-          target.parentNode.nextElementSibling.click();
+          target = target.parentNode.nextElementSibling;
+          while (target && !target.className.includes('editable')) {
+            target = target.nextElementSibling;
+          }
+          target?.click();
           // dont trigger cache rebuild as this may wipe the editable state above
           return false;
         }
@@ -174,6 +178,7 @@ export interface SharepointChoiceColumn {
   spec?: SharepointChoiceField; // make the cell editable using app-choice, onchange will trigger cell/row clicked for any save actions etc with target tagname of app-choice as only distinguishing factor that its emitted post edit
   _filtervisible?: boolean; // internal use to track filter visibility
 }
+
 
 
 
