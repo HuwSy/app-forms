@@ -295,8 +295,8 @@ export class SharepointChoiceTable {
     document.addEventListener('mouseup', onMouseUp);
   }
 
-  // handle cell click or row click, return true or false to current cell editing, done via promise to avoid await in template
-  handleCellClick(col: SharepointChoiceColumn, row: SharepointChoiceRow, event: any): boolean | Promise<boolean> {
+  // handle cell click or row click, return true or false to current cell editing, done via then to avoid await in template as it doesnt impact outcome
+  handleCellClick(col: SharepointChoiceColumn, row: SharepointChoiceRow, event: any): boolean {
     if (col.spec && col.field && event.target.tagName != 'APP-CHOICE')
       return true;
     
@@ -311,12 +311,9 @@ export class SharepointChoiceTable {
     if (this.selectedTab && c) {
       var ths = this;
       if (c instanceof Promise)
-        return new Promise(resolve => {
-          c.then(r => {
-            if (r)
-              ths._rowsCache.delete(ths.selectedTab);
-            resolve(false);
-          });
+        c.then(r => {
+          if (r)
+            ths._rowsCache.delete(ths.selectedTab);
         });
       else
         this._rowsCache.delete(this.selectedTab);
@@ -496,6 +493,7 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
 
