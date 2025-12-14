@@ -104,16 +104,6 @@ export interface SharepointChoiceColumn {
           await this.someSaveFunction(row);
           // trigger the next cell to be editable
           target.parentNode.nextElementSibling.click();
-          // await then focus the bext cell edit
-          setTimeout(() => {
-            var el = target.parentNode.nextElementSibling.getElementsByTagName('select');
-            if (!el || el.length == 0)
-              el = target.parentNode.nextElementSibling.getElementsByTagName('input');
-            if (!el || el.length == 0)
-              el = target.parentNode.nextElementSibling.getElementsByTagName('textarea');
-            if (el && el.length > 0)
-              el[0].focus();
-          }, 100);
           // dont trigger cache rebuild as this may wipe the editable state above
           return false;
         }
@@ -184,6 +174,7 @@ export interface SharepointChoiceColumn {
   spec?: SharepointChoiceField; // make the cell editable using app-choice, onchange will trigger cell/row clicked for any save actions etc with target tagname of app-choice as only distinguishing factor that its emitted post edit
   _filtervisible?: boolean; // internal use to track filter visibility
 }
+
 
 
 
