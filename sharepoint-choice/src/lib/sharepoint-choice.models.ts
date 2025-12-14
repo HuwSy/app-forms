@@ -95,11 +95,10 @@ export interface SharepointChoiceColumn {
   nowrap?: boolean; // enforce nowrap in cell content
   cellClicked?: (row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined) => boolean | Promise<boolean>; // on click of the cell, will override row click
   /*
-        // should consider this as general is cell editable?
-        // example: toggle selection and add text input to edit title
+        // example: toggle selection and add text input to edit non sp data
         {
           // only trigger on cells
-          if (target.tagName != 'TD')
+          if (!target || target.tagName != 'TD')
             return false;
           // if its already been triggered and added input do nothing
           if (target.children.length > 0)
@@ -159,9 +158,10 @@ export interface SharepointChoiceColumn {
   center?: boolean; // center align the column
   sortable?: boolean; // disable sorting on this column
   hide?: boolean | ((tab: string) => boolean); // hide column, or function to determine hide state based on selected tab
-  spec?: SharepointChoiceField; // make the cell editable using app-choice, onchange will trigger cell/row clicked for any save actions etc with target undefined as only distinguishing factor that its emitted from post edit
+  spec?: SharepointChoiceField; // make the cell editable using app-choice, onchange will trigger cell/row clicked for any save actions etc with target undefined as only distinguishing factor that its emitted post edit
   _filtervisible?: boolean; // internal use to track filter visibility
 }
+
 
 
 
