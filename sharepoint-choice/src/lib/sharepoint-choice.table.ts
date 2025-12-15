@@ -327,7 +327,7 @@ export class SharepointChoiceTable {
         c = col.cellClicked(row, event.target);
       else if (this.rowClicked)
         c = this.rowClicked(row, event.target);
-      else if (this.clicked.observed)
+      else
         this.clicked.emit({ row: row, target: event.target });
       // if its got a function truethy outward reset cache
       if (this.selectedTab && c) {
@@ -346,9 +346,13 @@ export class SharepointChoiceTable {
     }
   }
 
+  beingObserved(col: SharepointChoiceColumn): boolean {
+    return col.spec || col.cellClicked || this.rowClicked || this.clicked.listeners?.length > 0;
+  }
+
   // calculate the row hyperlink only if there isnt editable, cell click, row click or clicked first
   hyperlink(row: SharepointChoiceRow, col: SharepointChoiceColumn) : string|undefined {
-    if (col.spec || col.cellClicked || this.rowClicked || this.clicked.observed || !this.hyperlinkRow)
+    if (this.beingObserved(col) || !this.hyperlinkRow)
       return undefined;
     return this.hyperlinkRow(row);
   }
@@ -524,6 +528,7 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
 
