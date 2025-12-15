@@ -88,14 +88,17 @@ export class SharepointChoiceTable {
   @Input() prefix: string = document.location.href.split('?')[0].split('#')[0];
   @Input() loading: boolean = false;
   @Input() tableHeight: string = 'calc(100vh - 360px)';
-  @Input() allowSelection: boolean = false;
   @Input() allEditing: boolean = false; // all with spec render as app-choice else edit per cell on click
 
-  // outbound events or pseudo callbacks for await support
+  // allow selection and emit selected items and tab
+  @Input() allowSelection: boolean = false;
+  @Output() selected = new EventEmitter<{ data: SharepointChoiceRow[], tab: string }>();
+  
+  // outbound events or pseudo callbacks for await support on click, in order of trigger
+  // cellClicked triggers ahead of all of these if present
   @Input() rowClicked?: Function = async (row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined);
   @Output() clicked = new EventEmitter<{ row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined }>();
   @Input() hyperlinkRow?: Function = (row: SharepointChoiceRow);
-  @Output() selected = new EventEmitter<{ data: SharepointChoiceRow[], tab: string }>();
   
   // internal state
   pageNumber = 1;
@@ -324,7 +327,7 @@ export class SharepointChoiceTable {
         c = col.cellClicked(row, event.target);
       else if (this.rowClicked)
         c = this.rowClicked(row, event.target);
-      else if (this.clicked)
+      else if (this.clicked.observed)
         this.clicked.emit({ row: row, target: event.target });
       // if its got a function truethy outward reset cache
       if (this.selectedTab && c) {
@@ -345,7 +348,7 @@ export class SharepointChoiceTable {
 
   // calculate the row hyperlink only if there isnt editable, cell click, row click or clicked first
   hyperlink(row: SharepointChoiceRow, col: SharepointChoiceColumn) : string|undefined {
-    if (col.spec || col.cellClicked || this.rowClicked || this.clicked || !this.hyperlinkRow)
+    if (col.spec || col.cellClicked || this.rowClicked || this.clicked.observed || !this.hyperlinkRow)
       return undefined;
     return this.hyperlinkRow(row);
   }
@@ -521,6 +524,7 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
 
