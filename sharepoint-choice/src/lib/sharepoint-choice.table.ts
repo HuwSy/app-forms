@@ -92,9 +92,9 @@ export class SharepointChoiceTable {
   @Input() allEditing: boolean = false; // all with spec render as app-choice else edit per cell on click
 
   // outbound events or pseudo callbacks for await support
-  @Input() rowClicked: Function = async (row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined) => {};
+  @Input() rowClicked?: Function = async (row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined);
   @Output() clicked = new EventEmitter<{ row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined }>();
-  @Input() hyperlinkRow: Function = (row: SharepointChoiceRow) => {};
+  @Input() hyperlinkRow?: Function = (row: SharepointChoiceRow);
   @Output() selected = new EventEmitter<{ data: SharepointChoiceRow[], tab: string }>();
   
   // internal state
@@ -521,6 +521,7 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
 
