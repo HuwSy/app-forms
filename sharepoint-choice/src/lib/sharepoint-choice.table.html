@@ -270,12 +270,13 @@
         }
         @else {
         @let value = fieldValue(row, child.field);
+        @let pointer = beingObserved(child);
         @let hl = hyperlink(row, child);
         @switch (getCellType(child, value)) {
         @case ('renderer') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="child.spec || child.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="pointer ? 'pointer' : 'default'"
             [class]="{'editable': child.spec && child.field, 'center': child.center}"
             [innerHTML]="child.cellRenderer!(value, row, rowIndex)"
             (click)="editing = handleCellClick(child, row, $event)"></td>
@@ -283,7 +284,7 @@
         @case ('date') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="child.spec || child.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="pointer ? 'pointer' : 'default'"
             [class]="{'editable': child.spec && child.field, 'center': child.center !== false}"
             (click)="editing = handleCellClick(child, row, $event)">
             @if (hl) {
@@ -297,7 +298,7 @@
         @case ('number') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="child.spec || child.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="pointer ? 'pointer' : 'default'"
             [class]="{'editable': child.spec && child.field, 'center': child.center !== false}"
             (click)="editing = handleCellClick(child, row, $event)">
             @if (hl) {
@@ -311,7 +312,7 @@
         @case ('boolean') {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="child.spec || child.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="pointer ? 'pointer' : 'default'"
             [class]="{'editable': child.spec && child.field, 'center': child.center !== false}"
             (click)="editing = handleCellClick(child, row, $event)">
             @if (hl) {
@@ -325,7 +326,7 @@
         @default {
         <td [title]="value || ''"
             [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="child.spec || child.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="pointer ? 'pointer' : 'default'"
             [class]="{'editable': child.spec && child.field, 'center': child.center}"
             (click)="editing = handleCellClick(child, row, $event)">
             @if (hl) {
@@ -353,12 +354,13 @@
         }
         @else {
         @let value = fieldValue(row, col.field);
+        @let pointer = beingObserved(col);
         @let hl = hyperlink(row, col);
         @switch (getCellType(col, value)) {
         @case ('renderer') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="col.spec || col.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="pointer ? 'pointer' : 'default'"
             [class]="{'editable': col.spec && col.field, 'center': col.center}"
             [innerHTML]="col.cellRenderer!(value, row, rowIndex)"
             (click)="editing = handleCellClick(col, row, $event)"></td>
@@ -366,7 +368,7 @@
         @case ('date') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="col.spec || col.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="pointer ? 'pointer' : 'default'"
             [class]="{'editable': col.spec && col.field, 'center': col.center !== false}"
             (click)="editing = handleCellClick(col, row, $event)">
             @if (hl) {
@@ -380,7 +382,7 @@
         @case ('number') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="col.spec || col.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="pointer ? 'pointer' : 'default'"
             [class]="{'editable': col.spec && col.field, 'center': col.center !== false}"
             (click)="editing = handleCellClick(col, row, $event)">
             @if (hl) {
@@ -394,7 +396,7 @@
         @case ('boolean') {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="col.spec || col.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="pointer ? 'pointer' : 'default'"
             [class]="{'editable': col.spec && col.field, 'center': col.center !== false}"
             (click)="editing = handleCellClick(col, row, $event)">
             @if (hl) {
@@ -408,7 +410,7 @@
         @default {
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="col.spec || col.cellClicked || rowClicked ? 'pointer' : 'default'"
+            [style.cursor]="pointer ? 'pointer' : 'default'"
             [class]="{'editable': col.spec && col.field, 'center': col.center}"
             (click)="editing = handleCellClick(col, row, $event)">
             @if (hl) {
@@ -521,6 +523,7 @@
 </div>
 
 }
+
 
 
 
