@@ -502,6 +502,11 @@ a.fc-event {
       td {
         padding: 4px;
         border-bottom: 1px dotted #bbb;
+
+        a {
+          text-decoration: none;
+          color: inherit;
+        }
       }
 
       td.center {
@@ -977,6 +982,5 @@ a.fc-event {
     }
   }
 }
-
 
 /* End Component and app styles */
