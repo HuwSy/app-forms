@@ -345,7 +345,7 @@ export class SharepointChoiceTable {
 
   // calculate the row hyperlink only if there isnt editable, cell click, row click or clicked first
   hyperlink(row: SharepointChoiceRow, col: SharepointChoiceColumn) : string|undefined {
-    if (col.spec || col.cellClicked || this.rowClicked || this.clicked)
+    if (col.spec || col.cellClicked || this.rowClicked || this.clicked || !this.hyperlinkRow)
       return undefined;
     return this.hyperlinkRow(row);
   }
@@ -521,6 +521,7 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
 
