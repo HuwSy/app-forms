@@ -93,9 +93,10 @@ export class SharepointChoiceTable {
 
   // outbound events or pseudo callbacks for await support
   @Input() rowClicked: Function = async (row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined) => {};
-  @Output() selected = new EventEmitter<{ data: SharepointChoiceRow[], tab: string }>();
   @Output() clicked = new EventEmitter<{ row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined }>();
-
+  @Input() hyperlinkRow: Function = (row: SharepointChoiceRow) => {};
+  @Output() selected = new EventEmitter<{ data: SharepointChoiceRow[], tab: string }>();
+  
   // internal state
   pageNumber = 1;
   editColumns = false;
@@ -342,6 +343,13 @@ export class SharepointChoiceTable {
     }
   }
 
+  // calculate the row hyperlink only if there isnt editable, cell click, row click or clicked first
+  hyperlink(row: SharepointChoiceRow, col: SharepointChoiceColumn) : string|undefined {
+    if (col.spec || col.cellClicked || this.rowClicked || this.clicked)
+      return undefined;
+    return this.hyperlinkRow(row);
+  }
+
   spcf(field:string): string {
     return field.substring(field.lastIndexOf('.') + 1);
   }
@@ -513,6 +521,7 @@ export class SharepointChoiceTable {
   }
 
 }
+
 
 
 
