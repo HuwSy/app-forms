@@ -1,7 +1,7 @@
 import { Component, Input, ErrorHandler, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SharepointChoiceColumn, SharepointChoiceFilter, SharepointChoiceSort, SharepointChoiceHide, SharepointChoiceTabs, SharepointChoiceRow } from './sharepoint-choice.models';
+import { SharepointChoiceColumn, SharepointChoiceFilter, SharepointChoiceSort, SharepointChoiceHide, SharepointChoiceTabs, SharepointChoiceRow, SharepointChoiceForm, SharepointChoiceField, SharepointChoiceList } from './sharepoint-choice.models';
 import { SharepointChoiceComponent } from './sharepoint-choice.component';
 
 @Component({
@@ -92,14 +92,14 @@ export class SharepointChoiceTable {
 
   // allow selection and emit selected items and tab
   @Input() allowSelection: boolean = false;
-  @Output() selected = new EventEmitter<{ data: SharepointChoiceRow[], tab: string }>();
-  
+  @Output() selected = new EventEmitter<{ data: SharepointChoiceRow[], tab: string | undefined }>();
+
   // outbound events or pseudo callbacks for await support on click, in order of trigger
   // cellClicked triggers ahead of all of these if present
-  @Input() rowClicked?: Function = async (row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined);
-  @Output() clicked = new EventEmitter<{ row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined }>();
-  @Input() hyperlinkRow?: Function = (row: SharepointChoiceRow);
-  
+  @Input() rowClicked?: Function; // [rowClicked]="rowClicked" rowClicked = async (rowData: any, target: HTMLElement | EventTarget | undefined) => { ... } to ensure this. is from the app and not from app-table
+  @Output() clicked = new EventEmitter<{ row: SharepointChoiceRow, target: HTMLElement | EventTarget | undefined }>(); // (clicked)="onClicked($event)" onClicked(event: { row: SharepointChoiceRow, target: HTMLElement | EventTarget | undefined }) { ... }
+  @Input() hyperlinkRow?: Function; // [hyperlinkRow]="hyperlinkRow" hyperlinkRow = (rowData: any) => { return 'https://...'; } to ensure this. is from the app and not from app-table
+
   // internal state
   pageNumber = 1;
   editColumns = false;
@@ -164,12 +164,12 @@ export class SharepointChoiceTable {
   // selection change toggles row selected state and emits selected rows
   selectionChanged(row: SharepointChoiceRow): void {
     if (!this.selectedTab)
-      return this.selected.emit({ data: [], tab: this.selectedTab });
-    row.selected = !row.selected;
+      return this.selected.emit({ data: [], tab: undefined });
+    row._selected = !row._selected;
     // if there is filtering on selected, clear cache to refresh rows
     if (!!(this.filter[this.selectedTab]?.['selected']))
       this._rowsCache.delete(this.selectedTab);
-    let selectedRows = this.rows(this.selectedTab).filter(r => r.selected);
+    let selectedRows = this.rows(this.selectedTab).filter(r => r._selected);
     this.selected.emit({ data: selectedRows, tab: this.selectedTab });
   }
 
@@ -182,10 +182,10 @@ export class SharepointChoiceTable {
     const currentSort = { ...this.sort };
     if (!currentSort[this.selectedTab])
       currentSort[this.selectedTab] = [];
-    
+
     var asc = currentSort[this.selectedTab].findIndex(s => s.field == col.field && s.direction == 'asc');
     var desc = currentSort[this.selectedTab].findIndex(s => s.field == col.field && s.direction == 'desc');
-    
+
     if (asc == -1 && desc == -1) {
       currentSort[this.selectedTab] = [...currentSort[this.selectedTab], { field: col.field, direction: 'asc' }];
     } else if (asc >= 0) {
@@ -231,7 +231,7 @@ export class SharepointChoiceTable {
     // Reassign to trigger setter
     this.filter = currentFilter;
   }
-  
+
   sortContains(field: string | undefined, direction: 'asc' | 'desc'): boolean {
     if (!field || !this.selectedTab || !this.sort[this.selectedTab])
       return false;
@@ -262,15 +262,15 @@ export class SharepointChoiceTable {
 
     let curr = this.isHidden(col, tab);
     const currentHidden = { ...this.hiddenColumns };
-    
+
     if (!currentHidden[tab])
       currentHidden[tab] = [];
-    
+
     if (!curr)
       currentHidden[tab] = [...currentHidden[tab], col.field];
     else
       currentHidden[tab] = currentHidden[tab].filter((c: string) => c != col.field);
-    
+
     // Reassign to trigger setter
     this.hiddenColumns = currentHidden;
   }
@@ -300,79 +300,85 @@ export class SharepointChoiceTable {
   }
 
   // handle cell click or row click, return true or false to current cell editing, done via then to avoid await in template as it doesnt impact outcome
-  handleCellClick(col: SharepointChoiceColumn, row: SharepointChoiceRow, event: any): boolean {
+  handleCellClick(col: SharepointChoiceColumn, row: SharepointChoiceRow, event: any): void {
+    // if its editable and not editing already (spc onchange from app-choice will return the component tag)
     if (col.spec && col.field && event.target.tagName != 'APP-CHOICE') {
-      // if its editable and not editing already, onchange from spc will return the component tag
+      // show this app-choice for editing early to later get focus
+      row._editing =  col.field;
+      // get the target cell to focus after render
       var target = event.target;
       // ensure we are at the cell level not any inner nodes
-      while (target.tagName != 'TD')
+      while (target && target.tagName != 'TD')
         target = target.parentNode;
-      // await then focus to edit
+      // failed to find TD then end
+      if (!target)
+        return;
+      // await render then focus to edit
       setTimeout(() => {
         var el = target.getElementsByTagName('select');
-        if (!el || el.length == 0)
-          el = target.getElementsByTagName('input');
-        if (!el || el.length == 0)
+        if (el.length == 0)
           el = target.getElementsByTagName('textarea');
-        if (el && el.length > 0)
+        if (el.length == 0)
+          el = target.getElementsByTagName('input');
+        if (el.length > 0)
           el[0].focus();
-      }, 250);
-      // return to show app-choice
-      return true;
+      }, 500);
     } else {
-      // if not editable or upon change from edit trigger actions
-      var c:any = null;
       // get the trigger functions in priority order
+      var c: any = null;
       if (col.cellClicked)
         c = col.cellClicked(row, event.target);
       else if (this.rowClicked)
         c = this.rowClicked(row, event.target);
       else
         this.clicked.emit({ row: row, target: event.target });
-      // if its got a function truethy outward reset cache
-      if (this.selectedTab && c) {
-        if (!(c instanceof Promise))
-          this._rowsCache.delete(this.selectedTab);
-        else {
-          var ths = this;
-          c.then(r => {
-            if (r)
-              ths._rowsCache.delete(ths.selectedTab);
-          });
-        }
+      // wont need to clear cache end
+      if (!this.selectedTab || !c)
+        return;
+      // if it got a function truethy outward reset cache
+      if (!(c instanceof Promise))
+        this._rowsCache.delete(this.selectedTab);
+      else {
+        var ths = this;
+        c.then(r => {
+          if (r && ths.selectedTab)
+            ths._rowsCache.delete(ths.selectedTab);
+        });
       }
-      // ensure editing ends
-      return false;
+      // ensure editing ends/doesnt exist but after using target above
+      row._editing =  undefined;
     }
   }
 
   beingObserved(col: SharepointChoiceColumn): boolean {
-    return col.spec || col.cellClicked || this.rowClicked || this.clicked.listeners?.length > 0;
+    return !!col.spec || !!col.cellClicked || !!this.rowClicked || this.clicked.observed;
   }
 
   // calculate the row hyperlink only if there isnt editable, cell click, row click or clicked first
-  hyperlink(row: SharepointChoiceRow, col: SharepointChoiceColumn) : string|undefined {
+  hyperlink(row: SharepointChoiceRow, col: SharepointChoiceColumn): string | undefined {
     if (this.beingObserved(col) || !this.hyperlinkRow)
       return undefined;
     return this.hyperlinkRow(row);
   }
 
-  spcf(field:string): string {
+  sharepointChoiceField(field: string): string {
     return field.substring(field.lastIndexOf('.') + 1);
   }
 
-  spcs(spec: SharepointChoiceField, field:string) : SharepointChoiceList {
-    var f = this.spcf(field);
-    var s : SharepointChoiceList = {};
+  sharepointChoiceSpec(spec: SharepointChoiceField, field: string): SharepointChoiceList {
+    var f = this.sharepointChoiceField(field);
+    var s: SharepointChoiceList = {};
     s[f] = spec;
+    // ensure no title to avoid label rendering
+    s[f].Title = '';
     return s;
   }
 
-  spc(row: SharepointChoiceRow, field:string) : SharepointChoiceForm {
+  sharepointChoiceForm(row: SharepointChoiceRow, field: string): SharepointChoiceForm {
     var s = field.split('.');
-    var f = row;
-    for (let i = 0; i < s.length - 1: i++) {
-      f = f[i];
+    var f: any = row;
+    for (let i = 0; i < s.length - 1; i++) {
+      f = f[s[i]];
     }
     return f as SharepointChoiceForm;
   }
@@ -526,23 +532,4 @@ export class SharepointChoiceTable {
   ceil(number: number): number {
     return Math.ceil(number);
   }
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

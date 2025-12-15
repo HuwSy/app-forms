@@ -60,7 +60,8 @@ export interface SharepointChoiceTabs {
 }
 
 export interface SharepointChoiceRow {
-  selected?: boolean;
+  _selected?: boolean;
+  _editing?: string;
   [key: string]: string | number | boolean | Date | SharepointChoiceRowChild | null | undefined;
 }
 
@@ -93,81 +94,74 @@ export interface SharepointChoiceColumn {
   field?: string; // datafield name in the data, supports dot notation for nested fields
   headerTooltip?: string; // tooltip for the header
   nowrap?: boolean; // enforce nowrap in cell content
-  cellClicked?: (row: SharepointChoiceRow, target: HTMLElement|EventTarget|undefined) => boolean | Promise<boolean>; // on click of the cell, will override row click
+  cellClicked?: (row: SharepointChoiceRow, target: HTMLElement | EventTarget | undefined) => boolean | Promise<boolean>; // on click of the cell, will override row click
   /*
-        // example: on cell change via app-choice
-        {
-          // if not from app-choice edit return
-          if (!target || target.tagName != "APP-CHOICE")
-            return false;
-          // await any actions on the changed data
-          await this.someSaveFunction(row);
-          // trigger the next cell to be editable
-          target = target.parentNode.nextElementSibling;
-          while (target && !target.className.includes('editable')) {
-            target = target.nextElementSibling;
+    // example: edit in modal etc
+    {
+      private modalResolve?: (value: boolean) => void;
+      private modalReject?: (reason?: any) => void;
+
+      cellClicked = async (rowData: any, target: any): Promise<boolean> => {
+        return new Promise<boolean>(async (resolve, reject) => {
+          this.modalResolve = resolve;
+          this.modalReject = reject;
+
+          try {
+            //load modal component
+          } catch (e) {
+            this.modalReject?.(e);
           }
-          target?.click();
+        });
+      }
+
+      async saveClicked() {
+        try {
+          // save data
+          this.modalResolve?.(true); // true to trigger cache rebuild
+        } catch (e) {
+          this.modalReject?.(e);
+        }
+      }
+
+      calcelClicked() {
+        this.modalResolve?.(false); // false to prevent cache rebuild
+      }
+    }
+
+    // example: on cell change via app-choice
+    {
+      cellClicked = async (rowData: any, target: any): Promise<boolean> => {
+        // if not from app-choice edit return
+        if (!target || target.tagName != "APP-CHOICE")
+          return false;
+        // await any actions on the changed data
+        await this.someSaveFunction(row);
+        // trigger the next cell to be editable
+        target = target.parentNode.nextElementSibling;
+        while (target && !target.className.includes('editable')) {
+          target = target.nextElementSibling;
+        }
+        // if there is another on the row make it editable
+        if (target) {
+          target.click();
           // dont trigger cache rebuild as this may wipe the editable state above
           return false;
         }
-        
-        // example: toggle selection and add text input to edit non sp data
-        {
-          // only trigger on cells
-          if (!target || target.tagName != 'TD')
-            return false;
-          // if its already been triggered and added input do nothing
-          if (target.children.length > 0)
-            return false;
-          // return a promise thar the users action will resolve
-          return new Promise(resolve => {
-            var result = true;
-            var input = document.createElement('input');
-            input.type = 'text';
-            input.value = row['title'];
-            input.name = 'title';
-            input.onclick = (e) => {
-              // prevent cell or row clicks
-              e.stopPropagation();
-            }
-            input.onchange = async (e) => {
-              row['title'] = input.value;
-              await this.someSaveFunction(row);
-              input.remove();
-              // manually update cell render but ignoring all render rules
-              target.innerHTML = row['title'];
-              // trigger cache clear to correctly rerender if result is still true (tab will set false if it moved to next cell)
-              resolve(result);
-            }
-            input.onkeyup = (k) => {
-              // if tab move next? on change above would trigger too after this so set result false to prevent cache change just now
-              if (k.key == 'Tab') {
-                let n = target.nextElementSibling;
-                if (n && n.tagName == "TD") {
-                  result = false;
-                  n.click();
-                }
-              }
-            }
-            target.innerHTML = '';
-            target.appendChild(input);
-            // begin editing without extra click
-            input.focus();
-          }
-        }
+        // no more editable in this row then trigger cache rebuild
+        return true;
       }
+    }
   */
   cellRenderer?: (val: any, row: SharepointChoiceRow, index: number) => string; // must be string template not HTMLElement, if HTML input etc needed then use cellClicked to update or to generate HTML element dynamically
   /*
-        return `
-          ${
-            val == 'Yes'
-            ? '✔'
-            : '<span style="font-size: 20px;">☐</span>'
-          }
-          ${val}
-        `;
+    return `
+      ${
+        val == 'Yes'
+        ? '✔'
+        : '<span style="font-size: 20px;">☐</span>'
+      }
+      ${val}
+    `;
   */
   filter?: 'text' | 'number' | 'date' | 'select' | 'none'; // filter type
   width?: number; // minwidth of the column
@@ -178,13 +172,3 @@ export interface SharepointChoiceColumn {
   spec?: SharepointChoiceField; // make the cell editable using app-choice, onchange will trigger cell/row clicked for any save actions etc with target tagname of app-choice as only distinguishing factor that its emitted post edit
   _filtervisible?: boolean; // internal use to track filter visibility
 }
-
-
-
-
-
-
-
-
-
-

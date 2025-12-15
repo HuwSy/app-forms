@@ -10,7 +10,7 @@
   @let count = s == selectedTab ? currentRows.length : rows(s).length;
   <li (click)="tabChange(s)"
       [ngClass]="{Active: s == selectedTab}"
-      [style.maxWidth]="'calc(90% / '+allTabs.length+')'"
+      [style.maxWidth]="'calc(100% / '+(allTabs.length + 5)+')'"
       [title]="s">
     {{s}}
     @if (count > 0) {
@@ -230,23 +230,25 @@
     <tbody>
       @if (data.length == 0 && !loading) {
       <tr>
-        <td colspan="999" style="min-height: 100px;">
+        <td colspan="999"
+            style="min-height: 100px;">
           No data to display for page {{pageNumber}} of {{maxpage}}
         </td>
       </tr>
       }
       @else if (currentRows.length == 0 && loading) {
       <tr>
-        <td colspan="999" style="min-height: 100px;">
+        <td colspan="999"
+            style="min-height: 100px;">
           Loading...
         </td>
       </tr>
       }
       @else {
       @for (row of data; track row['id'] || row['reference'] || $index; let rowIndex = $index) {
-      <tr [class]="{'selected': row.selected, 'loading': loading }">
+      <tr [class]="{'selected': row._selected, 'loading': loading }">
         @if (allowSelection) {
-        @if (row.selected) {
+        @if (row._selected) {
         <td style="cursor: pointer;"
             (click)="selectionChanged(row)">✔</td>
         }
@@ -258,171 +260,123 @@
         @for (col of columns; track col.field || col.headerName || $index) {
         @if (col.children?.length || 1 > 1) {
         @for (child of col.children; track child.field || child.headerName || $index) {
-        @let editing = false;
-        @if (child.spec && child.field && (allEditing || editing === true)) {
-        <td>
-            <app-choice [field]="spcf(child.field)"
-                        [form]="spc(row, child.field)"
-                        [spec]="spcs(child.spec, child.field)"
-                        (change)="editing = handleCellClick(child, row, $event)">
-            </app-choice>
-        </td>
-        }
-        @else {
         @let value = fieldValue(row, child.field);
         @let pointer = beingObserved(child);
         @let hl = hyperlink(row, child);
-        @switch (getCellType(child, value)) {
-        @case ('renderer') {
+        @let type = getCellType(child, value);
         <td [title]="value || ''"
-            [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
+            [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="pointer ? 'pointer' : 'default'"
-            [class]="{'editable': child.spec && child.field, 'center': child.center}"
-            [innerHTML]="child.cellRenderer!(value, row, rowIndex)"
-            (click)="editing = handleCellClick(child, row, $event)"></td>
-        }
-        @case ('date') {
-        <td [title]="value || ''"
-            [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="pointer ? 'pointer' : 'default'"
-            [class]="{'editable': child.spec && child.field, 'center': child.center !== false}"
-            (click)="editing = handleCellClick(child, row, $event)">
-            @if (hl) {
-            <a [href]="hl">{{value | date:'dd MMM yy'}}</a>
-            }
-            @else {
-            {{value | date:'dd MMM yy'}}
-            }
-        </td>
-        }
-        @case ('number') {
-        <td [title]="value || ''"
-            [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="pointer ? 'pointer' : 'default'"
-            [class]="{'editable': child.spec && child.field, 'center': child.center !== false}"
-            (click)="editing = handleCellClick(child, row, $event)">
-            @if (hl) {
-            <a [href]="hl">{{value | number:'1.0-2'}}</a>
-            }
-            @else {
-            {{value | number:'1.0-2'}}
-            }
-        </td>
-        }
-        @case ('boolean') {
-        <td [title]="value || ''"
-            [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="pointer ? 'pointer' : 'default'"
-            [class]="{'editable': child.spec && child.field, 'center': child.center !== false}"
-            (click)="editing = handleCellClick(child, row, $event)">
-            @if (hl) {
-            <a [href]="hl">{{formatBoolean(value)}}</a>
-            }
-            @else {
-            {{formatBoolean(value)}}
-            }
-        </td>
-        }
-        @default {
-        <td [title]="value || ''"
-            [style.whiteSpace]="child.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="pointer ? 'pointer' : 'default'"
-            [class]="{'editable': child.spec && child.field, 'center': child.center}"
-            (click)="editing = handleCellClick(child, row, $event)">
-            @if (hl) {
-            <a [href]="hl">{{value}}</a>
-            }
-            @else {
-            {{value}}
-            }
-        </td>
-        }
-        }
-        }
-        }
+            [class]="{'editable': col.spec && col.field, 'center': col.center || (type == 'date' && col.center !== false) || (type == 'number' && col.center !== false) || (type == 'boolean' && col.center !== false)}"
+            (click)="handleCellClick(col, row, $event)">
+        @if (child.spec && child.field && (allEditing || row._editing == child.field)) {
+          <app-choice [field]="sharepointChoiceField(child.field)"
+                      [form]="sharepointChoiceForm(row, child.field)"
+                      [spec]="sharepointChoiceSpec(child.spec, child.field)"
+                      (change)="handleCellClick(child, row, $event)"
+                      (click)="$event.stopPropagation()">
+          </app-choice>
         }
         @else {
-        @let editing = false;
-        @if (col.spec && col.field && (allEditing || editing === true)) {
-        <td>
-            <app-choice [field]="spcf(col.field)"
-                        [form]="spc(row, col.field)"
-                        [spec]="spcs(col.spec, col.field)"
-                        (change)="editing = handleCellClick(col, row, $event)">
-            </app-choice>
+        @switch (type) {
+        @case ('renderer') {
+          <div [innerHTML]="child.cellRenderer!(value, row, rowIndex)"></div>
+        }
+        @case ('date') {
+          @if (hl) {
+          <a [href]="hl">{{value | date:'dd MMM yy'}}</a>
+          }
+          @else {
+          {{value | date:'dd MMM yy'}}
+          }
+        }
+        @case ('number') {
+          @if (hl) {
+          <a [href]="hl">{{value | number:'1.0-2'}}</a>
+          }
+          @else {
+          {{value | number:'1.0-2'}}
+          }
+        }
+        @case ('boolean') {
+          @if (hl) {
+          <a [href]="hl">{{formatBoolean(value)}}</a>
+          }
+          @else {
+          {{formatBoolean(value)}}
+          }
+        }
+        @default {
+          @if (hl) {
+          <a [href]="hl">{{value}}</a>
+          }
+          @else {
+          {{value}}
+          }
+        }
+        }
+        }
         </td>
+        }
         }
         @else {
         @let value = fieldValue(row, col.field);
         @let pointer = beingObserved(col);
         @let hl = hyperlink(row, col);
-        @switch (getCellType(col, value)) {
-        @case ('renderer') {
+        @let type = getCellType(col, value);
         <td [title]="value || ''"
             [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
             [style.cursor]="pointer ? 'pointer' : 'default'"
-            [class]="{'editable': col.spec && col.field, 'center': col.center}"
-            [innerHTML]="col.cellRenderer!(value, row, rowIndex)"
-            (click)="editing = handleCellClick(col, row, $event)"></td>
+            [class]="{'editable': col.spec && col.field, 'center': col.center || (type == 'date' && col.center !== false) || (type == 'number' && col.center !== false) || (type == 'boolean' && col.center !== false)}"
+            (click)="handleCellClick(col, row, $event)">
+        @if (col.spec && col.field && (allEditing || row._editing == col.field)) {
+          <app-choice [field]="sharepointChoiceField(col.field)"
+                      [form]="sharepointChoiceForm(row, col.field)"
+                      [spec]="sharepointChoiceSpec(col.spec, col.field)"
+                      (change)="handleCellClick(col, row, $event)"
+                      (click)="$event.stopPropagation()">
+          </app-choice>
+        }
+        @else {
+        @switch (type) {
+        @case ('renderer') {
+          <div [innerHTML]="col.cellRenderer!(value, row, rowIndex)"></div>
         }
         @case ('date') {
-        <td [title]="value || ''"
-            [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="pointer ? 'pointer' : 'default'"
-            [class]="{'editable': col.spec && col.field, 'center': col.center !== false}"
-            (click)="editing = handleCellClick(col, row, $event)">
-            @if (hl) {
-            <a [href]="hl">{{value | date:'dd MMM yy'}}</a>
-            }
-            @else {
-            {{value | date:'dd MMM yy'}}
-            }
-        </td>
+          @if (hl) {
+          <a [href]="hl">{{value | date:'dd MMM yy'}}</a>
+          }
+          @else {
+          {{value | date:'dd MMM yy'}}
+          }
         }
         @case ('number') {
-        <td [title]="value || ''"
-            [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="pointer ? 'pointer' : 'default'"
-            [class]="{'editable': col.spec && col.field, 'center': col.center !== false}"
-            (click)="editing = handleCellClick(col, row, $event)">
-            @if (hl) {
-            <a [href]="hl">{{value | number:'1.0-2'}}</a>
-            }
-            @else {
-            {{value | number:'1.0-2'}}
-            }
-        </td>
+          @if (hl) {
+          <a [href]="hl">{{value | number:'1.0-2'}}</a>
+          }
+          @else {
+          {{value | number:'1.0-2'}}
+          }
         }
         @case ('boolean') {
-        <td [title]="value || ''"
-            [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="pointer ? 'pointer' : 'default'"
-            [class]="{'editable': col.spec && col.field, 'center': col.center !== false}"
-            (click)="editing = handleCellClick(col, row, $event)">
-            @if (hl) {
-            <a [href]="hl">{{formatBoolean(value)}}</a>
-            }
-            @else {
-            {{formatBoolean(value)}}
-            }
-        </td>
+          @if (hl) {
+          <a [href]="hl">{{formatBoolean(value)}}</a>
+          }
+          @else {
+          {{formatBoolean(value)}}
+          }
         }
         @default {
-        <td [title]="value || ''"
-            [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="pointer ? 'pointer' : 'default'"
-            [class]="{'editable': col.spec && col.field, 'center': col.center}"
-            (click)="editing = handleCellClick(col, row, $event)">
-            @if (hl) {
-            <a [href]="hl">{{value}}</a>
-            }
-            @else {
-            {{value}}
-            }
+          @if (hl) {
+          <a [href]="hl">{{value}}</a>
+          }
+          @else {
+          {{value}}
+          }
+        }
+        }
+        }
         </td>
-        }
-        }
-        }
         }
         }
       </tr>
@@ -479,7 +433,7 @@
         </th>
         }
       </tr>
-    @for (heading of allCols; track heading.field || heading.headerName || $index; let colIndex = $index) {
+      @for (heading of allCols; track heading.field || heading.headerName || $index; let colIndex = $index) {
       @if (heading.children) {
       @for (child of heading.children; track child.field || child.headerName || $index; let childIndex = $index) {
       @if (child.field) {
@@ -488,13 +442,13 @@
           {{niceName(heading)}} - {{niceName(child)}}
         </td>
         @for (t of allTabs; track t) {
-          <td>
-            <input type="checkbox"
-                  (click)="columnToggle(child, t)"
-                  [ngModel]="isHidden(child, t)"
-                  [name]="'HideCol_'+colIndex+'_'+childIndex+'_'+t"
-                  [disabled]="typeof child.hide === 'function'" />
-          </td>
+        <td>
+          <input type="checkbox"
+                 (click)="columnToggle(child, t)"
+                 [ngModel]="isHidden(child, t)"
+                 [name]="'HideCol_'+colIndex+'_'+childIndex+'_'+t"
+                 [disabled]="typeof child.hide === 'function'" />
+        </td>
         }
       </tr>
       }
@@ -506,30 +460,19 @@
           {{niceName(heading)}}
         </td>
         @for (t of allTabs; track t) {
-          <td>
-            <input type="checkbox"
-                  (click)="columnToggle(heading, t)"
-                  [ngModel]="isHidden(heading, t)"
-                  [name]="'HideCol_'+colIndex+'_'+t"
-                  [disabled]="typeof heading.hide === 'function'" />
-          </td>
+        <td>
+          <input type="checkbox"
+                 (click)="columnToggle(heading, t)"
+                 [ngModel]="isHidden(heading, t)"
+                 [name]="'HideCol_'+colIndex+'_'+t"
+                 [disabled]="typeof heading.hide === 'function'" />
+        </td>
         }
       </tr>
       }
-    }
+      }
       <tr></tr>
     </table>
   </div>
 </div>
-
 }
-
-
-
-
-
-
-
-
-
-
