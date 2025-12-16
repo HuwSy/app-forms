@@ -152,6 +152,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // on init, destroy
   ngOnInit(): void {
+    this.elRef.nativeElement.setAttribute('field', this.field);
   }
   ngOnDestroy(): void {
     this.editor?.destroy();
@@ -1292,4 +1293,5 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     this.chRef.detectChanges();
   }
+
 }
