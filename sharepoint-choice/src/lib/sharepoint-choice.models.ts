@@ -109,7 +109,9 @@ export interface SharepointChoiceColumn {
           try {
             //load modal component
           } catch (e) {
+            //reject reload data in grid
             this.modalReject?.(e);
+            //close the modal
           }
         });
       }
@@ -119,7 +121,8 @@ export interface SharepointChoiceColumn {
           // save data
           this.modalResolve?.(true); // true to trigger cache rebuild
         } catch (e) {
-          this.modalReject?.(e);
+          //dont reject the prmoise as the modal save may get clicked again
+          //this.modalReject?.(e);
         }
       }
 
@@ -136,6 +139,9 @@ export interface SharepointChoiceColumn {
           return false;
         // await any actions on the changed data
         await this.someSaveFunction(row);
+        // if editing ended/on change due to clicking a different cell then dont continue to click next cell
+        if (!rowData._editing?.endsWith(target.getAttribute('field'))
+          return;
         // trigger the next cell to be editable
         target = target.parentNode.nextElementSibling;
         while (target && !target.className.includes('editable')) {
@@ -171,4 +177,5 @@ export interface SharepointChoiceColumn {
   hide?: boolean | ((tab: string) => boolean); // hide column, or function to determine hide state based on selected tab
   spec?: SharepointChoiceField; // make the cell editable using app-choice, onchange will trigger cell/row clicked for any save actions etc with target tagname of app-choice as only distinguishing factor that its emitted post edit
   _filtervisible?: boolean; // internal use to track filter visibility
+
 }
