@@ -342,6 +342,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       let r = this.get('ReadOnlyField');
       if (r)
         this.disabled = true;
+
+      // trigger change detection after current itteration as this will have field view, probably should be signal on @Input spec and form
+      setTimeout(() => {
+        this.chRef.detectChanges();
+      }, 1);
     }
 
     // init rich text editor
@@ -1295,3 +1300,4 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
 }
+
