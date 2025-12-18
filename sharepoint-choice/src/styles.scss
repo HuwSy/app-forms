@@ -580,6 +580,8 @@ a.fc-event {
     border-bottom: 1px solid #20476b;
     margin-top: 12px;
     position: relative;
+    clear: both;
+    min-height: 20px;
 
     li {
       color: #20476b;
@@ -608,15 +610,16 @@ a.fc-event {
       border-bottom: 1px solid white
     }
 
-    li.Right {
-      float: right;
-      border-radius: 0 0 4px 4px;
+    .Edit {
+      height: 20px;
     }
 
-    li.Right.Active,
-    li.Right:hover {
-      border: 1px solid #20476b;
-      border-top: 1px solid white
+    .Export {
+      position: absolute;
+      right: 0;
+      top: 0;
+      z-index: 99;
+      cursor: pointer;
     }
 
     div {
@@ -895,21 +898,6 @@ a.fc-event {
     color: #ddd !important;
     background-color: transparent !important;
     box-shadow: none;
-  }
-
-  .editor {
-    position: relative;
-
-    div {
-      position: absolute;
-      top: -35px;
-      right: 0;
-      color: #20476b;
-      padding: 7px 10px;
-      border: 1px solid #20476b;
-      border-radius: 4px 4px 0 0;
-      cursor: pointer;
-    }
   }
 
   .Saving {
