@@ -3,9 +3,8 @@
 @let maxpage = ceil(currentRows.length / pageSize);
 @let columns = !selectedTab ? [] : fields(selectedTab);
 
-@if (allTabs.length > 1) {
-<ul class="Tabs"
-    style="position: relative;">
+<ul class="Tabs">
+  @if (showSingleTab || allowHideColumns || allTabs.length > 1) {
   @for (s of allTabs; track s) {
   @let count = s == selectedTab ? currentRows.length : rows(s).length;
   <li (click)="tabChange(s)"
@@ -18,13 +17,23 @@
     }
   </li>
   }
+  }
+  @if (allowHideColumns) {
+  <li class="Edit"
+      (click)="editColumns = true"
+      title="Edit columns">
+    ⚙
+  </li>
+  }
+  @if (export) {
+  <img (click)="export(selectedTab, currentRows)"
+       src="{{excelIcon}}"
+       alt="Export to excel"
+       title="Export to excel"
+       height="32" 
+       class="Export">
+  }
 </ul>
-}
-<div class="editor">
-  <div (click)="editColumns = true">
-    Columns
-  </div>
-</div>
 <div class="table-wrapper"
      [style.maxHeight]="tableHeight"
      [style.visibility]="hasLoadedData ? 'visible' : 'hidden'">
@@ -61,7 +70,7 @@
             @case ('select') {
             <select (click)="$event.stopPropagation()"
                     [name]="'ColFlt_'+colIndex"
-                    (change)="filterChange(col, 'equals', $event)"
+                    (ngModelChange)="filterChange(col, 'equals', $event)"
                     [ngModel]="filter.equals">
               <option value="">-- All --</option>
               @for (option of filterDistinct(col.field); track option) {
@@ -71,27 +80,24 @@
             }
             @case ('number') {
             Equals:<br>
-            <input type="text"
+            <input type="number"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_'+colIndex"
-                   (keyup)="filterChange(col, 'equals', $event)"
-                   (change)="filterChange(col, 'equals', $event)"
+                   (ngModelChange)="filterChange(col, 'equals', $event)"
                    [ngModel]="filter.equals" />
             <br>
             From:<br>
-            <input type="text"
+            <input type="number"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_S'+colIndex"
-                   (keyup)="filterChange(col, 'greater', $event)"
-                   (change)="filterChange(col, 'greater', $event)"
+                   (ngModelChange)="filterChange(col, 'greater', $event)"
                    [ngModel]="filter.greater" />
             <br>
             To:<br>
-            <input type="text"
+            <input type="number"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_E'+colIndex"
-                   (keyup)="filterChange(col, 'less', $event)"
-                   (change)="filterChange(col, 'less', $event)"
+                   (ngModelChange)="filterChange(col, 'less', $event)"
                    [ngModel]="filter.less" />
             }
             @case ('date') {
@@ -99,24 +105,21 @@
             <input type="date"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_S'+colIndex"
-                   (keyup)="filterChange(col, 'greater', $event)"
-                   (change)="filterChange(col, 'greater', $event)"
+                   (ngModelChange)="filterChange(col, 'greater', $event)"
                    [ngModel]="filter.greater" />
             <br>
             To:<br>
             <input type="date"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_E'+colIndex"
-                   (keyup)="filterChange(col, 'less', $event)"
-                   (change)="filterChange(col, 'less', $event)"
+                   (ngModelChange)="filterChange(col, 'less', $event)"
                    [ngModel]="filter.less" />
             }
             @default {
             <input type="text"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_'+colIndex"
-                   (keyup)="filterChange(col, 'contains', $event)"
-                   (change)="filterChange(col, 'contains', $event)"
+                   (ngModelChange)="filterChange(col, 'contains', $event)"
                    [ngModel]="filter.contains" />
             }
             }
@@ -155,7 +158,7 @@
             @case ('select') {
             <select (click)="$event.stopPropagation()"
                     [name]="'ColFlt_'+colIndex"
-                    (change)="filterChange(col, 'equals', $event)"
+                    (ngModelChange)="filterChange(col, 'equals', $event)"
                     [ngModel]="filter.equals">
               <option value="">-- All --</option>
               @for (option of filterDistinct(col.field); track option) {
@@ -165,27 +168,24 @@
             }
             @case ('number') {
             Equals:<br>
-            <input type="text"
+            <input type="number"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_'+colIndex"
-                   (keyup)="filterChange(col, 'equals', $event)"
-                   (change)="filterChange(col, 'equals', $event)"
+                   (ngModelChange)="filterChange(col, 'equals', $event)"
                    [ngModel]="filter.equals" />
             <br>
             From:<br>
-            <input type="text"
+            <input type="number"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_S'+colIndex"
-                   (keyup)="filterChange(col, 'greater', $event)"
-                   (change)="filterChange(col, 'greater', $event)"
+                   (ngModelChange)="filterChange(col, 'greater', $event)"
                    [ngModel]="filter.greater" />
             <br>
             To:<br>
-            <input type="text"
+            <input type="number"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_E'+colIndex"
-                   (keyup)="filterChange(col, 'less', $event)"
-                   (change)="filterChange(col, 'less', $event)"
+                   (ngModelChange)="filterChange(col, 'less', $event)"
                    [ngModel]="filter.less" />
             }
             @case ('date') {
@@ -193,24 +193,21 @@
             <input type="date"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_S'+colIndex"
-                   (keyup)="filterChange(col, 'greater', $event)"
-                   (change)="filterChange(col, 'greater', $event)"
+                   (ngModelChange)="filterChange(col, 'greater', $event)"
                    [ngModel]="filter.greater" />
             <br>
             To:<br>
             <input type="date"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_E'+colIndex"
-                   (keyup)="filterChange(col, 'less', $event)"
-                   (change)="filterChange(col, 'less', $event)"
+                   (ngModelChange)="filterChange(col, 'less', $event)"
                    [ngModel]="filter.less" />
             }
             @default {
             <input type="text"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_'+colIndex"
-                   (keyup)="filterChange(col, 'contains', $event)"
-                   (change)="filterChange(col, 'contains', $event)"
+                   (ngModelChange)="filterChange(col, 'contains', $event)"
                    [ngModel]="filter.contains" />
             }
             }
@@ -269,53 +266,53 @@
             [style.cursor]="pointer ? 'pointer' : 'default'"
             [class]="{'editable': col.spec && col.field, 'center': col.center || (type == 'date' && col.center !== false) || (type == 'number' && col.center !== false) || (type == 'boolean' && col.center !== false)}"
             (click)="handleCellClick(col, row, $event)">
-        @if (child.spec && child.field && (allEditing || row._editing == child.field)) {
+          @if (child.spec && child.field && (allEditing || row._editing == child.field)) {
           <app-choice [field]="sharepointChoiceField(child.field)"
                       [form]="sharepointChoiceForm(row, child.field)"
                       [spec]="sharepointChoiceSpec(child.spec, child.field)"
                       (change)="handleCellClick(child, row, $event)"
                       (click)="$event.stopPropagation()">
           </app-choice>
-        }
-        @else {
-        @switch (type) {
-        @case ('renderer') {
+          }
+          @else {
+          @switch (type) {
+          @case ('renderer') {
           <div [innerHTML]="child.cellRenderer!(value, row, rowIndex)"></div>
-        }
-        @case ('date') {
+          }
+          @case ('date') {
           @if (hl) {
           <a [href]="hl">{{value | date:'dd MMM yy'}}</a>
           }
           @else {
           {{value | date:'dd MMM yy'}}
           }
-        }
-        @case ('number') {
+          }
+          @case ('number') {
           @if (hl) {
           <a [href]="hl">{{value | number:'1.0-2'}}</a>
           }
           @else {
           {{value | number:'1.0-2'}}
           }
-        }
-        @case ('boolean') {
+          }
+          @case ('boolean') {
           @if (hl) {
           <a [href]="hl">{{formatBoolean(value)}}</a>
           }
           @else {
           {{formatBoolean(value)}}
           }
-        }
-        @default {
+          }
+          @default {
           @if (hl) {
           <a [href]="hl">{{value}}</a>
           }
           @else {
           {{value}}
           }
-        }
-        }
-        }
+          }
+          }
+          }
         </td>
         }
         }
@@ -329,58 +326,61 @@
             [style.cursor]="pointer ? 'pointer' : 'default'"
             [class]="{'editable': col.spec && col.field, 'center': col.center || (type == 'date' && col.center !== false) || (type == 'number' && col.center !== false) || (type == 'boolean' && col.center !== false)}"
             (click)="handleCellClick(col, row, $event)">
-        @if (col.spec && col.field && (allEditing || row._editing == col.field)) {
+          @if (col.spec && col.field && (allEditing || row._editing == col.field)) {
           <app-choice [field]="sharepointChoiceField(col.field)"
                       [form]="sharepointChoiceForm(row, col.field)"
                       [spec]="sharepointChoiceSpec(col.spec, col.field)"
                       (change)="handleCellClick(col, row, $event)"
                       (click)="$event.stopPropagation()">
           </app-choice>
-        }
-        @else {
-        @switch (type) {
-        @case ('renderer') {
+          }
+          @else {
+          @switch (type) {
+          @case ('renderer') {
           <div [innerHTML]="col.cellRenderer!(value, row, rowIndex)"></div>
-        }
-        @case ('date') {
+          }
+          @case ('date') {
           @if (hl) {
           <a [href]="hl">{{value | date:'dd MMM yy'}}</a>
           }
           @else {
           {{value | date:'dd MMM yy'}}
           }
-        }
-        @case ('number') {
+          }
+          @case ('number') {
           @if (hl) {
           <a [href]="hl">{{value | number:'1.0-2'}}</a>
           }
           @else {
           {{value | number:'1.0-2'}}
           }
-        }
-        @case ('boolean') {
+          }
+          @case ('boolean') {
           @if (hl) {
           <a [href]="hl">{{formatBoolean(value)}}</a>
           }
           @else {
           {{formatBoolean(value)}}
           }
-        }
-        @default {
+          }
+          @default {
           @if (hl) {
           <a [href]="hl">{{value}}</a>
           }
           @else {
           {{value}}
           }
-        }
-        }
-        }
+          }
+          }
+          }
         </td>
         }
         }
       </tr>
       }
+      <tr>
+        <td colspan="999"></td>
+      </tr>
       }
     </tbody>
   </table>

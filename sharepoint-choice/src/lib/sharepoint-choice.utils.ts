@@ -21,7 +21,7 @@ export class SharepointChoiceUtils {
   // context can be read and updated
   public context: string = '';
   public sp: SPFI;
-
+  
   // attempt to establish correct context url for the site from one of the available sources then setup logging for this class
   constructor(
     context?: string
@@ -40,7 +40,8 @@ export class SharepointChoiceUtils {
 
     this.sp = spfi().using(SPBrowser({ baseUrl: this.context }));
 
-    this.mockClassicContext();
+    this.mockClassicContext(!!context);
+
     this.watermark();
   }
 
@@ -53,10 +54,10 @@ export class SharepointChoiceUtils {
     }
   }
 
-  private async mockClassicContext() {
+  private async mockClassicContext(overwrite: boolean = false) {
     let w: any = window;
-    // no classic sp context then mock one up
-    if (!w._spPageContextInfo || w._spPageContextInfo.webAbsoluteUrl != this.context)
+    // no classic sp context then mock one up, or if a sprecific context passed in then overwrite if different
+    if (!w._spPageContextInfo || (overwrite && w._spPageContextInfo.webAbsoluteUrl != this.context))
       w._spPageContextInfo = {
         webAbsoluteUrl: this.context
       };
@@ -79,13 +80,18 @@ export class SharepointChoiceUtils {
   // NOTE: this will only detect direct assignments or users added to a mail enabled global security group
   public async permissions(): Promise<SharepointChoicePermission> {
     let w: any = window;
+
+    // start permission object, user id should be known by now but just in case
     let permission: SharepointChoicePermission = {
-      userId: w._spPageContextInfo.userId as number,
+      userId: w._spPageContextInfo?.userId as number,
       perms: {}
     };
 
     try {
       let web = await this.sp.web();
+      // ensure user id
+      if (permission.userId == null)
+        permission.userId = (await this.sp.web.currentUser()).Id;
 
       // get any directly assigned groups
       // this doesnt work well with ad and aad groups assignments
@@ -112,10 +118,6 @@ export class SharepointChoiceUtils {
     } catch (e) {
       permission.perms = { Error: true };
     }
-
-    // retry here after mocking context should have completed
-    if (!permission.userId)
-      permission.userId = w._spPageContextInfo.userId as number;
 
     return permission
   }

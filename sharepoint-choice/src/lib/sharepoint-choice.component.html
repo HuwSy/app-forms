@@ -40,7 +40,7 @@
     @if (!disabled) {
     <input placeholder="Filter or search {{title || internal}} below"
            name="SharepointChoice{{prefix}}{{field}}_Search"
-           [(ngModel)]="filterMulti"><br>
+           [(ngModel)]="otherText"><br>
     }
     <select (mousedown)="false"
             (click)="changedM($event)"
@@ -68,14 +68,14 @@
       <option disabled
               selected
               hidden>Please select {{title || internal}}</option>
-      @if (select?.none) {
-      <option [value]="null">{{select?.none}}</option>
+      @if (select.none) {
+      <option [value]="null">{{select.none}}</option>
       }
       @for (i of c; track $index) {
       <option [value]="i">{{i}}</option>
       }
-      @if (select?.other || get('FillInChoice')) {
-      <option [value]="inChoices(c) ? 'Please select...' : form[field]">{{select?.other || 'Other'}}, please specify...</option>
+      @if (select.other || get('FillInChoice')) {
+      <option [value]="inChoices(c) ? 'Please select...' : form[field]">{{select.other || 'Other'}}, please specify...</option>
       }
     </select>
     <input [disabled]="disabled"
@@ -90,7 +90,7 @@
            [hidden]="inChoices(c)">
     }
     @else {
-    @if (select?.none) {
+    @if (select.none) {
     <label class="radio">
       <input [value]="null"
              [disabled]="disabled"
@@ -99,7 +99,7 @@
              [required]="req"
              name="SharepointChoice{{prefix}}{{field}}"
              (change)="changed()">
-      {{select?.none}}
+      {{select.none}}
     </label>
     }
     @for (i of c; track $index) {
@@ -174,7 +174,7 @@
     @case ('Text') {
     <input [disabled]="disabled"
            type="text"
-           [pattern]="text?.pattern || '.*'"
+           [pattern]="text.pattern || '.*'"
            [(ngModel)]="form[field]"
            [required]="req"
            name="SharepointChoice{{prefix}}{{field}}"
@@ -216,14 +216,14 @@
               [required]="req"
               name="SharepointChoice{{prefix}}{{field}}"
               (change)="changed()"
-              [style]="(text?.height ? 'height: '+text?.height+'px' : '')"
+              [style]="(text.height ? 'height: '+text.height+'px' : '')"
               placeholder="{{title || internal}}..."></textarea>
     }
     @else {
     <textarea [required]="req"
               name="SharepointChoice{{prefix}}{{field}}"
               (change)="changedA($event)"
-              [style]="(text?.height ? 'height: '+text?.height+'px' : '')"
+              [style]="(text.height ? 'height: '+text.height+'px' : '')"
               placeholder="{{title || internal}}..."></textarea>
     }
     }
@@ -243,7 +243,7 @@
       }
       @else {
       <ngx-editor [editor]="editor"
-                  [(ngModel)]="unused"
+                  [(ngModel)]="otherText"
                   placeholder="{{title || internal}}..."
                   (ngModelChange)="changedA($event)"
                   name="SharepointChoice{{prefix}}{{field}}"
@@ -284,17 +284,17 @@
     }
     @case ('Attachments') {
     @let files = attachments();
-    @let keys = additionalKeys(file?.spec);
-    @if (!file?.uploadonly) {
+    @let keys = additionalKeys(file.spec);
+    @if (!file.uploadonly) {
     @if (files.length > 0) {
-    <div [hidden]="!file?.doctype || !hasChecked()">
+    <div [hidden]="!file.doctype || !hasChecked()">
       Update selected:
       <select (change)="setClasses($event)"
               name="SharepointChoice{{prefix}}{{field}}_Cat">
         <option disabled
                 selected
-                hidden>{{file?.doctype}}</option>
-        @for (v of file?.doctypes; track $index) {
+                hidden>{{file.doctype}}</option>
+        @for (v of file.doctypes; track $index) {
         <option value="{{v}}">{{v}}</option>
         }
       </select>
@@ -306,15 +306,15 @@
            (drop)="drop($event)"
            [ngClass]="{'FilesOver': filesOver}">
       <tr>
-        <th [hidden]="!file?.check"></th>
-        @if (field != 'Attachments' && file?.doctype) {
+        <th [hidden]="!file.check"></th>
+        @if (field != 'Attachments' && file.doctype) {
         <th style="width: 0; white-space: nowrap;">
           <span style="cursor: pointer;"
-                (click)="changeSort(file?.doctype)">
+                (click)="changeSort(file.doctype)">
             File Type
           </span>
           <select style="width:30px;border:none;margin-left:8px;"
-                  [(ngModel)]="filter"
+                  [(ngModel)]="otherText"
                   name="SharepointChoice{{prefix}}{{field}}_Filter">
             <option value>All</option>
 
@@ -322,8 +322,8 @@
             <option value="{{v}}">{{v}}</option>
             }
           </select>
-          <span [hidden]="sort != '+'+file?.doctype">&#9660;</span>
-          <span [hidden]="sort != '-'+file?.doctype">&#9650;</span>
+          <span [hidden]="sort != '+'+file.doctype">&#9660;</span>
+          <span [hidden]="sort != '-'+file.doctype">&#9650;</span>
         </th>
         }
         <th>
@@ -334,17 +334,17 @@
           <span [hidden]="sort != '+Title'">&#9660;</span>
           <span [hidden]="sort != '-Title'">&#9650;</span>
         </th>
-        @if (field != 'Attachments' && file?.notes) {
+        @if (field != 'Attachments' && file.notes) {
         <th>
           <span>
-            {{friendlyName(file?.notes)}}
+            {{friendlyName(file.notes)}}
           </span>
         </th>
         }
         @for (k of keys; track $index) {
         <th>
           <span>
-            @let fs = file?.spec?.[k];
+            @let fs = file.spec?.[k];
             {{fs?.Title || friendlyName(fs?.InternalName)}}
           </span>
         </th>
@@ -367,21 +367,21 @@
       @let fileSizeOver = !f || !f.ServerRelativeUrl ? false : f.ServerRelativeUrl.length > 402;
       @let listItem = f.ListItemAllFields || {};
       <tr>
-        <td [hidden]="!file?.check">
+        <td [hidden]="!file.check">
           <input type="checkbox"
-                 [disabled]="disabled || f.Deleted || (field != 'Attachments' && file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver"
+                 [disabled]="disabled || f.Deleted || (field != 'Attachments' && file.archive && listItem[(file.archive || 'Archive')]) || fileSizeOver"
                  [(ngModel)]="f.Checked"
                  name="SharepointChoice{{prefix}}{{field}}_Checked_{{i}}">
         </td>
-        @if (field != 'Attachments' && file?.doctype) {
+        @if (field != 'Attachments' && file.doctype) {
         <td style="white-space: nowrap"
             [style]="width()">
           <app-choice [form]="listItem"
-                      [spec]="loadOrGenerateSpec(file?.doctype, 'Choice')"
-                      [field]="file?.doctype || 'DocType'"
+                      [spec]="loadOrGenerateSpec(file.doctype, 'Choice')"
+                      [field]="file.doctype || 'DocType'"
                       [prefix]="field+'_'+i"
                       (change)="changed()"
-                      [disabled]="disabled || f.Deleted || (file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver">
+                      [disabled]="disabled || f.Deleted || (file.archive && listItem[(file.archive || 'Archive')]) || fileSizeOver">
           </app-choice>
         </td>
         }
@@ -395,7 +395,7 @@
              [hidden]="disabled || fileSizeOver">+</a>
         </td>
         }
-        @else if (field != 'Attachments' && file?.archive && listItem[(file?.archive || 'Archive')]) {
+        @else if (field != 'Attachments' && file.archive && listItem[(file.archive || 'Archive')]) {
         <td>
           <span style="text-decoration: line-through">{{listItem['Title'] || f.FileName}}</span>
 
@@ -411,10 +411,10 @@
         }
         @else {
         <td style="position: relative">
-          <a [hidden]="!f.ServerRelativeUrl || !file?.download"
+          <a [hidden]="!f.ServerRelativeUrl || !file.download"
              download="{{f.FileName}}"
              href="{{f.ServerRelativeUrl}}">{{listItem['Title'] || f.FileName}}</a>
-          <a [hidden]="!f.ServerRelativeUrl || file?.download"
+          <a [hidden]="!f.ServerRelativeUrl || file.download"
              (click)="newTab(f, $event)"
              style="cursor:pointer">{{listItem['Title'] || f.FileName}}</a>
 
@@ -437,26 +437,26 @@
              [hidden]="disabled || fileSizeOver">x</a>
         </td>
         }
-        @if (field != 'Attachments' && file?.notes) {
+        @if (field != 'Attachments' && file.notes) {
         <td>
           <app-choice [form]="listItem"
-                      [spec]="loadOrGenerateSpec(file?.notes)"
-                      [field]="file?.notes || 'Notes'"
+                      [spec]="loadOrGenerateSpec(file.notes)"
+                      [field]="file.notes || 'Notes'"
                       [prefix]="field+'_'+i"
                       (change)="changed()"
-                      [disabled]="disabled || f.Deleted || (file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver">
+                      [disabled]="disabled || f.Deleted || (file.archive && listItem[(file.archive || 'Archive')]) || fileSizeOver">
           </app-choice>
         </td>
         }
         @for (k of keys; track $index) {
         <td>
-          @let fs = file?.spec?.[k];
+          @let fs = file.spec?.[k];
           @if (fs?.InternalName) {
           <app-choice [form]="listItem"
-                      [spec]="file?.spec || spec"
+                      [spec]="file.spec || spec"
                       [field]="fs?.InternalName ?? ''"
                       [prefix]="field+'_'+i"
-                      [disabled]="disabled || f.Deleted || (file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver"
+                      [disabled]="disabled || f.Deleted || (file.archive && listItem[(file.archive || 'Archive')]) || fileSizeOver"
                       [text]="{
                           height: 35
                         }"
@@ -495,7 +495,7 @@
              [hidden]="disabled || fileSizeOver">+</a>
         </div>
         }
-        @else if (field != 'Attachments' && file?.archive && listItem[(file?.archive || 'Archive')]) {
+        @else if (field != 'Attachments' && file.archive && listItem[(file.archive || 'Archive')]) {
         <div>
           <span style="text-decoration: line-through">{{listItem['Title'] || f.FileName}}</span>
 
@@ -511,17 +511,17 @@
         }
         @else {
         <div style="position: relative;">
-          <input [hidden]="!file?.check"
+          <input [hidden]="!file.check"
                  type="checkbox"
-                 [disabled]="disabled || f.Deleted || (field != 'Attachments' && file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver"
+                 [disabled]="disabled || f.Deleted || (field != 'Attachments' && file.archive && listItem[(file.archive || 'Archive')]) || fileSizeOver"
                  [(ngModel)]="f.Checked"
                  (change)="changed()"
                  name="SharepointChoice{{prefix}}{{field}}_Check_{{i}}">
 
-          <a [hidden]="!f.ServerRelativeUrl || !file?.download"
+          <a [hidden]="!f.ServerRelativeUrl || !file.download"
              download="{{f.FileName}}"
              href="{{f.ServerRelativeUrl}}">{{listItem['Title'] || f.FileName}}</a>
-          <a [hidden]="!f.ServerRelativeUrl || file?.download"
+          <a [hidden]="!f.ServerRelativeUrl || file.download"
              (click)="newTab(f, $event)"
              style="cursor:pointer">{{listItem['Title'] || f.FileName}}</a>
 
@@ -544,42 +544,42 @@
              [hidden]="disabled || fileSizeOver">x</a>
         </div>
 
-        @if (field != 'Attachments' && file?.doctype) {
+        @if (field != 'Attachments' && file.doctype) {
         <div class="choice">
-          {{friendlyName(file?.doctype)}}
+          {{friendlyName(file.doctype)}}
 
           <app-choice [form]="listItem"
-                      [spec]="loadOrGenerateSpec(file?.doctype, 'Choice')"
-                      [field]="file?.doctype || 'DocType'"
+                      [spec]="loadOrGenerateSpec(file.doctype, 'Choice')"
+                      [field]="file.doctype || 'DocType'"
                       [prefix]="field+'_'+i"
                       (change)="changed()"
-                      [disabled]="disabled || f.Deleted || (file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver">
+                      [disabled]="disabled || f.Deleted || (file.archive && listItem[(file.archive || 'Archive')]) || fileSizeOver">
           </app-choice>
         </div>
         }
-        @if (field != 'Attachments' && file?.notes) {
+        @if (field != 'Attachments' && file.notes) {
         <div class="choice">
-          {{friendlyName(file?.notes)}}
+          {{friendlyName(file.notes)}}
 
           <app-choice [form]="listItem"
-                      [spec]="loadOrGenerateSpec(file?.notes)"
-                      [field]="file?.notes || 'Notes'"
+                      [spec]="loadOrGenerateSpec(file.notes)"
+                      [field]="file.notes || 'Notes'"
                       [prefix]="field+'_'+i"
                       (change)="changed()"
-                      [disabled]="disabled || f.Deleted || (file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver">
+                      [disabled]="disabled || f.Deleted || (file.archive && listItem[(file.archive || 'Archive')]) || fileSizeOver">
           </app-choice>
         </div>
         }
         @for (k of keys; track $index) {
         <div>
-          @let fs = file?.spec?.[k];
+          @let fs = file.spec?.[k];
           @if (fs?.InternalName) {
           <app-choice [form]="listItem"
-                      [spec]="file?.spec || spec"
+                      [spec]="file.spec || spec"
                       [field]="fs?.InternalName ?? ''"
                       [prefix]="field+'_'+i"
                       (change)="changed()"
-                      [disabled]="disabled || f.Deleted || (file?.archive && listItem[(file?.archive || 'Archive')]) || fileSizeOver"
+                      [disabled]="disabled || f.Deleted || (file.archive && listItem[(file.archive || 'Archive')]) || fileSizeOver"
                       [text]="{
                         height: 75
                       }">
@@ -626,7 +626,7 @@
       }
 
       <input #fileInput
-             accept="{{file?.accept}}"
+             accept="{{file.accept}}"
              type="file"
              style="display: none !important;"
              multiple
@@ -651,7 +651,7 @@
       }
     </div>
     <input type="text"
-           [(ngModel)]="name"
+           [(ngModel)]="otherText"
            name="SharepointChoice{{prefix}}{{field}}"
            (keyup)="onUpUser($event.key)"
            (click)="onUpUser(undefined)"
@@ -693,7 +693,7 @@
       }
     </div>
     <input type="text"
-           [(ngModel)]="name"
+           [(ngModel)]="otherText"
            name="SharepointChoice{{prefix}}{{field}}"
            (keyup)="onUpUser($event.key)"
            (click)="onUpUser(undefined)"
@@ -727,6 +727,9 @@
     }
     }
     @case (null) {
+    <div class="spin"></div>
+    }
+    @case (undefined) {
     <div class="spin"></div>
     }
     @default {

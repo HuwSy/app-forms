@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Input, ElementRef, ChangeDetectorRef, ErrorHandler, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, ElementRef, ChangeDetectorRef, ErrorHandler, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import "@pnp/sp/webs";
 import { Web } from "@pnp/sp/webs";
 import { IPeoplePickerEntity } from "@pnp/sp/profiles";
@@ -19,6 +19,7 @@ import { SharepointChoiceForm, SharepointChoiceList, SharepointChoiceField, Shar
   templateUrl: './sharepoint-choice.component.html',
   styleUrls: ['../styles.scss'],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     FormsModule,
@@ -30,21 +31,66 @@ import { SharepointChoiceForm, SharepointChoiceList, SharepointChoiceField, Shar
   }]
 })
 export class SharepointChoiceComponent implements OnInit, OnDestroy {
-  @Input() prefix: string = ''; // prefix name attributes for uniqness, usefull for nesting
+  // form object to bind to, not using field direct as simple objects are clones not references
+  @Input() set form(value: SharepointChoiceForm) {
+    this._form = value;
+    this.chRef.markForCheck();
+  }
+  get form(): SharepointChoiceForm {
+    return this._form;
+  }
+  private _form!: SharepointChoiceForm;
 
-  @Input() form!: SharepointChoiceForm; // form containing field, varies based on list therefore uses flexible interface
+  // specification of the list fields
+  @Input() set spec(value: SharepointChoiceList) {
+    this._spec = value;
+    this.chRef.markForCheck();
+  }
+  get spec(): SharepointChoiceList {
+    return this._spec;
+  }
+  private _spec!: SharepointChoiceList;
+
+  // manually override any spec above. prefer send as string as passing object kills large form performance
+  @Input() set override(value: string | SharepointChoiceField | undefined) {
+    // if override passed in, make sure its an object else convert
+    if (value)
+      this._override = typeof value === 'string' ? JSON.parse(value) : value;
+    else
+      this._override = undefined;
+    this.chRef.markForCheck();
+  }
+  get override(): SharepointChoiceField {
+    return this._override ?? {};
+  }
+  private _override?: SharepointChoiceField;
+
+  @Input() set disabled(value: boolean) { // get disabled state from outside
+    this._disabled = value;
+    this.chRef.markForCheck();
+  }
+  get disabled(): boolean {
+    return this._disabled;
+  }
+  private _disabled: boolean = false;
+
+  @Input() set versions(value: SharepointChoiceForm[] | undefined) {
+    this._versions = value;
+    this.chRef.markForCheck();
+  }
+  get versions(): SharepointChoiceForm[] | undefined {
+    return this._versions;
+  }
+  private _versions?: SharepointChoiceForm[];
+
+  @Input() prefix: string = ''; // prefix name attributes for uniqness, usefull for nesting
 
   @Input() field!: string; // internal field name on form object, used for push back and against spec
 
-  @Input() spec!: SharepointChoiceList; // spec of field loaded from list
-  @Input() versions?: SharepointChoiceForm[]; // version history of this field to display if presented, varies based on list therefore object not defined explicitly
-  @Input() override?: string | SharepointChoiceField; // manually override any spec above. prefer send as string as passing object kills large form performance
-
   // could also input hidden rather than elRef but that doesnt pick up non angular html hidden or parent hidden
-  @Input() disabled: boolean = false; // get disabled state from outside
   @Output() change = new EventEmitter<{ field: string, value: any, target: HTMLElement }>(); // emit changes to parent through (change) binding
 
-  @Input() text?: { // override text for field
+  @Input() text: { // override text for field
     pattern?: string, // regex pattern for validation
     height?: number, // height of text area in px
 
@@ -52,16 +98,16 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     search?: Function, // search via api for drop down options
     select?: Function, // upon selection in drop down call back function
     parent?: any // parent object that the control belongs to for call backs or specific search functions
-  };
+  } = {};
 
-  @Input() select?: { // override select for field
+  @Input() select: { // override select for field
     none?: string, // none option text instead of null
     other?: string, // Other fill-in option text, will override to allow other
 
     filter?: Function // filter choices by a function
-  };
+  } = {};
 
-  @Input() file?: { // override file for field
+  @Input() file: { // override file for field
     extract?: boolean, // extract files from zip and email
     check?: boolean, // show check box for each file
 
@@ -77,82 +123,54 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     notes?: string, // notes input field name for singular note input space
     spec?: SharepointChoiceList // field spec for additional fields, 
-  };
+  } = {};
 
-  declare editor?: Editor;
-  declare toolbar: Toolbar;
-  declare tooltip?: boolean;
-  declare filesOver?: boolean;
-  declare name?: string;
-  declare loading: Array<number>;
-  declare versionsDisplayed?: boolean;
+  tooltip?: boolean;
 
-  declare users: SharepointChoiceUser[];
+  editor?: Editor;
+  // rtf menu items
+  toolbar: Toolbar = [
+    ['text_color', 'background_color'],
+    ['bold', 'italic', 'underline', 'strike'],
+    ['ordered_list', 'bullet_list'],
+    [{ heading: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] }],
+    ['code', 'blockquote'],
+    ['link', 'image'],
+    ['align_left', 'align_center', 'align_right', 'align_justify'],
+  ];
 
-  declare filterMulti?: string;
-  declare unused: string;
-  declare results: Array<object>; // varies based on the search source therefore not explicitly defined
-  declare pos: number;
-  declare office: {
+  filesOver?: boolean;
+
+  office: {
     type: string | null,
     loading: boolean
-  };
+  } = { type: null, loading: false };
 
-  declare sort?: string;
-  declare filter: string;
+  // varies based on the search source therefore not explicitly defined
+  results: Array<object> = [];
+  pos: number = -1;
+  sort?: string;
+  otherText: string = '';
 
-  public textKey?: Subject<string>;
-  public userKey?: Subject<string>;
+  users: SharepointChoiceUser[] = [];
 
-  private overridePrevious?: string;
-  private overrideParsed?: object;
+  versionsDisplayed?: boolean;
 
-  private display: SharepointChoiceUser[];
+  private textKey?: Subject<string>;
+  private userKey?: Subject<string>;
+
+  private loading: Array<number> = [];
+  private display: SharepointChoiceUser[] = [];
 
   constructor(
     private elRef: ElementRef,
     private chRef: ChangeDetectorRef
-  ) {
-    this.office = {
-      type: null,
-      loading: false
-    };
-    if (!this.text)
-      this.text = {};
-    if (!this.select)
-      this.select = {};
-    if (!this.file)
-      this.file = {};
-    if (!this.filter)
-      this.filter = '';
-    if (!this.disabled)
-      this.disabled = false;
-
-    // rtf menu items
-    this.toolbar = [
-      ['text_color', 'background_color'],
-      ['bold', 'italic', 'underline', 'strike'],
-      ['ordered_list', 'bullet_list'],
-      [{ heading: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] }],
-      ['code', 'blockquote'],
-      ['link', 'image'],
-      ['align_left', 'align_center', 'align_right', 'align_justify'],
-    ];
-    // field must be model bound even if not is use
-    this.unused = '';
-
-    this.results = [];
-    this.pos = -1;
-
-    // user(s)
-    this.users = [];
-    this.display = [];
-    this.loading = [];
-  }
+  ) { }
 
   // on init, destroy
   ngOnInit(): void {
     this.elRef.nativeElement.setAttribute('field', this.field);
+    this.chRef.markForCheck();
   }
   ngOnDestroy(): void {
     this.editor?.destroy();
@@ -167,12 +185,15 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // show or hide tooltips 
   showHideTooltip(show: boolean): void {
     this.tooltip = show;
+    this.chRef.markForCheck();
   }
 
   // are there different field version values shown
   versionsToggle(): string {
-    if (!this.versionsDisplayed)
+    if (!this.versionsDisplayed) {
       this.versionsDisplayed = true;
+      this.chRef.markForCheck();
+    }
     return '';
   }
 
@@ -246,20 +267,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // gets the required field properties and/or any overrides to determine which field type etc to display
   get(t: string): any {
-    // if override passed in, make sure its an object and convert only once unless changed
-    if (this.override && typeof this.override === 'string' && this.override != this.overridePrevious) {
-      this.overridePrevious = this.override;
-      this.overrideParsed = JSON.parse(this.override);
-    }
-    // if override is an object then use it directly
-    if (this.override && typeof this.override !== 'string') {
-      this.overrideParsed = this.override;
-    }
-
     // initial starting value of p from override
-    let p: any = this.overrideParsed ? this.overrideParsed[t] : null;
+    let p: any = this.override[t];
     // if no override then get from field spec selected
-    if (p == null) {
+    if (p === undefined || p === null) {
       let spec = this.spec[this.field.replace(/^OData_/, '')] ?? this.spec[this.field];
       if (spec)
         p = spec[t];
@@ -342,11 +353,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       let r = this.get('ReadOnlyField');
       if (r)
         this.disabled = true;
-
-      // trigger change detection after current itteration as this will have field view, probably should be signal on @Input spec and form
-      setTimeout(() => {
-        this.chRef.detectChanges();
-      }, 1);
     }
 
     // init rich text editor
@@ -367,10 +373,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // any field changes trigger for relevant updates
-  changed(trigger: boolean = false): void {
-    if (trigger)
-      this.chRef.detectChanges();
+  changed(): void {
     this.change.emit({ field: this.field, value: this.form[this.field]?.results ?? this.form[this.field], target: this.elRef.nativeElement });
+    this.chRef.markForCheck();
   }
 
   // on multi select, not using ctrl key
@@ -437,6 +442,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       else
         this.textKey.next(this.form[this.field]);
     }
+    this.chRef.markForCheck();
   }
 
   async onUpTextSearch(text: string): Promise<void> {
@@ -446,7 +452,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.results = await this.text.search(text, this.text.parent);
 
     this.pos = -1;
-    this.chRef.detectChanges();
+    this.chRef.markForCheck();
   }
 
   async selectedText(res: SharepointChoiceForm | null): Promise<void> {
@@ -462,7 +468,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
 
     this.results = [];
-    this.changed(true);
+    this.changed();
   }
 
   /* 
@@ -487,7 +493,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       if (this.disabled && this.form[this.field] && this.form[this.field].results && !this.form[this.field].results.includes(x))
         return false;
       // filter on search above multichoice field
-      if (this.filterMulti && !x.toLowerCase().includes(this.filterMulti.toLowerCase()))
+      if (this.otherText && !x.toLowerCase().includes(this.otherText.toLowerCase()))
         return false;
       // else true
       return true;
@@ -528,11 +534,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         return false;
       })
       .filter((f: SharepointChoiceAttachment) => {
-        if (!this.filter || !this.file?.doctype)
+        if (!this.otherText || !this.file?.doctype)
           return true;
         if (!f.ListItemAllFields || !f.ListItemAllFields[this.file.doctype])
           return true;
-        if (f.ListItemAllFields[this.file.doctype] == this.filter)
+        if (f.ListItemAllFields[this.file.doctype] == this.otherText)
           return true;
         return false;
       })
@@ -592,6 +598,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     } else {
       this.sort = '-' + field;
     }
+    this.chRef.markForCheck();
   }
 
   additionalKeys(o?: SharepointChoiceList): Array<string> {
@@ -672,7 +679,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.changed(true);
+    this.changed();
   }
 
   // add attachment to array
@@ -699,7 +706,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           if (remaining == 0 && file instanceof HTMLInputElement)
             setTimeout(() => {
               file.value = '';
-              ths.chRef.detectChanges();
+              ths.chRef.markForCheck();
             }, 10);
         } catch (e) {
           alert(`File onread error: ${f.name} with error ${e}`);
@@ -847,7 +854,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           // capture what office type of addin for later use
           if (ths.office.type != info.host.toString()) {
             ths.office.type = info.host.toString();
-            ths.chRef.detectChanges();
+            ths.chRef.markForCheck();
           }
         });
       }
@@ -1044,7 +1051,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       await this.emls(data, results);
 
     this.office.loading = false;
-    this.changed(true);
+    this.changed();
   }
 
   // extract zip files and append to results
@@ -1124,6 +1131,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     evt.preventDefault();
     evt.stopPropagation();
     this.filesOver = true;
+    this.chRef.markForCheck();
   }
 
   // dragging and dropping, unhover
@@ -1133,6 +1141,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     evt.preventDefault();
     evt.stopPropagation();
     this.filesOver = false;
+    this.chRef.markForCheck();
   }
 
   // dragging and dropping, drop
@@ -1151,6 +1160,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     // after files then drop the shake
     this.filesOver = false;
+    this.chRef.markForCheck();
 
     // if no transfer on drop and not chromium based add the meta tag to allow the drop next time
     if (!evt.dataTransfer && !(window as any).chrome) {
@@ -1167,7 +1177,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // select user
   async selectedUser(res: SharepointChoiceUser | null): Promise<void> {
-    let mark = false;
     if (res
       && (this.display.filter((x: SharepointChoiceUser) => {
         return x.LoginName == res.LoginName
@@ -1191,15 +1200,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         this.form[this.field + 'Id'] = usr.Id;
         this.display = [usr];
       }
-
-      mark = true;
     }
 
     // clear search fields
-    this.name = '';
+    this.otherText = '';
     this.users = [];
 
-    this.changed(mark);
+    this.changed();
   }
 
   // load list data only has IDs so expand the object
@@ -1229,7 +1236,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           Title: u.Title
         });
 
-        this.chRef.detectChanges();
+        this.chRef.markForCheck();
       });
     }
 
@@ -1261,11 +1268,12 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     } else if (key == "Enter") {
       this.selectedUser(this.users[this.pos]);
     } else {
-      if (!this.name || this.name.length < 3)
+      if (!this.otherText || this.otherText.length < 3)
         this.users = [];
       else
-        this.userKey?.next(this.name);
+        this.userKey?.next(this.otherText);
     }
+    this.chRef.markForCheck();
   }
 
   async onUpUserSearch(text: string): Promise<void> {
@@ -1296,8 +1304,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       });
     });
 
-    this.chRef.detectChanges();
+    this.chRef.markForCheck();
   }
-
 }
-
