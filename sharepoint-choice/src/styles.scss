@@ -140,7 +140,11 @@ a.fc-event {
   textarea:disabled {
     border-bottom-style: dotted;
   }
-
+  
+  .choice > i {
+    margin-left: 4px;
+  }
+  
   .ng-invalid.ng-touched {
     border-bottom-color: red !important;
   }
@@ -290,7 +294,7 @@ a.fc-event {
 
   .MaxLength {
     font-size: 10px;
-    color: red;
+    color: navy;
   }
 
   .FilesOver {
@@ -626,7 +630,35 @@ a.fc-event {
       transition: opacity .15s linear;
     }
   }
+  
+  .Histories {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-bottom: 1px solid #20476b;
+    position: relative;
+   
+    li {
+      float: right;
+      color: #20476b;
+      padding: 7px 10px;
+      border: 1px solid #20476b;
+      cursor: pointer;
+    }
 
+    li[hidden] {
+      display: none;
+    }
+
+    li.Active,
+    li:hover {
+      background-color: #16314a;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .24);
+      color: white;
+      border: 1px solid #20476b;
+    }
+  }
+  
   .Tasks {
     list-style: none;
     padding: 0 8px 8px;
@@ -719,7 +751,13 @@ a.fc-event {
     background: white;
     z-index: 4;
     margin: 8px 0 60px 0;
-
+    
+    .right {
+      float: right;
+      max-width: 65%;
+      text-align: right;
+    }
+    
     a {
       color: #20476b;
       padding: 7px 10px;
@@ -796,6 +834,111 @@ a.fc-event {
     left: 16px;
   }
 
+  .button,
+  button {
+    color: #20476b;
+    padding: 7px 10px;
+    border: 1px solid #20476b;
+    background-color: transparent;
+    box-shadow: none;
+    font-size: 14px;
+    border-radius: 4px;
+    margin: 0 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .24);
+    cursor: pointer;
+  }
+
+  a.primary,
+  .button.primary,
+  button.primary,
+  .primary {
+    background-color: #20476b;
+    color: #fff;
+  }
+
+  .button:hover,
+  button:hover {
+    background-color: #16314a;
+    color: white;
+  }
+
+  a.primary:hover,
+  .button.primary:hover,
+  button.primary:hover,
+  .primary:hover {
+    color: #fff;
+    background-color: #16314a;
+  }
+
+  .button:disabled,
+  button:disabled {
+    border-color: #ddd;
+    color: #ddd !important;
+    background-color: transparent !important;
+    box-shadow: none;
+  }
+
+  .Overlay {
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    bottom: 0px;
+    right: 0px;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.6);
+    .Modal,
+    .Saving {
+      background: white;
+      border-radius: 4px;
+      position: relative;
+      padding: 30px;
+      box-shadow: 8px 8px #555;
+
+    }
+
+    .Saving {
+      margin: auto;
+      width: 200px;
+      top: 40%;
+      text-align: center;
+    }
+
+    .Modal {
+      margin: 10vh auto;
+      overflow-x: auto;
+
+      max-height: 75vh;
+      min-width: 30vw;
+      width: 700px;
+      max-width: 90vw;
+
+      .Close {
+        float: right;
+        cursor: pointer;
+
+        * {
+          font-weight: bold;
+        }
+      }
+
+      .Actions {
+        * {
+          text-align: right;
+        }
+      }
+
+      .Buttons {
+        * {
+          display: inline-block;
+          margin: 16px 4px;
+          padding: 8px;
+          border: 1px solid #ddd;
+          border-radius: 4px
+        }
+      }
+    }
+  }
+
   .Accent1 {
     background-color: #ED8727;
     color: black;
@@ -845,130 +988,7 @@ a.fc-event {
     background-color: #556B82;
     color: white;
   }
-
-  ins {
-    text-decoration: none;
-    background-color: #d4fcbc;
-  }
-
-  del {
-    text-decoration: line-through;
-    background-color: #fbb6c2;
-    color: #555;
-  }
-
-  .button,
-  button {
-    color: #20476b;
-    padding: 7px 10px;
-    border: 1px solid #20476b;
-    background-color: transparent;
-    box-shadow: none;
-    font-size: 14px;
-    border-radius: 4px;
-    margin: 0 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, .24);
-  }
-
-  a.primary,
-  .button.primary,
-  button.primary,
-  .primary {
-    background-color: #20476b;
-    color: #fff;
-  }
-
-  .button:hover,
-  button:hover {
-    background-color: #16314a;
-    color: white;
-  }
-
-  a.primary:hover,
-  .button.primary:hover,
-  button.primary:hover,
-  .primary:hover {
-    color: #fff;
-    background-color: #16314a;
-  }
-
-  .button:disabled,
-  button:disabled {
-    border-color: #ddd;
-    color: #ddd !important;
-    background-color: transparent !important;
-    box-shadow: none;
-  }
-
-  .Saving {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 999;
-    background-color: rgba(0, 0, 0, 0.5);
-
-    div {
-      margin: auto;
-      background: white;
-      width: 200px;
-      position: relative;
-      top: 40%;
-      border-radius: 8px;
-      box-shadow: 8px 8px #555;
-      text-align: center;
-      padding: 40px;
-    }
-  }
-
-  .Overlay {
-    position: fixed;
-    top: 0px;
-    left: 0px;
-    bottom: 0px;
-    right: 0px;
-    z-index: 10000;
-    background: rgba(0, 0, 0, 0.6);
-
-    .Modal {
-      margin: 10vh auto;
-      background: white;
-      border-radius: 4px;
-      padding: 30px;
-      overflow-x: auto;
-
-      max-height: 75vh;
-      min-width: 30vw;
-      width: 700px;
-      max-width: 90vw;
-
-      .Close {
-        float: right;
-        cursor: pointer;
-
-        * {
-          font-weight: bold;
-        }
-      }
-
-      .Actions {
-        * {
-          text-align: right;
-        }
-      }
-
-      .Buttons {
-        * {
-          display: inline-block;
-          margin: 16px 4px;
-          padding: 8px;
-          border: 1px solid #ddd;
-          border-radius: 4px
-        }
-      }
-    }
-  }
 }
+
 
 /* End Component and app styles */
