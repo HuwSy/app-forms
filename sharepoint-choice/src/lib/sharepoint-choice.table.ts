@@ -539,7 +539,7 @@ export class SharepointChoiceTable implements OnInit {
               if (!(c?.toString().toLowerCase().includes(value.toString().toLowerCase())))
                 return false;
             } else if (op == 'equals') {
-              if (!(c === value || (value == '(blanks)' && (c === null || c === undefined || c === ''))))
+              if (!(c?.toString() === value?.toString() || (value == '(blanks)' && (c === null || c === undefined || c === ''))))
                 return false;
             } else if (op == 'greater') {
               if (!(c > value))
@@ -599,4 +599,5 @@ export class SharepointChoiceTable implements OnInit {
   ceil(number: number): number {
     return Math.ceil(number);
   }
+
 }
