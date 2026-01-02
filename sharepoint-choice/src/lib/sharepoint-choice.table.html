@@ -1,16 +1,16 @@
-@let currentRows = !selectedTab ? [] : rows(selectedTab);
-@let data = currentRows.slice((pageNumber - 1) * pageSize, pageNumber * pageSize);
-@let maxpage = ceil(currentRows.length / pageSize);
 @let columns = !selectedTab ? [] : fields(selectedTab);
+@let currentRows = !selectedTab ? [] : rows(selectedTab);
+@let currentPage = currentPageRows(currentRows);
+@let maxpage = ceil(currentRows.length / pageSize);
 
 <ul class="Tabs">
   @if (showSingleTab || allowHideColumns || allTabs.length > 1) {
   @for (s of allTabs; track s) {
-  @let count = s == selectedTab ? currentRows.length : rows(s).length;
+  @let count = s == selectedTab ? currentRows.length : (allData[s]?.length || 0);
   <li (click)="tabChange(s)"
       [ngClass]="{Active: s == selectedTab}"
       [style.maxWidth]="'calc(100% / '+(allTabs.length + 5)+')'"
-      [title]="s">
+      [title]="s + ' (' + count + ' items)'">
     {{s}}
     @if (count > 0) {
     ({{count}})
@@ -35,8 +35,7 @@
   }
 </ul>
 <div class="table-wrapper"
-     [style.maxHeight]="tableHeight"
-     [style.visibility]="hasLoadedData ? 'visible' : 'hidden'">
+     [style.maxHeight]="tableHeight">
   <table class="table">
     <thead>
       <tr>
@@ -44,13 +43,30 @@
         <th style="width: 30px;"
             rowspan="2">
           #
+          @let col = {_filtervisible: false, field: '_selected'};
+          @let filter = filterContains(col.field);
+          <i (click)="filterToggle(col, $event)"
+             [ngClass]="{'inuse': filter.equals || filter.greater || filter.less || filter.contains}">&#9776;</i>
+          @if (col._filtervisible) {
+          <div class="options">
+            <select (click)="$event.stopPropagation()"
+                    [name]="'ColFlt_Selection'"
+                    (ngModelChange)="filterChange(col, 'equals', $event)"
+                    [ngModel]="filter.equals">
+              <option value="">-- All --</option>
+              <option [value]="true">True</option>
+              <option [value]="false">False</option>
+            </select>
+            <div><button (click)="filterToggle(col, $event)">Close</button></div>
+          </div>
+          }
         </th>
         }
         @for (col of columns; track col.field || col.headerName || $index; let colIndex = $index) {
         @let filter = filterContains(col.field);
         <th [style.minWidth.px]="col.width"
             [title]="col.headerTooltip || col.headerName || ''"
-            [style.cursor]="col.sortable === false ? 'default' : 'pointer'"
+            [ngClass]="{'pointer': col.sortable !== false}"
             (click)="sortChange(col)"
             [colSpan]="col.children?.length || 1"
             [rowSpan]="(col.children?.length || 1) == 1 ? 2 : 1">
@@ -63,7 +79,7 @@
           }
           @if (col.filter) {
           <i (click)="filterToggle(col, $event)"
-             [style.color]="filter.equals || filter.greater || filter.less || filter.contains ? 'darkorange' : 'black'">&#9776;</i>
+             [ngClass]="{'inuse': filter.equals || filter.greater || filter.less || filter.contains}">&#9776;</i>
           @if (col._filtervisible) {
           <div class="options">
             @switch (col.filter) {
@@ -140,7 +156,7 @@
         @let filter = filterContains(col.field);
         <th [style.minWidth.px]="col.width"
             [title]="col.headerTooltip || col.headerName || ''"
-            [style.cursor]="col.sortable === false ? 'default' : 'pointer'"
+            [ngClass]="{'pointer': col.sortable !== false}"
             (click)="sortChange(col)">
           {{niceName(col)}}
           @if (sortContains(col.field, 'desc')) {
@@ -151,7 +167,7 @@
           }
           @if (col.filter) {
           <i (click)="filterToggle(col, $event)"
-             [style.color]="filter.equals || filter.greater || filter.less || filter.contains ? 'darkorange' : 'black'">&#9776;</i>
+             [ngClass]="{'inuse': filter.equals || filter.greater || filter.less || filter.contains}">&#9776;</i>
           @if (col._filtervisible) {
           <div class="options">
             @switch (col.filter) {
@@ -225,7 +241,7 @@
       </tr>
     </thead>
     <tbody>
-      @if (data.length == 0 && !loading) {
+      @if (currentPage.length == 0 && !loading) {
       <tr>
         <td colspan="999"
             style="min-height: 100px;">
@@ -242,30 +258,33 @@
       </tr>
       }
       @else {
-      @for (row of data; track row['id'] || row['reference'] || $index; let rowIndex = $index) {
-      <tr [class]="{'selected': row._selected, 'loading': loading }">
+      @for (row of currentPage; track $index; let rowIndex = $index) {
+      @let hlRow = hyperlink(row);
+      <tr [ngClass]="{'selected': row._selected, 'loading': loading }"
+          role="row"
+          [attr.aria-rowindex]="rowIndex + 1"
+          [attr.aria-label]="'Row ' + (rowIndex + 1) + ' ' + row['_tracking'] + ' ' + (row['Title'] ?? '')">
         @if (allowSelection) {
         @if (row._selected) {
-        <td style="cursor: pointer;"
+        <td class="pointer"
             (click)="selectionChanged(row)">✔</td>
         }
         @else {
-        <td style="cursor: pointer;font-size: 20px;"
+        <td class="pointer fs20"
             (click)="selectionChanged(row)">☐</td>
         }
         }
-        @for (col of columns; track col.field || col.headerName || $index) {
+        @for (col of columns; track col.field || col.headerName || $index; let colIndex = $index) {
         @if (col.children?.length || 1 > 1) {
-        @for (child of col.children; track child.field || child.headerName || $index) {
+        @for (child of col.children; track child.field || child.headerName || $index; let childIndex = $index) {
         @let value = fieldValue(row, child.field);
         @let pointer = beingObserved(child);
-        @let hl = hyperlink(row, child);
+        @let hl = pointer ? undefined : hlRow;
         @let type = getCellType(child, value);
         <td [title]="value || ''"
-            [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="pointer ? 'pointer' : 'default'"
-            [class]="{'editable': col.spec && col.field, 'center': col.center || (type == 'date' && col.center !== false) || (type == 'number' && col.center !== false) || (type == 'boolean' && col.center !== false)}"
-            (click)="handleCellClick(col, row, $event)">
+            [ngClass]="{'pointer': pointer, 'nowrap': child.nowrap, 'editable': child.spec && child.field, 'center': child.center || (type == 'date' && child.center !== false) || (type == 'number' && child.center !== false) || (type == 'boolean' && child.center !== false)}"
+            (click)="handleCellClick(child, row, $event)"
+            role="cell">
           @if (child.spec && child.field && (allEditing || row._editing == child.field)) {
           <app-choice [field]="sharepointChoiceField(child.field)"
                       [form]="sharepointChoiceForm(row, child.field)"
@@ -277,7 +296,7 @@
           @else {
           @switch (type) {
           @case ('renderer') {
-          <div [innerHTML]="child.cellRenderer!(value, row, rowIndex)"></div>
+          <div [spcRenderNode]="renderNode(child, value, row, rowIndex, colIndex, childIndex)"></div>
           }
           @case ('date') {
           @if (hl) {
@@ -319,13 +338,12 @@
         @else {
         @let value = fieldValue(row, col.field);
         @let pointer = beingObserved(col);
-        @let hl = hyperlink(row, col);
+        @let hl = pointer ? undefined : hlRow;
         @let type = getCellType(col, value);
         <td [title]="value || ''"
-            [style.whiteSpace]="col.nowrap ? 'nowrap' : 'normal'"
-            [style.cursor]="pointer ? 'pointer' : 'default'"
-            [class]="{'editable': col.spec && col.field, 'center': col.center || (type == 'date' && col.center !== false) || (type == 'number' && col.center !== false) || (type == 'boolean' && col.center !== false)}"
-            (click)="handleCellClick(col, row, $event)">
+            [ngClass]="{'pointer': pointer, 'nowrap': col.nowrap, 'editable': col.spec && col.field, 'center': col.center || (type == 'date' && col.center !== false) || (type == 'number' && col.center !== false) || (type == 'boolean' && col.center !== false)}"
+            (click)="handleCellClick(col, row, $event)"
+            role="cell">
           @if (col.spec && col.field && (allEditing || row._editing == col.field)) {
           <app-choice [field]="sharepointChoiceField(col.field)"
                       [form]="sharepointChoiceForm(row, col.field)"
@@ -337,7 +355,7 @@
           @else {
           @switch (type) {
           @case ('renderer') {
-          <div [innerHTML]="col.cellRenderer!(value, row, rowIndex)"></div>
+          <div [spcRenderNode]="renderNode(col, value, row, rowIndex, colIndex)"></div>
           }
           @case ('date') {
           @if (hl) {
@@ -378,11 +396,15 @@
         }
       </tr>
       }
-      <tr>
-        <td colspan="999"></td>
-      </tr>
       }
     </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="999">
+          <!-- Spacer row to prevent scrollbar cutting off last row -->
+        </td>
+      </tr>
+    </tfoot>
   </table>
 </div>
 <div>
@@ -408,7 +430,6 @@
     <option [value]="250">250</option>
     <option [value]="500">500</option>
     <option [value]="1000">1000</option>
-    <option [value]="100000">Show All</option>
   </select>
 </div>
 

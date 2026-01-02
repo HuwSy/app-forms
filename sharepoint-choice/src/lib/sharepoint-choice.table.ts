@@ -1,8 +1,31 @@
-import { Component, Input, ErrorHandler, EventEmitter, Output, ChangeDetectorRef, ChangeDetectionStrategy, OnInit } from '@angular/core';
+import { Component, Input, ErrorHandler, EventEmitter, Output, ChangeDetectorRef, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SharepointChoiceColumn, SharepointChoiceFilter, SharepointChoiceSort, SharepointChoiceHide, SharepointChoiceTabs, SharepointChoiceRow, SharepointChoiceForm, SharepointChoiceField, SharepointChoiceList, ExcelIcon } from './sharepoint-choice.models';
+import { SharepointChoiceColumn, SharepointChoiceTabs, SharepointChoiceRow, SharepointChoiceForm, SharepointChoiceField, SharepointChoiceList, ExcelIcon } from './sharepoint-choice.models';
 import { SharepointChoiceComponent } from './sharepoint-choice.component';
+import { SharepointChoiceRender } from './sharepoint-choice.render';
+
+interface SharepointChoiceHide {
+  [tabName: string]: string[];
+}
+
+interface SharepointChoiceSort {
+  [tabName: string]: {
+    direction: 'asc' | 'desc';
+    field: string;
+  }[];
+}
+
+interface SharepointChoiceFilter {
+  [tabName: string]: {
+    [fieldName:string]: {
+      equals?: string | number | boolean | Date | null;
+      contains?: string | null;
+      greater?: number | Date | null;
+      less?: number | Date | null;
+    };
+  }
+}
 
 @Component({
   selector: 'app-table',
@@ -13,23 +36,20 @@ import { SharepointChoiceComponent } from './sharepoint-choice.component';
   imports: [
     CommonModule,
     FormsModule,
-    SharepointChoiceComponent
+    SharepointChoiceComponent,
+    SharepointChoiceRender
   ],
   providers: [{
     provide: ErrorHandler
   }]
 })
-export class SharepointChoiceTable implements OnInit {
+export class SharepointChoiceTable implements OnInit, OnDestroy {
   // all data passed in keyed by tab name (not via signals which reduce performance on large data sets)
   @Input() set allData(value: SharepointChoiceTabs) {
     this._allData = value;
-    this.computeAllTabs();
+    this.computedData(true);
     // Clear cache when data changes
     this._rowsCache.clear();
-    // Mark as loaded after first data set and at least one tab with data
-    if (!this.hasLoadedData && value && Object.keys(value).length > 0 && Object.values(value).some(tabData => tabData && tabData.length > 0)) {
-      this.hasLoadedData = true;
-    }
     this.chRef.markForCheck();
   }
   get allData(): SharepointChoiceTabs {
@@ -40,6 +60,10 @@ export class SharepointChoiceTable implements OnInit {
   // all columns
   @Input() set allCols(value: SharepointChoiceColumn[]) {
     this._allCols = value;
+    // Clear cache when columns change
+    this._colsCache.clear();
+    this._nodeCache.clear();
+    this._pageCache = [];
     this.chRef.markForCheck();
   }
   get allCols(): SharepointChoiceColumn[] {
@@ -50,7 +74,7 @@ export class SharepointChoiceTable implements OnInit {
   // all tabs or derive from all data
   @Input() set allTabs(value: string[]) {
     this._allTabs = value;
-    this.computeAllTabs();
+    this.computedData();
     this.chRef.markForCheck();
   }
   get allTabs(): string[] {
@@ -61,8 +85,10 @@ export class SharepointChoiceTable implements OnInit {
   // selected tab else use stored value or first tab
   @Input() set selectedTab(value: string | undefined) {
     this._selectedTab = value;
-    this.computeAllTabs();
+    this.computedData();
     this.setStorage(`Tab`, this._selectedTab);
+    // Revert to page 1 on every tab change
+    this.pageNumber = 1;
     this.chRef.markForCheck();
   }
   get selectedTab(): string | undefined {
@@ -74,10 +100,11 @@ export class SharepointChoiceTable implements OnInit {
   @Input() set pageSize(value: number) {
     this._pageSize = value;
     this.setStorage(`Size`, this.pageSize);
+    this._pageCache = [];
     this.chRef.markForCheck();
   }
   get pageSize(): number {
-    return this._pageSize || 250;
+    return this._pageSize || 100;
   }
   private _pageSize?: number;
 
@@ -110,71 +137,135 @@ export class SharepointChoiceTable implements OnInit {
   @Input() export?: Function; // [export]="export" export = (selectedTab: string, filteredRows: SharepointChoiceRow[]) => { ... } function triggered when export icon clicked giving current tab and filtered rows
 
   // internal state
-  pageNumber = 1;
+  set pageNumber(value: number) {
+    this._pageNumber = value;
+    this._pageCache = [];
+    this.chRef.markForCheck();
+  }
+  get pageNumber(): number {
+    return this._pageNumber || 1;
+  }
+  private _pageNumber?: number;
+
   editColumns = false;
-  hasLoadedData = false;
   excelIcon: string = ExcelIcon;
 
   // stored sort/filter/hidden columns via getter/setter with storage and recall
   set sort(value: SharepointChoiceSort) {
     this._sort = value;
     this.setStorage(`Sort`, this.sort);
-    // Clear cache when sort changes
-    if (this.selectedTab) {
-      this._rowsCache.delete(this.selectedTab);
-    }
-    this.chRef.markForCheck();
+    this.debounceAndMark();
   }
   get sort(): SharepointChoiceSort {
     return this._sort || {};
   }
-  private _sort: SharepointChoiceSort = {};
+  private _sort?: SharepointChoiceSort;
 
   set filter(value: SharepointChoiceFilter) {
     this._filter = value;
     this.setStorage(`Filter`, this.filter);
-    // Clear cache when filter changes
-    if (this.selectedTab) {
-      this._rowsCache.delete(this.selectedTab);
-    }
-    this.chRef.markForCheck();
+    this.debounceAndMark();
   }
   get filter(): SharepointChoiceFilter {
     return this._filter || {};
   }
-  private _filter: SharepointChoiceFilter = {};
+  private _filter?: SharepointChoiceFilter;
 
   set hiddenColumns(value: SharepointChoiceHide) {
     this._hiddenColumns = value;
     this.setStorage(`Hide`, this.hiddenColumns);
-    // Clear cache when columns changes
-    if (this.selectedTab) {
-      this._rowsCache.delete(this.selectedTab);
-    }
+    // Clear cache after adjusting columns which impact filters/sorts
+    if (!this._selectedTab)
+      return;
+    this._colsCache.delete(this._selectedTab);
     this.chRef.markForCheck();
   }
   get hiddenColumns(): SharepointChoiceHide {
     return this._hiddenColumns || {};
   }
-  private _hiddenColumns: SharepointChoiceHide = {};
+  private _hiddenColumns?: SharepointChoiceHide;
 
-  // Memoization cache for filtered/sorted rows
+  private _dataLoadCycles: number = 0;
+  private _debounceFilterSort?: ReturnType<typeof setTimeout>;
+  private _destroyed = false;
+  private _renderQueued = false;
+  // Memoization cache for columns filtered/sorted rows
+  private _colsCache: Map<string, SharepointChoiceColumn[]> = new Map();
   private _rowsCache: Map<string, SharepointChoiceRow[]> = new Map();
-
+  private _pageCache: SharepointChoiceRow[] = [];
+  private _fieldMapCache: Map<string, Array<string>> = new Map();
+  private _nodeCache: Map<string, any> = new Map();
+  private _isObserved: boolean = false;
+  
   constructor(private chRef: ChangeDetectorRef) { }
 
   ngOnInit(): void {
-    // Initialize from storage once
-    if (!this._sort) this._sort = this.getStorage(`Sort`);
-    if (!this._filter) this._filter = this.getStorage(`Filter`);
-    if (!this._hiddenColumns) this._hiddenColumns = this.getStorage(`Hide`);
-    if (!this._selectedTab) this._selectedTab = this.getStorage(`Tab`);
-    if (!this._pageSize) this._pageSize = this.getStorage(`Size`);
-    this.computeAllTabs();
+    if (!this._sort)
+      try {
+        this._sort = this.getStorage(`Sort`);
+      } catch {}
+    if (!this._filter)
+      try {
+        this._filter = this.getStorage(`Filter`);
+      } catch {}
+    if (!this._hiddenColumns)
+      try {
+        this._hiddenColumns = this.getStorage(`Hide`);
+      } catch {}
+    if (!this._selectedTab)
+      try {
+        this._selectedTab = this.getStorage(`Tab`);
+      } catch {}
+    if (!this._pageSize)
+      try {
+        this._pageSize = this.getStorage(`Size`);
+      } catch {}
   }
 
-  private computeAllTabs(): void {
+  ngOnDestroy(): void {
+    this._destroyed = true;
+    if (this._debounceFilterSort)
+      clearTimeout(this._debounceFilterSort);
+  }
+
+  private requestRender(): void {
+    // In zoneless apps, timers, Promise callbacks, and document event listeners
+    // do not automatically schedule change detection. Coalesce renders and force
+    // a local check for this component.
+    if (this._destroyed || this._renderQueued)
+      return;
+
+    this._renderQueued = true;
+    queueMicrotask(() => {
+      this._renderQueued = false;
+      if (this._destroyed)
+        return;
+      try {
+        this.chRef.detectChanges();
+      } catch {
+        // Fallback if view is not in a state to detect immediately.
+        this.chRef.markForCheck();
+      }
+    });
+  }
+
+  private debounceAndMark(): void {
+    // use debounce to avoid multiple rapid changes clearing cache too often across multiple columns and filter/sort types etc so simpler than rxjs
+    clearTimeout(this._debounceFilterSort);
+    this._debounceFilterSort = setTimeout(() => {
+      if (!this.selectedTab)
+        return;
+      // drop cache to recalc rows
+      this._rowsCache.delete(this.selectedTab);
+      this.requestRender();
+      // emit the new filtered/sorted selection
+      this.emitSelection();
+    }, 500);
+  }
+
+  private computedData(incKeys:boolean = false): void {
     var tabs = Object.keys(this._allData || {}).filter(k => k && k != 'undefined' && k != 'null');
+
     if ((!this._allTabs || this._allTabs.length == 0) ||
       (tabs.length > 0 && this._allTabs.filter(t => tabs.includes(t)).length == 0)) {
       this._allTabs = tabs;
@@ -183,6 +274,27 @@ export class SharepointChoiceTable implements OnInit {
     if (this._allTabs.length > 0
       && (!this._selectedTab || !this._allTabs.includes(this._selectedTab))) {
       this._selectedTab = this._allTabs[0];
+    }
+
+    if (!incKeys)
+      return;
+
+    this._dataLoadCycles++;
+    // add _trackKey to each row for ngFor tracking
+    for (let tab of tabs) {
+      if (this._allData[tab]) {
+        this._allData[tab].forEach((row, index) => {
+          if (row['_tracking'])
+            return;
+          
+          if (row['Id']) // likely SPId so retain through changes
+            row['_tracking'] = `id-${row['Id']}`;
+          else if (row['reference']) // likely policy reference so retain through changes
+            row['_tracking'] = `ref-${row['reference']}`;
+          else // generate unique tracking key each time data changes too
+            row['_tracking'] = `${tab}-${this._dataLoadCycles}-${index}`;
+        });
+      }
     }
   }
 
@@ -199,26 +311,29 @@ export class SharepointChoiceTable implements OnInit {
   // tab change resets page number and emits empty selection
   tabChange(tab: string): void {
     this.selectedTab = tab;
-    this.pageNumber = 1;
-    this.selected.emit({ data: [], tab: this.selectedTab });
-    // Clear cache when tab changes
-    if (this.selectedTab) {
-      this._rowsCache.delete(this.selectedTab);
-    }
     this.chRef.markForCheck();
+    this.emitSelection();
   }
 
   // selection change toggles row selected state and emits selected rows
   selectionChanged(row: SharepointChoiceRow): void {
-    if (!this.selectedTab)
-      return this.selected.emit({ data: [], tab: undefined });
     row._selected = !row._selected;
-    // if there is filtering on selected, clear cache to refresh rows
-    if (!!(this.filter[this.selectedTab]?.['selected']))
-      this._rowsCache.delete(this.selectedTab);
-    let selectedRows = this.rows(this.selectedTab).filter(r => r._selected);
-    this.selected.emit({ data: selectedRows, tab: this.selectedTab });
-    this.chRef.markForCheck();
+    // if there is filtering on selected, debounce so users can click and unclick multiple without multiple emits or the item vanishing immediately
+    if (this.selectedTab && !!(this.filter[this.selectedTab]?.['_selected']))
+      this.debounceAndMark();
+    else {
+      this.chRef.markForCheck();
+      this.emitSelection();
+    }
+  }
+
+  emitSelection(): void {
+    if (!this.selectedTab)
+      this.selected.emit({ data: [], tab: undefined });
+    else {
+      let selectedRows = this.rows(this.selectedTab).filter(r => r._selected);
+      this.selected.emit({ data: selectedRows, tab: this.selectedTab });
+    }
   }
 
   // sorts, filters, column visibility changes
@@ -227,7 +342,7 @@ export class SharepointChoiceTable implements OnInit {
       return;
 
     // Get current sort state
-    const currentSort = { ...this.sort };
+    let currentSort = { ...this.sort };
     if (!currentSort[this.selectedTab])
       currentSort[this.selectedTab] = [];
 
@@ -245,7 +360,6 @@ export class SharepointChoiceTable implements OnInit {
 
     // Reassign to trigger setter
     this.sort = currentSort;
-    this.chRef.markForCheck();
   }
 
   filterChange(col: SharepointChoiceColumn, op: string, value: Date | string | number | null): void {
@@ -264,9 +378,9 @@ export class SharepointChoiceTable implements OnInit {
     }
 
     // Get current filter state
-    const currentFilter = { ...this.filter };
+    let currentFilter = { ...this.filter };
     if (!currentFilter[this.selectedTab])
-      currentFilter[this.selectedTab] = [];
+      currentFilter[this.selectedTab] = {};
 
     if (value === undefined || value === null || value === '') {
       if (currentFilter[this.selectedTab][col.field]) {
@@ -283,7 +397,6 @@ export class SharepointChoiceTable implements OnInit {
 
     // Reassign to trigger setter
     this.filter = currentFilter;
-    this.chRef.markForCheck();
   }
 
   sortContains(field: string | undefined, direction: 'asc' | 'desc'): boolean {
@@ -293,6 +406,15 @@ export class SharepointChoiceTable implements OnInit {
   }
 
   filterContains(field?: string) {
+    // if filter exists on selected then all others disabled
+    if (this.selectedTab && this.filter[this.selectedTab]?.['_selected'] && field != '_selected')
+      return {
+        equals: null,
+        contains: null,
+        greater: null,
+        less: null
+      };
+
     return {
       equals: !field || !this.selectedTab || !this.filter[this.selectedTab] ? null : this.filter[this.selectedTab][field]?.equals ?? null,
       contains: !field || !this.selectedTab || !this.filter[this.selectedTab] ? null : this.filter[this.selectedTab][field]?.contains ?? null,
@@ -315,13 +437,11 @@ export class SharepointChoiceTable implements OnInit {
     if (!col.field)
       return;
 
-    let curr = this.isHidden(col, tab);
-    const currentHidden = { ...this.hiddenColumns };
-
+    let currentHidden = { ...this.hiddenColumns };
     if (!currentHidden[tab])
       currentHidden[tab] = [];
 
-    if (!curr)
+    if (!this.isHidden(col, tab))
       currentHidden[tab] = [...currentHidden[tab], col.field];
     else
       currentHidden[tab] = currentHidden[tab].filter((c: string) => c != col.field);
@@ -349,16 +469,17 @@ export class SharepointChoiceTable implements OnInit {
       const newWidth = startWidth + (e.pageX - startX);
       col.width = newWidth;
       target.style.right = '0px';
+      this.requestRender();
     }
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-    this.chRef.markForCheck();
   }
 
   // handle cell click or row click, return true or false to current cell editing, done via then to avoid await in template as it doesnt impact outcome
   handleCellClick(col: SharepointChoiceColumn, row: SharepointChoiceRow, event: any): void {
+    let choice = event.target.tagName == 'APP-CHOICE';
     // if its editable and not editing already (spc onchange from app-choice will return the component tag)
-    if (col.spec && col.field && event.target.tagName != 'APP-CHOICE') {
+    if (col.spec && col.field && !choice) {
       // show this app-choice for editing early to later get focus
       row._editing = col.field;
       // get the target cell to focus after render
@@ -369,7 +490,7 @@ export class SharepointChoiceTable implements OnInit {
       // failed to find TD then end
       if (!target)
         return;
-      // await render then focus to edit
+      // await render, init, all internals of app-choice then focus to edit
       setTimeout(() => {
         var el = target.getElementsByTagName('select');
         if (el.length == 0)
@@ -388,36 +509,37 @@ export class SharepointChoiceTable implements OnInit {
         c = this.rowClicked(row, event.target);
       else
         this.clicked.emit({ row: row, target: event.target });
-      // wont need to clear cache end
-      if (!this.selectedTab || !c)
+      // cant clear cache end
+      if (!this.selectedTab)
         return;
-      // if it got a function truethy outward reset cache
+      // wont need to clear cache end
+      if (!choice && !c)
+        return;
+      // if it is choice or got a function truethy outward reset cache
       if (!(c instanceof Promise))
         this._rowsCache.delete(this.selectedTab);
       else {
-        var ths = this;
-        c.then(r => {
-          if (r && ths.selectedTab) {
-            ths._rowsCache.delete(ths.selectedTab);
-            ths.chRef.markForCheck();
+        c.then((r?: any) => {
+          if (r || choice) {
+            this._rowsCache.delete(this.selectedTab!);
+            this.requestRender();
           }
         });
       }
       // ensure editing ends/doesnt exist but after using target above
       row._editing = undefined;
     }
+    
     this.chRef.markForCheck();
   }
 
   beingObserved(col: SharepointChoiceColumn): boolean {
-    return !!col.spec || !!col.cellClicked || !!this.rowClicked || this.clicked.observed;
+    return !!col.spec || !!col.cellClicked || this._isObserved;
   }
 
   // calculate the row hyperlink only if there isnt editable, cell click, row click or clicked first
-  hyperlink(row: SharepointChoiceRow, col: SharepointChoiceColumn): string | undefined {
-    if (this.beingObserved(col) || !this.hyperlinkRow)
-      return undefined;
-    return this.hyperlinkRow(row);
+  hyperlink(row: SharepointChoiceRow): string | undefined {
+    return this.hyperlinkRow?.(row);
   }
 
   sharepointChoiceField(field: string): string {
@@ -434,7 +556,7 @@ export class SharepointChoiceTable implements OnInit {
   }
 
   sharepointChoiceForm(row: SharepointChoiceRow, field: string): SharepointChoiceForm {
-    var s = field.split('.');
+    var s = this.fieldPart(field);
     var f: any = row;
     for (let i = 0; i < s.length - 1; i++) {
       f = f[s[i]];
@@ -452,9 +574,16 @@ export class SharepointChoiceTable implements OnInit {
 
   // get columns based on tab and hidden state
   fields(tab: string): SharepointChoiceColumn[] {
+    // Return cached result if available (cache cleared on hide changes)
+    const cached = this._colsCache.get(tab);
+    if (cached)
+      return cached;
+
+    this._rowsCache.delete(tab);
+
     let cols = this.allowHideColumns ? this.hiddenColumns[tab] || [] : [];
     // hide based on tab function or hide state
-    return this.allCols.filter(c => {
+    const columns = this.allCols.filter(c => {
       return !cols.includes(c.field ?? '') && (!c.hide || (typeof c.hide == 'function' && !c.hide(tab)));
     }).map(c => {
       if (c.children) {
@@ -468,13 +597,19 @@ export class SharepointChoiceTable implements OnInit {
         return c.children.length > 0;
       return true;
     });
+
+    // Cache the result
+    this._colsCache.set(tab, columns);
+    return columns;
   }
 
   // utility functions
   niceName(col: SharepointChoiceColumn): string {
     if (col.headerName)
       return col.headerName;
-    var h = col.field?.substring(col.field?.lastIndexOf('.') + 1);
+    if (!col.field)
+      return '';
+    var h = col.field.substring(col.field.lastIndexOf('.') + 1);
     if (h)
       col.headerName = h.charAt(0).toUpperCase() + h.slice(1).replace(/([a-z])([A-Z])/g, '$1 $2');
     return col.headerName || '';
@@ -483,15 +618,20 @@ export class SharepointChoiceTable implements OnInit {
   fieldValue(row: SharepointChoiceRow, field?: string): any {
     if (!field)
       return null;
-    try {
-      var f = field.split('.');
-      var c = row[f[0]];
-      for (let i = 1; i < f.length; i++)
-        c = c ? c[f[i]] : null;
-      return c;
-    } catch (e) {
-      return null;
-    }
+    var f = this.fieldPart(field);
+    var c = row[f[0]];
+    for (let i = 1; c && i < f.length; i++)
+      c = c[f[i]];
+    return c;
+  }
+
+  private fieldPart(field: string): Array<string> {
+    const cached = this._fieldMapCache.get(field);
+    if (cached)
+      return cached;
+    const parts = field.split('.');
+    this._fieldMapCache.set(field, parts);
+    return parts;
   }
 
   filterDistinct(field?: string): any[] {
@@ -508,21 +648,51 @@ export class SharepointChoiceTable implements OnInit {
     return values;
   }
 
+  currentPageRows(rows: SharepointChoiceRow[]): SharepointChoiceRow[] {
+    const cached = this._pageCache;
+    if (cached)
+      return cached;
+
+    const result = rows.slice((this.pageNumber - 1) * this.pageSize, this.pageNumber * this.pageSize);
+    this._pageCache = result;
+
+    return result;
+  }
+
   // get rows based on tab, sort and filter
   rows(tab: string): SharepointChoiceRow[] {
-    if (!this.allData || !tab || !this.allData[tab])
-      return [];
-
     // Return cached result if available (cache cleared on filter/sort changes)
     const cached = this._rowsCache.get(tab);
     if (cached)
       return cached;
 
+    this._pageCache = [];
+    this._isObserved = !!this.rowClicked || this.clicked.observed;
+    this._nodeCache.clear();
+
     var filter = this.filter[tab] || {};
     var sort = this.sort[tab] || [];
 
-    const result = this.allData[tab]
-      .filter((row: SharepointChoiceRow) => {
+    if (filter['_selected'])
+      filter = { '_selected': filter['_selected'] };
+
+    const hasFilter = Object.keys(filter).some(field => {
+      if (this.allowHideColumns && this.hiddenColumns[tab]?.includes(field))
+        return false;
+      return true;
+    });
+
+    const hasSort = sort && sort.length > 0 && sort.some(s => {
+      if (this.allowHideColumns && this.hiddenColumns[tab]?.includes(s.field))
+        return false;
+      return true;
+    });
+
+    // never mutate the input array (this.allData[tab]) if there is sorting
+    let result: SharepointChoiceRow[] = hasSort ? [...this.allData[tab] ?? []] : this.allData[tab] ?? [];
+
+    if (hasFilter) {
+      result = result.filter((row: SharepointChoiceRow) => {
         // apply all filters
         for (let field in filter) {
           // user hidden columns to skip filters
@@ -551,8 +721,11 @@ export class SharepointChoiceTable implements OnInit {
           }
         }
         return true;
-      })
-      .sort((a: SharepointChoiceRow, b: SharepointChoiceRow) => {
+      });
+    }
+
+    if (hasSort)
+      result.sort((a: SharepointChoiceRow, b: SharepointChoiceRow) => {
         for (let s of sort) {
           // user hidden columns to skip sorts
           if (this.allowHideColumns && this.hiddenColumns[tab]?.includes(s.field))
@@ -582,13 +755,38 @@ export class SharepointChoiceTable implements OnInit {
     return result;
   }
 
+  renderNode(col: SharepointChoiceColumn, value: any, row: SharepointChoiceRow, rowIndex: number, colIndex: number, childIndex?: number): any {
+    if (!col.cellRenderer)
+      return null;
+
+    // could return issues if cols hidden and many aren't named at all
+    const key = `${row['_tracking']}::${col.field ?? col.headerName ?? ((1000 * colIndex) + (childIndex ?? 0)).toString()}`;
+    
+    const cached = this._nodeCache.get(key);
+    if (cached)
+      return cached;
+
+    const node = col.cellRenderer(value, row, rowIndex);
+    this._nodeCache.set(key, node);
+    return node;
+  }
+
   // Helper method to determine cell type (reduces template complexity)
   getCellType(col: SharepointChoiceColumn, value: any): 'renderer' | 'date' | 'number' | 'boolean' | 'default' {
+    // quick checks for type
     if (col.cellRenderer) return 'renderer';
-    if (col.filter === 'date' || value?.toJSON) return 'date';
-    if (col.filter === 'number' || typeof value === 'number') return 'number';
-    if (typeof value === 'boolean') return 'boolean';
-    return 'default';
+    if (col.filter === 'date') return 'date';
+    if (col.filter === 'number') return 'number';
+    // slower checks based on value
+    switch (typeof value)
+    {
+      case 'number':
+        return 'number';
+      case 'boolean':
+        return 'boolean';
+    }
+    // check for date object
+    return value instanceof Date ? 'date' : 'default';
   }
 
   // Helper to format boolean values
@@ -599,5 +797,4 @@ export class SharepointChoiceTable implements OnInit {
   ceil(number: number): number {
     return Math.ceil(number);
   }
-
 }

@@ -12,7 +12,13 @@ import { SharepointChoiceUtils } from './sharepoint-choice.utils';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SharepointChoiceLogging } from './sharepoint-choice.logging';
-import { SharepointChoiceForm, SharepointChoiceList, SharepointChoiceField, SharepointChoiceAttachment, SharepointChoiceUser } from './sharepoint-choice.models';
+import { SharepointChoiceForm, SharepointChoiceList, SharepointChoiceField, SharepointChoiceAttachment } from './sharepoint-choice.models';
+
+interface SharepointChoiceUser {
+  Id: number;
+  Title: string;
+  LoginName: string;
+}
 
 @Component({
   selector: 'app-choice',
@@ -159,6 +165,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   private textKey?: Subject<string>;
   private userKey?: Subject<string>;
 
+  private _destroyed = false;
+  private _renderQueued = false;
+
   private loading: Array<number> = [];
   private display: SharepointChoiceUser[] = [];
 
@@ -170,12 +179,31 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // on init, destroy
   ngOnInit(): void {
     this.elRef.nativeElement.setAttribute('field', this.field);
-    this.chRef.markForCheck();
   }
   ngOnDestroy(): void {
+    this._destroyed = true;
     this.editor?.destroy();
     this.textKey?.complete();
     this.userKey?.complete();
+  }
+
+  private requestRender(): void {
+    // Zoneless apps won't auto-run CD after timers, Promise callbacks, DOM listeners,
+    // FileReader events, or other browser APIs. Coalesce and force a local check.
+    if (this._destroyed || this._renderQueued)
+      return;
+
+    this._renderQueued = true;
+    queueMicrotask(() => {
+      this._renderQueued = false;
+      if (this._destroyed)
+        return;
+      try {
+        this.chRef.detectChanges();
+      } catch {
+        this.chRef.markForCheck();
+      }
+    });
   }
 
   /* 
@@ -374,8 +402,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // any field changes trigger for relevant updates
   changed(): void {
+    this.requestRender();
     this.change.emit({ field: this.field, value: this.form[this.field]?.results ?? this.form[this.field], target: this.elRef.nativeElement });
-    this.chRef.markForCheck();
   }
 
   // on multi select, not using ctrl key
@@ -691,14 +719,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     for (let i = file.files.length - 1; i >= 0; i--)
       files.push(file.files[i]);
     // copy these outside for reuse in the loop
-    let ths = this;
     let remaining = files.length;
     // loop the array in forEach for variable isolation
     files.forEach((f: File) => {
       let reader = new FileReader();
-      reader.onload = async function (event: ProgressEvent<FileReader>) {
+      reader.onload = async (event: ProgressEvent<FileReader>) => {
         try {
-          await ths.appendFile(f.name, event.target?.result as ArrayBuffer, ths.form[ths.field].results);
+          await this.appendFile(f.name, event.target?.result as ArrayBuffer, this.form[this.field].results);
 
           remaining--;
 
@@ -706,7 +733,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           if (remaining == 0 && file instanceof HTMLInputElement)
             setTimeout(() => {
               file.value = '';
-              ths.chRef.markForCheck();
+              this.requestRender();
             }, 10);
         } catch (e) {
           alert(`File onread error: ${f.name} with error ${e}`);
@@ -842,7 +869,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     s.id = 'officejs';
     document.head.appendChild(s);
     // capture the office type for later use along with triggering change detection if needed
-    let ths = this;
     s.addEventListener('load', () => {
       // only once office.js loaded
       if ('Office' in window) {
@@ -852,9 +878,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         // on ready should be ran soon after office.js is loaded trigger
         office.onReady(info => {
           // capture what office type of addin for later use
-          if (ths.office.type != info.host.toString()) {
-            ths.office.type = info.host.toString();
-            ths.chRef.markForCheck();
+          if (this.office.type != info.host.toString()) {
+            this.office.type = info.host.toString();
+            this.requestRender();
           }
         });
       }
@@ -870,20 +896,19 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     // if the adding type is outlook then get the selected email(s)
     var spc = new SharepointChoiceUtils();
-    var ths = this;
 
     if (office.context.mailbox['initialData']?.isFromSharedFolder) {
       office.context.mailbox.item?.getSharedPropertiesAsync(shared => {
         if (shared.status === Office.AsyncResultStatus.Failed)
           return;
-        this.getMailItem(office, shared?.value?.targetMailbox, spc, ths);
+        this.getMailItem(office, shared?.value?.targetMailbox, spc);
       });
     } else {
-      this.getMailItem(office, null, spc, ths);
+      this.getMailItem(office, null, spc);
     }
   }
 
-  getMailItem(office: typeof Office, targetMailbox: string | null, spc: SharepointChoiceUtils, ths: SharepointChoiceComponent) {
+  getMailItem = (office: typeof Office, targetMailbox: string | null, spc: SharepointChoiceUtils) => {
     office.context.mailbox.getSelectedItemsAsync(async (asyncResult: Office.AsyncResult<Office.SelectedItemDetails[]>) => {
       if (asyncResult.status === Office.AsyncResultStatus.Failed)
         return;
@@ -906,7 +931,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             'text'
           );
 
-          await ths.appendFile(`${message.subject.trim()}.eml`, new TextEncoder().encode(fileContent).buffer as ArrayBuffer, ths.form[ths.field].results);
+          await this.appendFile(`${message.subject.trim()}.eml`, new TextEncoder().encode(fileContent).buffer as ArrayBuffer, this.form[this.field].results);
         } catch (e) {
           errors.push(`Email append error: ${message.subject} with error ${e}`);
         }
@@ -931,7 +956,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     let docDataSlices: Office.FileType.Text[] | Office.FileType.Compressed[] = [];
     let slicesReceived = 0;
     let file: Office.File;
-    let ths = this;
 
     try {
       // get the file in 64k slices until complete
@@ -948,7 +972,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       });
 
       // process the slice and append until completed
-      function processSlice(sliceResult: Office.AsyncResult<Office.Slice>) {
+      let processSlice = (sliceResult: Office.AsyncResult<Office.Slice>) => {
         if (sliceResult.status === Office.AsyncResultStatus.Failed)
           throw sliceResult.error.message;
 
@@ -959,7 +983,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           file.getSliceAsync(slicesReceived, processSlice);
       }
 
-      async function saveFile() {
+      let saveFile = async () => {
         // completed getting slices then start patching the file
         let docData: (Office.FileType.Text | Office.FileType.Compressed)[] = [];
         for (let i = 0; i < docDataSlices.length; i++)
@@ -974,7 +998,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         var fileName = office.context.document.url?.split('/')?.pop()?.split('\\')?.pop();
         if (!fileName) {
           fileName = `OfficeAddin-${new Date().toISOString().replace(/:/g, '-')}`;
-          switch (ths.office.type) {
+          switch (this.office.type) {
             case "Word":
               fileName += ".docx";
               break;
@@ -998,7 +1022,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           }
         }
 
-        await ths.appendFile(`${fileName}`, Uint8Array.from(fileContent.toString(), c => c.charCodeAt(0)).buffer, ths.form[ths.field].results);
+        await this.appendFile(`${fileName}`, Uint8Array.from(fileContent.toString(), c => c.charCodeAt(0)).buffer, this.form[this.field].results);
       }
     } catch (e) {
       // if there is an error then alert it
@@ -1236,7 +1260,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           Title: u.Title
         });
 
-        this.chRef.markForCheck();
+        this.requestRender();
       });
     }
 

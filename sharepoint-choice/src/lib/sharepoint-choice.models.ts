@@ -42,12 +42,6 @@ export interface SharepointChoiceField {
   AppendOnly?: boolean;
 }
 
-export interface SharepointChoiceUser {
-  Id: number;
-  Title: string;
-  LoginName: string;
-}
-
 export interface SharepointChoicePermission {
   userId: number;
   perms: {
@@ -60,33 +54,14 @@ export interface SharepointChoiceTabs {
 }
 
 export interface SharepointChoiceRow {
-  _selected?: boolean;
-  _editing?: string;
+  _tracking?: string; // unique key for tracking row changes
+  _selected?: boolean; // row is selected
+  _editing?: string; // fieldname being edited currently in app-choice
   [key: string]: string | number | boolean | Date | SharepointChoiceRowChild | null | undefined;
 }
 
 export interface SharepointChoiceRowChild {
   [key: string]: string | number | boolean | Date | null | undefined;
-}
-
-export interface SharepointChoiceSort {
-  [tabName: string]: {
-    direction: 'asc' | 'desc';
-    field: string;
-  }[];
-}
-
-export interface SharepointChoiceFilter {
-  [tabName: string]: {
-    equals: string | number | boolean | Date | null;
-    contains: string | null;
-    greater: number | Date | null;
-    less: number | Date | null;
-  }[];
-}
-
-export interface SharepointChoiceHide {
-  [tabName: string]: string[];
 }
 
 export interface SharepointChoiceColumn {
@@ -158,7 +133,7 @@ export interface SharepointChoiceColumn {
       }
     }
   */
-  cellRenderer?: (val: any, row: SharepointChoiceRow, index: number) => string; // must be string template not HTMLElement, if HTML input etc needed then use cellClicked to update or to generate HTML element dynamically
+  cellRenderer?: (val: any, row: SharepointChoiceRow, index: number) => string | Node; // string is sanitized HTML; Node allows HTMLElement w/ inner elements and listeners
   /*
     return `
       ${
