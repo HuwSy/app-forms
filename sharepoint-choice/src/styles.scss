@@ -140,19 +140,13 @@ a.fc-event {
   textarea:disabled {
     border-bottom-style: dotted;
   }
-  
+
   .choice > i {
     margin-left: 4px;
   }
-  
+
   .ng-invalid.ng-touched {
     border-bottom-color: red !important;
-  }
-
-  *[click],
-  *[onclick],
-  .click {
-    cursor: pointer;
   }
 
   .choice {
@@ -424,16 +418,22 @@ a.fc-event {
         white-space: nowrap;
         position: relative;
         user-select: none;
-        cursor: pointer;
+        transition: width 1s ease-in-out;
+        cursor: default;
 
         i {
           position: absolute;
           right: 16px;
+          color: black;
           cursor: pointer;
         }
 
         i:last-of-type {
           right: 2px;
+        }
+
+        i.inuse {
+          color: darkorange;
         }
 
         .options {
@@ -466,6 +466,10 @@ a.fc-event {
           cursor: ew-resize;
           z-index: 9;
         }
+      }
+
+      th.pointer {
+        cursor: pointer;
       }
 
       tr:first-child th[rowSpan="2"] {
@@ -506,6 +510,7 @@ a.fc-event {
       td {
         padding: 4px;
         border-bottom: 1px dotted #bbb;
+        transition: width 1s ease-in-out;
 
         a {
           text-decoration: none;
@@ -513,8 +518,20 @@ a.fc-event {
         }
       }
 
+      td.pointer {
+        cursor: pointer;
+      }
+
+      td.fs20 {
+        font-size: 20px;
+      }
+
       td.center {
         text-align: center;
+      }
+
+      td.nowrap {
+        white-space: nowrap;
       }
 
       td:first-child {
@@ -535,6 +552,11 @@ a.fc-event {
 
       tr:last-child {
         position: inherit;
+      }
+
+      th,
+      td {
+        transition: width 1s ease-in-out;
       }
 
       position: sticky;
@@ -630,14 +652,14 @@ a.fc-event {
       transition: opacity .15s linear;
     }
   }
-  
+
   .Histories {
     list-style: none;
     margin: 0;
     padding: 0;
     border-bottom: 1px solid #20476b;
     position: relative;
-   
+    
     li {
       float: right;
       color: #20476b;
@@ -658,7 +680,7 @@ a.fc-event {
       border: 1px solid #20476b;
     }
   }
-  
+
   .Tasks {
     list-style: none;
     padding: 0 8px 8px;
@@ -751,13 +773,13 @@ a.fc-event {
     background: white;
     z-index: 4;
     margin: 8px 0 60px 0;
-    
+
     .right {
       float: right;
       max-width: 65%;
       text-align: right;
     }
-    
+
     a {
       color: #20476b;
       padding: 7px 10px;
@@ -886,6 +908,7 @@ a.fc-event {
     right: 0px;
     z-index: 10000;
     background: rgba(0, 0, 0, 0.6);
+
     .Modal,
     .Saving {
       background: white;
@@ -989,6 +1012,5 @@ a.fc-event {
     color: white;
   }
 }
-
 
 /* End Component and app styles */
