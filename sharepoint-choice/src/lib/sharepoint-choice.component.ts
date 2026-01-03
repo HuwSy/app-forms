@@ -752,7 +752,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   async outlook(transfer: DataTransfer): Promise<void> {
     let spc = new SharepointChoiceUtils();
 
-    function mailType(transfer: DataTransfer, type: string) {
+    let mailType = (transfer: DataTransfer, type: string) => {
       let item = transfer.getData(type);
       if (!item)
         return null;
