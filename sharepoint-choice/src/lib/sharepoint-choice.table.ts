@@ -45,12 +45,11 @@ interface SharepointChoiceFilter {
 })
 export class SharepointChoiceTable implements OnInit, OnDestroy {
   // all data passed in keyed by tab name (not via signals which reduce performance on large data sets)
-  @Input() set allData(value: SharepointChoiceTabs) {
+    @Input() set allData(value: SharepointChoiceTabs) {
     this._allData = value;
-    this.computedData();
     
+    // add _tracking to each row for ngFor tracking and node cache
     this._dataLoadCycles++;
-    // add _trackKey to each row for ngFor tracking
     for (let tab of tabs) {
       if (this._allData[tab]) {
         this._allData[tab].forEach((row, index) => {
@@ -72,7 +71,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this.chRef.markForCheck();
   }
   get allData(): SharepointChoiceTabs {
-    return this._allData || {};
+    return this._allData;
   }
   private _allData: SharepointChoiceTabs = {};
 
@@ -81,37 +80,37 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this._allCols = value;
     // Clear cache when columns change
     this._colsCache.clear();
-    this._nodeCache.clear();
-    this._pageCache = [];
     this.chRef.markForCheck();
   }
   get allCols(): SharepointChoiceColumn[] {
-    return this._allCols || [];
+    return this._allCols;
   }
   private _allCols: SharepointChoiceColumn[] = [];
 
   // all tabs or derive from all data
   @Input() set allTabs(value: string[]) {
     this._allTabs = value;
-    this.computedData();
     this.chRef.markForCheck();
   }
   get allTabs(): string[] {
-    return this._allTabs;
+    return this._allTabs || Object.keys(this._allData || {}).filter(k => k) || [];
   }
-  private _allTabs: string[] = [];
+  private _allTabs?: string[];
 
   // selected tab else use stored value or first tab
   @Input() set selectedTab(value: string | undefined) {
     this._selectedTab = value;
-    this.computedData();
     this.setStorage(`Tab`, this._selectedTab);
     // Revert to page 1 on every tab change
     this.pageNumber = 1;
     this.chRef.markForCheck();
   }
   get selectedTab(): string | undefined {
-    return this._selectedTab;
+    if (this.allTabs.includes(this._selectedTab))
+      return this._selectedTab;
+    else if (this.allTabs.length > 0)
+      return this.allTabs[0];
+    return undefined;
   }
   private _selectedTab?: string;
 
@@ -133,7 +132,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this.chRef.markForCheck();
   }
   get loading(): boolean {
-    return this._loading || false;
+    return this._loading;
   }
   private _loading: boolean = false;
 
@@ -255,20 +254,6 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       // emit the new filtered/sorted selection
       this.emitSelection();
     }, 500);
-  }
-
-  private computedData(): void {
-    var tabs = Object.keys(this._allData || {}).filter(k => k && k != 'undefined' && k != 'null');
-
-    if ((!this._allTabs || this._allTabs.length == 0) ||
-      (tabs.length > 0 && this._allTabs.filter(t => tabs.includes(t)).length == 0)) {
-      this._allTabs = tabs;
-    }
-
-    if (this._allTabs.length > 0
-      && (!this._selectedTab || !this._allTabs.includes(this._selectedTab))) {
-      this._selectedTab = this._allTabs[0];
-    }
   }
 
   getStorage(key: string): any {
