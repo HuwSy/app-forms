@@ -45,7 +45,7 @@ interface SharepointChoiceFilter {
 })
 export class SharepointChoiceTable implements OnInit, OnDestroy {
   // all data passed in keyed by tab name (not via signals which reduce performance on large data sets)
-    @Input() set allData(value: SharepointChoiceTabs) {
+  @Input() set allData(value: SharepointChoiceTabs) {
     this._allData = value;
     
     // add _tracking to each row for ngFor tracking and node cache
