@@ -306,7 +306,9 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       let selectedRows = this.rows(this.selectedTab).filter(r => r._selected);
       this.selected.emit({ data: selectedRows, tab: this.selectedTab });
     }
-    this.chRef.detectChanges();
+    queueMicrotask(() => {
+      this.chRef.detectChanges();
+    });
   }
 
   // sorts, filters, column visibility changes
@@ -455,6 +457,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     if (col.spec && col.field && !choice) {
       // show this app-choice for editing early to later get focus
       row._editing = col.field;
+      this.chRef.markForCheck();
       // get the target cell to focus after render
       var target = event.target;
       // ensure we are at the cell level not any inner nodes
@@ -501,9 +504,8 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       }
       // ensure editing ends/doesnt exist but after using target above
       row._editing = undefined;
+      this.chRef.markForCheck();
     }
-    
-    this.chRef.markForCheck();
   }
 
   beingObserved(col: SharepointChoiceColumn): boolean {
