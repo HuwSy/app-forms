@@ -165,9 +165,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   private textKey?: Subject<string>;
   private userKey?: Subject<string>;
 
-  private _destroyed = false;
-  private _renderQueued = false;
-
   private loading: Array<number> = [];
   private display: SharepointChoiceUser[] = [];
 
@@ -181,29 +178,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.elRef.nativeElement.setAttribute('field', this.field);
   }
   ngOnDestroy(): void {
-    this._destroyed = true;
     this.editor?.destroy();
     this.textKey?.complete();
     this.userKey?.complete();
-  }
-
-  private requestRender(): void {
-    // Zoneless apps won't auto-run CD after timers, Promise callbacks, DOM listeners,
-    // FileReader events, or other browser APIs. Coalesce and force a local check.
-    if (this._destroyed || this._renderQueued)
-      return;
-
-    this._renderQueued = true;
-    queueMicrotask(() => {
-      this._renderQueued = false;
-      if (this._destroyed)
-        return;
-      try {
-        this.chRef.detectChanges();
-      } catch {
-        this.chRef.markForCheck();
-      }
-    });
   }
 
   /* 
@@ -402,8 +379,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // any field changes trigger for relevant updates
   changed(): void {
-    this.requestRender();
     this.change.emit({ field: this.field, value: this.form[this.field]?.results ?? this.form[this.field], target: this.elRef.nativeElement });
+    queueMicrotask(() => {
+      this.chRef.markForCheck();
+    });
   }
 
   // on multi select, not using ctrl key
@@ -733,8 +712,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           if (remaining == 0 && file instanceof HTMLInputElement)
             setTimeout(() => {
               file.value = '';
-              this.requestRender();
-            }, 10);
+            }, 0);
         } catch (e) {
           alert(`File onread error: ${f.name} with error ${e}`);
         }
@@ -880,7 +858,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           // capture what office type of addin for later use
           if (this.office.type != info.host.toString()) {
             this.office.type = info.host.toString();
-            this.requestRender();
+            this.chRef.detectChanges();
           }
         });
       }
@@ -1260,7 +1238,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           Title: u.Title
         });
 
-        this.requestRender();
+        this.chRef.detectChanges();
       });
     }
 
