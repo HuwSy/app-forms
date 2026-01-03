@@ -50,7 +50,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     
     // add _tracking to each row for ngFor tracking and node cache
     this._dataLoadCycles++;
-    let tabs = Object.keys(this._allData || {}).filter(k => k);
+    let tabs = Object.keys(this._allData);
     for (let tab of tabs) {
       if (this._allData[tab]) {
         this._allData[tab].forEach((row, index) => {
@@ -94,7 +94,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this.chRef.markForCheck();
   }
   get allTabs(): string[] {
-    return this._allTabs || Object.keys(this._allData || {}).filter(k => k) || [];
+    return this._allTabs || Object.keys(this._allData) || [];
   }
   private _allTabs?: string[];
 
@@ -107,7 +107,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this.chRef.markForCheck();
   }
   get selectedTab(): string | undefined {
-    if (this.allTabs.includes(this._selectedTab))
+    if (this._selectedTab && this.allTabs.includes(this._selectedTab))
       return this._selectedTab;
     else if (this.allTabs.length > 0)
       return this.allTabs[0];
