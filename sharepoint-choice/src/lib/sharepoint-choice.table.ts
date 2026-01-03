@@ -187,8 +187,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   private _dataLoadCycles: number = 0;
   private _debounceFilterSort?: ReturnType<typeof setTimeout>;
-  private _destroyed = false;
-  private _renderQueued = false;
+  
   // Memoization cache for columns filtered/sorted rows
   private _colsCache: Map<string, SharepointChoiceColumn[]> = new Map();
   private _rowsCache: Map<string, SharepointChoiceRow[]> = new Map();
@@ -223,30 +222,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this._destroyed = true;
-    if (this._debounceFilterSort)
-      clearTimeout(this._debounceFilterSort);
-  }
-
-  private requestRender(): void {
-    // In zoneless apps, timers, Promise callbacks, and document event listeners
-    // do not automatically schedule change detection. Coalesce renders and force
-    // a local check for this component.
-    if (this._destroyed || this._renderQueued)
-      return;
-
-    this._renderQueued = true;
-    queueMicrotask(() => {
-      this._renderQueued = false;
-      if (this._destroyed)
-        return;
-      try {
-        this.chRef.detectChanges();
-      } catch {
-        // Fallback if view is not in a state to detect immediately.
-        this.chRef.markForCheck();
-      }
-    });
+    clearTimeout(this._debounceFilterSort);
   }
 
   private debounceAndMark(): void {
@@ -257,7 +233,6 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
         return;
       // drop cache to recalc rows
       this._rowsCache.delete(this.selectedTab);
-      this.requestRender();
       // emit the new filtered/sorted selection
       this.emitSelection();
     }, 500);
@@ -311,7 +286,6 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   // tab change resets page number and emits empty selection
   tabChange(tab: string): void {
     this.selectedTab = tab;
-    this.chRef.markForCheck();
     this.emitSelection();
   }
 
@@ -321,10 +295,8 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     // if there is filtering on selected, debounce so users can click and unclick multiple without multiple emits or the item vanishing immediately
     if (this.selectedTab && !!(this.filter[this.selectedTab]?.['_selected']))
       this.debounceAndMark();
-    else {
-      this.chRef.markForCheck();
+    else
       this.emitSelection();
-    }
   }
 
   emitSelection(): void {
@@ -334,6 +306,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       let selectedRows = this.rows(this.selectedTab).filter(r => r._selected);
       this.selected.emit({ data: selectedRows, tab: this.selectedTab });
     }
+    this.chRef.detectChanges();
   }
 
   // sorts, filters, column visibility changes
@@ -469,7 +442,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       const newWidth = startWidth + (e.pageX - startX);
       col.width = newWidth;
       target.style.right = '0px';
-      this.requestRender();
+      this.chRef.markForCheck();
     }
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
@@ -522,7 +495,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
         c.then((r?: any) => {
           if (r || choice) {
             this._rowsCache.delete(this.selectedTab!);
-            this.requestRender();
+            this.chRef.detectChanges();
           }
         });
       }
