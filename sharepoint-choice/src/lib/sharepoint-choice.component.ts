@@ -381,7 +381,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   changed(): void {
     this.change.emit({ field: this.field, value: this.form[this.field]?.results ?? this.form[this.field], target: this.elRef.nativeElement });
     queueMicrotask(() => {
-      this.chRef.markForCheck();
+      this.chRef.detectChanges();
     });
   }
 
@@ -1238,7 +1238,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           Title: u.Title
         });
 
-        this.chRef.detectChanges();
+        this.chRef.markForCheck();
       });
     }
 
