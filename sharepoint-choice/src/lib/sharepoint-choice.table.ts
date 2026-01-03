@@ -50,6 +50,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     
     // add _tracking to each row for ngFor tracking and node cache
     this._dataLoadCycles++;
+    let tabs = Object.keys(this._allData || {}).filter(k => k);
     for (let tab of tabs) {
       if (this._allData[tab]) {
         this._allData[tab].forEach((row, index) => {
