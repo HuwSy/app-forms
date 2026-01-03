@@ -47,7 +47,26 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   // all data passed in keyed by tab name (not via signals which reduce performance on large data sets)
   @Input() set allData(value: SharepointChoiceTabs) {
     this._allData = value;
-    this.computedData(true);
+    this.computedData();
+    
+    this._dataLoadCycles++;
+    // add _trackKey to each row for ngFor tracking
+    for (let tab of tabs) {
+      if (this._allData[tab]) {
+        this._allData[tab].forEach((row, index) => {
+          if (row['_tracking'])
+            return;
+          
+          if (row['Id']) // likely SPId so retain through changes
+            row['_tracking'] = `id-${row['Id']}`;
+          else if (row['reference']) // likely policy reference so retain through changes
+            row['_tracking'] = `ref-${row['reference']}`;
+          else // generate unique tracking key each time data changes too
+            row['_tracking'] = `${tab}-${this._dataLoadCycles}-${index}`;
+        });
+      }
+    }
+    
     // Clear cache when data changes
     this._rowsCache.clear();
     this.chRef.markForCheck();
@@ -238,7 +257,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     }, 500);
   }
 
-  private computedData(incKeys:boolean = false): void {
+  private computedData(): void {
     var tabs = Object.keys(this._allData || {}).filter(k => k && k != 'undefined' && k != 'null');
 
     if ((!this._allTabs || this._allTabs.length == 0) ||
@@ -249,27 +268,6 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     if (this._allTabs.length > 0
       && (!this._selectedTab || !this._allTabs.includes(this._selectedTab))) {
       this._selectedTab = this._allTabs[0];
-    }
-
-    if (!incKeys)
-      return;
-
-    this._dataLoadCycles++;
-    // add _trackKey to each row for ngFor tracking
-    for (let tab of tabs) {
-      if (this._allData[tab]) {
-        this._allData[tab].forEach((row, index) => {
-          if (row['_tracking'])
-            return;
-          
-          if (row['Id']) // likely SPId so retain through changes
-            row['_tracking'] = `id-${row['Id']}`;
-          else if (row['reference']) // likely policy reference so retain through changes
-            row['_tracking'] = `ref-${row['reference']}`;
-          else // generate unique tracking key each time data changes too
-            row['_tracking'] = `${tab}-${this._dataLoadCycles}-${index}`;
-        });
-      }
     }
   }
 
