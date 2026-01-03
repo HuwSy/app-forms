@@ -858,7 +858,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           // capture what office type of addin for later use
           if (this.office.type != info.host.toString()) {
             this.office.type = info.host.toString();
-            this.chRef.detectChanges();
+            this.chRef.markForCheck();
           }
         });
       }
