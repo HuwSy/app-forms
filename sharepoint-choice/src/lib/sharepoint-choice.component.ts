@@ -605,7 +605,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     } else {
       this.sort = '-' + field;
     }
-    this.chRef.markForCheck();
   }
 
   additionalKeys(o?: SharepointChoiceList): Array<string> {
