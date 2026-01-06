@@ -56,8 +56,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this._spec = value;
     this.chRef.markForCheck();
   }
-  get spec(): SharepointChoiceList {
-    return this._spec || {};
+  get spec(): SharepointChoiceList | undefined {
+    return this._spec;
   }
   private _spec?: SharepointChoiceList;
 
