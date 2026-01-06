@@ -297,7 +297,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     let p: any = (this.override ?? {})[t];
     // if no override then get from field spec selected
     if (p === undefined || p === null) {
-      let spec = this.spec[this.field.replace(/^OData_/, '')] ?? this.spec[this.field];
+      let spec = (this.spec || {})[this.field.replace(/^OData_/, '')] ?? (this.spec || {})[this.field];
       if (spec)
         p = spec[t];
     }
@@ -1217,7 +1217,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       )
     ) {
       let spc = new SharepointChoiceUtils();
-      var url = (this.spec[this.field] || {}).Scope || '';
+      var url = ((this.spec ?? {})[this.field] || {}).Scope || '';
       let web = Web([spc.sp.web, url]);
       let usr = {
         Id: (await web.ensureUser(res.LoginName)).Id,
@@ -1258,7 +1258,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this.loading.push(user);
       // load the user
       let spc = new SharepointChoiceUtils();
-      var url = (this.spec[this.field] || {}).Scope || '';
+      var url = ((this.spec ?? {})[this.field] || {}).Scope || '';
       let web = Web([spc.sp.web, url]);
       // do as .then to avoid async issues
       web.getUserById(user)().then((u: SharepointChoiceUser) => {
