@@ -1,12 +1,13 @@
 @let title = get('Title');
-@let internal = friendlyName(get('InternalName'));
+@let internal = friendlyName(get('InternalName') ?? field);
 @let desc = get('Description');
 @let req = required();
 @let type = get('TypeAsString');
 
 <div class="choice"
      [ngClass]="{noTitle: !title}"
-     title="{{(!desc ? (title ?? '') : '')}}">
+     title="{{(!desc ? (title ?? '') : '')}}"
+     [hidden]="!spec[field] && !override">
   @if (title) {
   <span title="{{(!desc ? '' : title)}}">{{title}}</span>
   }

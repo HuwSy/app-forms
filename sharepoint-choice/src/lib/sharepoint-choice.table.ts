@@ -291,7 +291,11 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       this.selected.emit({ data: selectedRows, tab: this.selectedTab });
     }
     queueMicrotask(() => {
-      this.chRef.detectChanges();
+      try {
+        this.chRef.detectChanges();
+      } catch {
+        this.chRef.markForCheck();
+      }
     });
   }
 
@@ -469,6 +473,9 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
         c = this.rowClicked(row, event.target);
       else
         this.clicked.emit({ row: row, target: event.target });
+      // ensure editing ends/doesnt exist but after using target above
+      row._editing = undefined;
+      this.chRef.markForCheck();
       // cant clear cache end
       if (!this.selectedTab)
         return;
@@ -476,9 +483,10 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       if (!choice && !c)
         return;
       // if it is choice or got a function truethy outward reset cache
-      if (!(c instanceof Promise))
+      if (!(c instanceof Promise)) {
         this._rowsCache.delete(this.selectedTab);
-      else {
+        this.chRef.markForCheck();
+      } else {
         c.then((r?: any) => {
           if (r || choice) {
             this._rowsCache.delete(this.selectedTab!);
@@ -486,9 +494,6 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
           }
         });
       }
-      // ensure editing ends/doesnt exist but after using target above
-      row._editing = undefined;
-      this.chRef.markForCheck();
     }
   }
 
@@ -535,7 +540,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   fields(tab: string): SharepointChoiceColumn[] {
     // Return cached result if available (cache cleared on hide changes)
     const cached = this._colsCache.get(tab);
-    if (cached)
+    if (cached && cached.length > 0)
       return cached;
 
     this._rowsCache.delete(tab);
@@ -586,7 +591,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   private fieldPart(field: string): Array<string> {
     const cached = this._fieldMapCache.get(field);
-    if (cached)
+    if (cached && cached.length > 0)
       return cached;
     const parts = field.split('.');
     this._fieldMapCache.set(field, parts);
@@ -609,7 +614,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   currentPageRows(rows: SharepointChoiceRow[]): SharepointChoiceRow[] {
     const cached = this._pageCache;
-    if (cached)
+    if (cached && cached.length > 0)
       return cached;
 
     const result = rows.slice((this.pageNumber - 1) * this.pageSize, this.pageNumber * this.pageSize);
@@ -622,7 +627,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   rows(tab: string): SharepointChoiceRow[] {
     // Return cached result if available (cache cleared on filter/sort changes)
     const cached = this._rowsCache.get(tab);
-    if (cached)
+    if (cached && cached.length > 0)
       return cached;
 
     this._pageCache = [];

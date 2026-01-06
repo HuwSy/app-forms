@@ -6,13 +6,14 @@ import { Editor, NgxEditorModule, Toolbar } from 'ngx-editor';
 import MsgReader from '@kenjiuno/msgreader';
 import { Attachment, readEml } from 'eml-parse-js';
 import { loadAsync } from 'jszip';
-import { Subject } from 'rxjs';
+import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { SharepointChoiceUtils } from './sharepoint-choice.utils';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SharepointChoiceLogging } from './sharepoint-choice.logging';
 import { SharepointChoiceForm, SharepointChoiceList, SharepointChoiceField, SharepointChoiceAttachment } from './sharepoint-choice.models';
+import { SharepointChoiceRefresh } from './sharepoint-choice.refresh';
 
 interface SharepointChoiceUser {
   Id: number;
@@ -37,7 +38,9 @@ interface SharepointChoiceUser {
   }]
 })
 export class SharepointChoiceComponent implements OnInit, OnDestroy {
-  // form object to bind to, not using field direct as simple objects are clones not references
+  // form object to bind to
+  // not using field direct as simple objects are clones not references
+  // not using ngModel as it requires extra boilerplate such as ngModel=form['field'] spec=spec['field'] etc for each field
   @Input() set form(value: SharepointChoiceForm) {
     this._form = value;
     this.chRef.markForCheck();
@@ -48,16 +51,18 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   private _form!: SharepointChoiceForm;
 
   // specification of the list fields
-  @Input() set spec(value: SharepointChoiceList) {
+  // as spec must match datatype and form data for successful save then tie all of these together by this.field not separately
+  @Input() set spec(value: SharepointChoiceList | undefined) {
     this._spec = value;
     this.chRef.markForCheck();
   }
   get spec(): SharepointChoiceList {
-    return this._spec;
+    return this._spec || {};
   }
-  private _spec!: SharepointChoiceList;
+  private _spec?: SharepointChoiceList;
 
-  // manually override any spec above. prefer send as string as passing object kills large form performance
+  // manually override any spec above
+  // prefer send as string as passing object kills large form performance
   @Input() set override(value: string | SharepointChoiceField | undefined) {
     // if override passed in, make sure its an object else convert
     if (value)
@@ -66,8 +71,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this._override = undefined;
     this.chRef.markForCheck();
   }
-  get override(): SharepointChoiceField {
-    return this._override ?? {};
+  get override(): SharepointChoiceField | undefined {
+    return this._override;
   }
   private _override?: SharepointChoiceField;
 
@@ -168,19 +173,35 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   private loading: Array<number> = [];
   private display: SharepointChoiceUser[] = [];
 
+  // subscription to refresh bus
+  private refreshSub?: Subscription;
+  // unique instance id for this component
+  private static nextInstanceId = 1;
+  private readonly instanceId = SharepointChoiceComponent.nextInstanceId++;
+
   constructor(
     private elRef: ElementRef,
-    private chRef: ChangeDetectorRef
+    private chRef: ChangeDetectorRef,
+    private refreshBus: SharepointChoiceRefresh
   ) { }
 
   // on init, destroy
   ngOnInit(): void {
     this.elRef.nativeElement.setAttribute('field', this.field);
+
+    this.refreshSub = this.refreshBus.changes$.subscribe((event) => {
+      if (event.sourceId === this.instanceId)
+        return;
+      if ((event.form && event.form === this._form) || (event.spec && event.spec === this._spec))
+        this.chRef.markForCheck();
+    });
   }
+  
   ngOnDestroy(): void {
     this.editor?.destroy();
     this.textKey?.complete();
     this.userKey?.complete();
+    this.refreshSub?.unsubscribe();
   }
 
   /* 
@@ -273,7 +294,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // gets the required field properties and/or any overrides to determine which field type etc to display
   get(t: string): any {
     // initial starting value of p from override
-    let p: any = this.override[t];
+    let p: any = (this.override ?? {})[t];
     // if no override then get from field spec selected
     if (p === undefined || p === null) {
       let spec = this.spec[this.field.replace(/^OData_/, '')] ?? this.spec[this.field];
@@ -380,8 +401,21 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // any field changes trigger for relevant updates
   changed(): void {
     this.change.emit({ field: this.field, value: this.form[this.field]?.results ?? this.form[this.field], target: this.elRef.nativeElement });
+
+    // Notify other instances (with OnPush) that share the same form/spec reference.
+    this.refreshBus.emit({
+      sourceId: this.instanceId,
+      form: this._form,
+      spec: this._spec,
+      field: this.field
+    });
+
     queueMicrotask(() => {
-      this.chRef.detectChanges();
+      try {
+        this.chRef.detectChanges();
+      } catch {
+        this.chRef.markForCheck();
+      }
     });
   }
 
@@ -857,7 +891,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           // capture what office type of addin for later use
           if (this.office.type != info.host.toString()) {
             this.office.type = info.host.toString();
-            this.chRef.markForCheck();
+            // abuse changed to mark for change detection and ensure running
+            this.changed();
           }
         });
       }
@@ -1041,14 +1076,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     results.push(file);
 
-    if (!this.file?.extract)
-      return;
-
-    if (fileName.toLowerCase().endsWith(".zip"))
+    if (this.file?.extract && fileName.toLowerCase().endsWith(".zip"))
       await this.zips(data, results);
-    if (fileName.toLowerCase().endsWith(".msg"))
+    if (this.file?.extract && fileName.toLowerCase().endsWith(".msg"))
       await this.msgs(data, results);
-    if (fileName.toLowerCase().endsWith(".eml"))
+    if (this.file?.extract && fileName.toLowerCase().endsWith(".eml"))
       await this.emls(data, results);
 
     this.office.loading = false;
