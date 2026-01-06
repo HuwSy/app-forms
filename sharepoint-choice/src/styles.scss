@@ -119,8 +119,8 @@ a.fc-event {
 
   input[type="radio"],
   input[type="checkbox"] {
-    height: 16px;
-    width: 16px;
+    height: 16px !important;
+    width: 16px !important;
     min-height: 0 !important;
   }
 
