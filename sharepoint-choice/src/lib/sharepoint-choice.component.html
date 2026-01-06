@@ -7,7 +7,7 @@
 <div class="choice"
      [ngClass]="{noTitle: !title}"
      title="{{(!desc ? (title ?? '') : '')}}"
-     [hidden]="!spec[field] && !override">
+     [hidden]="spec && !spec[field] && !override">
   @if (title) {
   <span title="{{(!desc ? '' : title)}}">{{title}}</span>
   }
