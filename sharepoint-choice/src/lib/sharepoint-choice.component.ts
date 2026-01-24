@@ -154,7 +154,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   office: {
     type: string | null,
-    loading: boolean
+    loading: boolean,
+    alert?: string
   } = { type: null, loading: false };
 
   // varies based on the search source therefore not explicitly defined
@@ -891,6 +892,14 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           // capture what office type of addin for later use
           if (this.office.type != info.host.toString()) {
             this.office.type = info.host.toString();
+            // disable the window alert and confirm override that outlook.js implements
+            window.alert = (message?: any, ...optionalParams: any[]): void => {
+              this.office.alert = message?.toString() || '';
+            };
+            window.confirm = (message?: any, ...optionalParams: any[]): boolean => {
+              this.office.alert = 'Auto approving... ' + (message?.toString() || '');
+              return true;
+            };
             // abuse changed to mark for change detection and ensure running
             this.changed();
           }

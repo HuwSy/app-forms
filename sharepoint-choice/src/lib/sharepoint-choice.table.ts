@@ -396,6 +396,12 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this.chRef.markForCheck();
   }
 
+  resetFilters(): void {
+    this.sort = {};
+    this.filter = {};
+    this.hiddenColumns = {};
+  }
+
   columnToggle(col: SharepointChoiceColumn, tab: string): void {
     if (!col.field)
       return;

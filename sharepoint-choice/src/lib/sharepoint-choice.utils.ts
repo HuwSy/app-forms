@@ -9,8 +9,10 @@ import "@pnp/sp/attachments";
 import "@pnp/sp/files";
 import "@pnp/sp/folders";
 import "@pnp/sp/profiles";
+import "@pnp/sp/search";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { PermissionKind } from "@pnp/sp/security";
+import { ISearchQuery, ISort, SearchResults } from "@pnp/sp/search";
 import { App } from './App';
 import { SharepointChoicePermission, SharepointChoiceForm, SharepointChoiceList, SharepointChoiceField, SharepointChoiceAttachment } from "./sharepoint-choice.models";
 
@@ -134,6 +136,23 @@ export class SharepointChoiceUtils {
     return false;
   }
 
+  // search
+  public async search(query: string, limit: number = 1000, page: number = 1, sort?: ISort[], select?: string[], detail?: string[], filter?: string[]): Promise<SearchResults> {
+    return await this.sp.search(<ISearchQuery>{
+        Querytext: query,
+        RowLimit: limit,
+        StartRow: (page - 1) * limit,
+        EnableInterleaving: true,
+        TrimDuplicates: false,
+        HitHighlightedProperties: detail ? detail : ['Title', 'Path', 'Content'],
+        SelectProperties: select ? select : ['Title', 'Path', 'Author', 'Editor', 'Created', 'LastModifiedTime'],
+        EnableSorting: true,
+        SortList: sort ? sort : [{ Property: "LastModifiedTime", Direction: 1 }],
+        Refiners: (detail ? detail : ['Title', 'Path']).join(','),
+        RefinementFilters: filter ? filter : []
+    });
+  }
+
   // get list fields in the appropriate format for use in <sharepoint-choice spec=""> attributes
   public async fields(listTitle: string): Promise<SharepointChoiceList> {
     let spec: SharepointChoiceList = {};
@@ -201,7 +220,7 @@ export class SharepointChoiceUtils {
       // return multifields to results, old behaviour for old people fields and to prevent json paring clashing
       if (typeof d[key] == "object" && !d[key].results && d[key].length > 0) {
         d[key] = {
-          results: d[key],
+          results: d[key].filter(k => k && !k.toString().includes('\n')),
           __metadata: { type: (typeof d[key][0] == "number" ? "Collection(Edm.Int32)" : "Collection(Edm.String)") }
         }
         continue;

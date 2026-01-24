@@ -624,6 +624,7 @@
       <button (click)="importOffice()"
               [disabled]="office.loading"
               [hidden]="office.type == 'Outlook'">Import open file</button>
+      <div style="color: red;">{{office.alert ?? ''}}</div>
       }
 
       <input #fileInput

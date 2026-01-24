@@ -21,7 +21,7 @@
   @if (allowHideColumns) {
   <li class="Edit"
       (click)="editColumns = true"
-      title="Edit columns">
+      title="Settings">
     ⚙
   </li>
   }
@@ -437,12 +437,17 @@
 <div class="Overlay">
   <div class="Modal">
     <h3>
-      Hide columns
+      Table Settings
+      <input class="Reset"
+             type="button"
+             value="Reset all filters and visibility"
+             (click)="resetFilters()" />
       <div class="Close"
            (click)="editColumns = false">
         X
       </div>
     </h3>
+    <h4>Configure which columns are visible in each tab</h4>
     <table class="table">
       <tr>
         <th>
