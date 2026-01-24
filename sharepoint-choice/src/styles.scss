@@ -932,8 +932,13 @@ a.fc-event {
 
       max-height: 75vh;
       min-width: 30vw;
-      width: 700px;
+      width: 825px;
       max-width: 90vw;
+
+      .Reset {
+        position: absolute;
+        right: 50px;
+      }
 
       .Close {
         float: right;
