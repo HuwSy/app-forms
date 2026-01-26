@@ -149,6 +149,12 @@ a.fc-event {
     border-bottom-color: red !important;
   }
 
+  app-choice {
+    width: 100%;
+    display: inline-block;
+    vertical-align: top;
+  }
+  
   .choice {
     margin: 12px 0 0 0;
     position: relative;
