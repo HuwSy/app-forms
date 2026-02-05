@@ -328,7 +328,7 @@ export class SharepointChoiceUtils {
     };
 
     // attempt to get token or login and get token
-    var login, errors:any = [];
+    var login;
     try {
       login = await msal.acquireTokenSilent(params);
     } catch (e) {
