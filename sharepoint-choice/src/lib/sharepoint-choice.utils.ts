@@ -16,14 +16,20 @@ import { ISearchQuery, ISort, SearchResults } from "@pnp/sp/search";
 import { App } from './App';
 import { SharepointChoicePermission, SharepointChoiceForm, SharepointChoiceList, SharepointChoiceField, SharepointChoiceAttachment } from "./sharepoint-choice.models";
 
+// if this is a popup or iframe then attempt to send the message for msal to the main frame as soon as possible
+import { BrowserUtils } from "@azure/msal-browser";
+import { broadcastResponseToMainFrame } from "@azure/msal-browser/redirect-bridge";
+if (BrowserUtils.isInPopup() || BrowserUtils.isInIframe())
+  broadcastResponseToMainFrame().catch(() => {});
+
 ///<summary>
-/// This is to be used in place of specific pnp.sp function when using these form fields to aid in data transforms and a few other fringe cases outlined in the method coments 
+/// This is to be used in place of specific pnp.sp function when using these form fields to aid in data transforms and a few other fringe cases outlined in the method coments
 ///</summary>
 export class SharepointChoiceUtils {
   // context can be read and updated
   public context: string = '';
   public sp: SPFI;
-  
+
   // attempt to establish correct context url for the site from one of the available sources then setup logging for this class
   constructor(
     context?: string
@@ -306,8 +312,7 @@ export class SharepointChoiceUtils {
         redirectUri: this.context?.replace(/\/$/, '')
       },
       cache: {
-        cacheLocation: "sessionStorage",
-        storeAuthStateInCookie: false
+        cacheLocation: "sessionStorage"
       }
     }
 
@@ -323,17 +328,13 @@ export class SharepointChoiceUtils {
     };
 
     // attempt to get token or login and get token
-    var login;
+    var login, errors:any = [];
     try {
       login = await msal.acquireTokenSilent(params);
-    } catch (error) {
-      try {
-        await msal.loginPopup(params);
-        params.account = msal.getAllAccounts()[0];
-        login = await msal.acquireTokenSilent(params);
-      } catch (e) {
-        throw `Exception logging in to MSAL for scope ${permissionScope} with error ${e}`;
-      }
+    } catch (e) {
+      await msal.loginPopup(params);
+      params.account = msal.getAllAccounts()[0];
+      login = await msal.acquireTokenSilent(params);
     }
 
     // if no url, login only, then return
