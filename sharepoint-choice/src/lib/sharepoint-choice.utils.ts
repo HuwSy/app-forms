@@ -18,13 +18,13 @@ import { SharepointChoicePermission, SharepointChoiceForm, SharepointChoiceList,
 
 // if this is a popup or iframe with #code= then attempt to send the message for msal to the main frame as soon as possible
 if (window.location.hash.includes('code=')) {
-	// this is for microsoft sso integration.
-	setTimeout(async () => {
-		const { broadcastResponseToMainFrame } = await import('@azure/msal-browser/redirect-bridge');
-		broadcastResponseToMainFrame().catch(() => {
-			// don't really care about this throwing an error.
-		});
-	}, 0);
+  // this is for microsoft sso integration.
+  setTimeout(async () => {
+    const { broadcastResponseToMainFrame } = await import('@azure/msal-browser/redirect-bridge');
+	broadcastResponseToMainFrame().catch(() => {
+	  // don't really care about this throwing an error.
+	});
+  }, 0);
 }
 
 ///<summary>
