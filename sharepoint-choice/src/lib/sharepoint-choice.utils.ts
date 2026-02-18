@@ -306,8 +306,13 @@ export class SharepointChoiceUtils {
         redirectUri: this.context?.replace(/\/$/, '')
       },
       cache: {
-        cacheLocation: "sessionStorage"
-      }
+        cacheLocation: "sessionStorage",
+      },
+      system: {
+        windowHashTimeout: 30000,
+        iframeHashTimeout: 30000,
+        loadFrameTimeout: 30000,
+      },
     }
 
     // init client
