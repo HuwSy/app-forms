@@ -6,6 +6,18 @@ import {
   PropertyPaneCheckbox
 } from '@microsoft/sp-property-pane';
 
+// if this is a popup or iframe with #|? state= then attempt to send the message for msal to the main frame as soon as possible
+if ((window.opener || window.parent !== window) && (location.hash.includes('state=') || location.search.includes('state='))) {
+  // this is for microsoft sso integration
+  setTimeout(async () => {
+	// this is to avoid adding this import unless needed as it can cause conflicts
+    const { broadcastResponseToMainFrame } = await import('@azure/msal-browser/redirect-bridge');
+	broadcastResponseToMainFrame().catch(() => {
+	  // don't really care about this throwing an error
+	});
+  }, 0);
+}
+
 export interface IAngularWrapperWebPartProps {
   tag: string;
   src: string;
@@ -120,3 +132,4 @@ export default class AngularWrapperWebPart extends BaseClientSideWebPart<IAngula
     };
   }
 }
+
