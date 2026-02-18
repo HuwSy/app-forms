@@ -16,18 +16,6 @@ import { ISearchQuery, ISort, SearchResults } from "@pnp/sp/search";
 import { App } from './App';
 import { SharepointChoicePermission, SharepointChoiceForm, SharepointChoiceList, SharepointChoiceField, SharepointChoiceAttachment } from "./sharepoint-choice.models";
 
-// if this is a popup or iframe with #|? state= then attempt to send the message for msal to the main frame as soon as possible
-if ((window.opener || window.parent !== window) && (location.hash.includes('state=') || location.search.includes('state='))) {
-  // this is for microsoft sso integration
-  setTimeout(async () => {
-	// this is to avoid adding this import unless needed as it can cause conflicts
-    const { broadcastResponseToMainFrame } = await import('@azure/msal-browser/redirect-bridge');
-	broadcastResponseToMainFrame().catch(() => {
-	  // don't really care about this throwing an error
-	});
-  }, 0);
-}
-
 ///<summary>
 /// This is to be used in place of specific pnp.sp function when using these form fields to aid in data transforms and a few other fringe cases outlined in the method coments
 ///</summary>
