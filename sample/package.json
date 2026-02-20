@@ -11,10 +11,10 @@
   "private": true,
   "sideEffects": false,
   "dependencies": {
-    "sharepoint-choice": "^20.2.5"
+    "sharepoint-choice": "^21.1.109"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^20.1.0",
-    "@angular/cli": "^20.1.0"
+    "@angular/build": "^21.1.4",
+    "@angular/cli": "^21.1.4"
   }
 }
