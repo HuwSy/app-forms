@@ -47,7 +47,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   // all data passed in keyed by tab name (not via signals which reduce performance on large data sets)
   @Input() set allData(value: SharepointChoiceTabs) {
     this._allData = value;
-    
+
     // add _tracking to each row for ngFor tracking and node cache
     this._dataLoadCycles++;
     let tabs = Object.keys(this._allData);
@@ -56,7 +56,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
         this._allData[tab].forEach((row, index) => {
           if (row['_tracking'])
             return;
-          
+
           if (row['Id']) // likely SPId so retain through changes
             row['_tracking'] = `id-${row['Id']}`;
           else if (row['reference']) // likely policy reference so retain through changes
@@ -66,7 +66,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
         });
       }
     }
-    
+
     // Clear cache when data changes
     this._rowsCache.clear();
     this.chRef.markForCheck();
@@ -153,6 +153,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   @Input() rowClicked?: Function; // [rowClicked]="rowClicked" rowClicked = async (rowData: any, target: HTMLElement | EventTarget | undefined) => { ... } to ensure this. is from the app and not from app-table
   @Output() clicked = new EventEmitter<{ row: SharepointChoiceRow, target: HTMLElement | EventTarget | undefined }>(); // (clicked)="onClicked($event)" onClicked(event: { row: SharepointChoiceRow, target: HTMLElement | EventTarget | undefined }) { ... }
   @Input() hyperlinkRow?: Function; // [hyperlinkRow]="hyperlinkRow" hyperlinkRow = (rowData: any) => { return 'https://...'; } to ensure this. is from the app and not from app-table
+  @Input() hyperlinkTarget: string = '_self'; // target for hyperlink rows
   @Input() export?: Function; // [export]="export" export = (selectedTab: string, filteredRows: SharepointChoiceRow[]) => { ... } function triggered when export icon clicked giving current tab and filtered rows
 
   // internal state
@@ -206,7 +207,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   private _dataLoadCycles: number = 0;
   private _debounceFilterSort?: ReturnType<typeof setTimeout>;
-  
+
   // Memoization cache for columns filtered/sorted rows
   private _colsCache: Map<string, SharepointChoiceColumn[]> = new Map();
   private _rowsCache: Map<string, SharepointChoiceRow[]> = new Map();
@@ -214,7 +215,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   private _fieldMapCache: Map<string, Array<string>> = new Map();
   private _nodeCache: Map<string, any> = new Map();
   private _isObserved: boolean = false;
-  
+
   constructor(private chRef: ChangeDetectorRef) { }
 
   ngOnInit(): void {
@@ -731,7 +732,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
     // could return issues if cols hidden and many aren't named at all
     const key = `${row['_tracking']}::${col.field ?? col.headerName ?? ((1000 * colIndex) + (childIndex ?? 0)).toString()}`;
-    
+
     const cached = this._nodeCache.get(key);
     if (cached)
       return cached;

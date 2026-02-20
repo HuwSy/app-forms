@@ -139,17 +139,17 @@ export class SharepointChoiceUtils {
   // search
   public async search(query: string, limit: number = 1000, page: number = 1, sort?: ISort[], select?: string[], detail?: string[], filter?: string[]): Promise<SearchResults> {
     return await this.sp.search(<ISearchQuery>{
-        Querytext: query,
-        RowLimit: limit,
-        StartRow: (page - 1) * limit,
-        EnableInterleaving: true,
-        TrimDuplicates: false,
-        HitHighlightedProperties: detail ? detail : ['Title', 'Path', 'Content'],
-        SelectProperties: select ? select : ['Title', 'Path', 'Author', 'Editor', 'Created', 'LastModifiedTime'],
-        EnableSorting: true,
-        SortList: sort ? sort : [{ Property: "LastModifiedTime", Direction: 1 }],
-        Refiners: (detail ? detail : ['Title', 'Path']).join(','),
-        RefinementFilters: filter ? filter : []
+      Querytext: query,
+      RowLimit: limit,
+      StartRow: (page - 1) * limit,
+      EnableInterleaving: true,
+      TrimDuplicates: false,
+      HitHighlightedProperties: detail ? detail : ['Title', 'Path', 'Content'],
+      SelectProperties: select ? select : ['Title', 'Path', 'Author', 'Editor', 'Created', 'LastModifiedTime'],
+      EnableSorting: true,
+      SortList: sort ? sort : [{ Property: "LastModifiedTime", Direction: 1 }],
+      Refiners: (detail ? detail : ['Title', 'Path']).join(','),
+      RefinementFilters: filter ? filter : []
     });
   }
 
@@ -298,25 +298,23 @@ export class SharepointChoiceUtils {
 
   // calls an api more generically, or graph api if no parameters passed
   public async callApi(tenancyOnMicrosoft?: string, clientId?: string, permissionScope?: string, apiUrl?: string, httpMethod?: string, jsonPostData?: any, dataType: string = 'json'): Promise<any> {
-    // client settings
-    var config = {
+    // init client
+    var msal = new PublicClientApplication({
       auth: {
         clientId: clientId || App.GraphClient,
         authority: `https://login.microsoftonline.com/${tenancyOnMicrosoft || App.Tenancy}.onmicrosoft.com`,
         redirectUri: this.context?.replace(/\/$/, '')
       },
       cache: {
-        cacheLocation: "sessionStorage",
+        cacheLocation: "sessionStorage"
       },
       system: {
-        windowHashTimeout: 30000,
-        iframeHashTimeout: 30000,
-        loadFrameTimeout: 30000,
-      },
-    }
-
-    // init client
-    var msal = new PublicClientApplication(config);
+        allowRedirectInIframe: true,
+        iframeBridgeTimeout: 45000, // this needs to load the sp page so will be slower in bridge mode
+        popupBridgeTimeout: 180000, // this needs to allow for user interaction in some cases
+        redirectNavigationTimeout: 240000 // this needs to allow for user interaction in some cases
+      }
+    });
 
     await msal.initialize();
 
@@ -333,7 +331,11 @@ export class SharepointChoiceUtils {
     } catch (e) {
       await msal.loginPopup(params);
       params.account = msal.getAllAccounts()[0];
-      login = await msal.acquireTokenSilent(params);
+      try {
+        login = await msal.acquireTokenSilent(params);
+      } catch (e) {
+        throw `Exception acquiring token silently or via popup for tenant ${tenancyOnMicrosoft || App.Tenancy} with error ${e}`;
+      }
     }
 
     // if no url, login only, then return
