@@ -1,8 +1,11 @@
 {
   "@microsoft/generator-sharepoint": {
+    "useGulp": false,
     "plusBeta": false,
     "isCreatingSolution": true,
-    "version": "0.0.0",
+    "nodeVersion": "22.22.0",
+    "sdksVersions": {},
+    "version": "1.22.2",
     "libraryName": "angular-wrapper",
     "libraryId": "99999999-9999-9999-9999-999999999999",
     "environment": "spo",
