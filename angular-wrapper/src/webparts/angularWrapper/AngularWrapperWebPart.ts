@@ -1,3 +1,4 @@
+import './msal';
 import { Version } from '@microsoft/sp-core-library';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import {
@@ -5,18 +6,6 @@ import {
   PropertyPaneTextField,
   PropertyPaneCheckbox
 } from '@microsoft/sp-property-pane';
-
-// if this is a popup or iframe with #|? state= then attempt to send the message for msal to the main frame as soon as possible
-if ((window.opener || window.parent !== window) && (location.hash.includes('state=') || location.search.includes('state='))) {
-  // this is for microsoft sso integration
-  setTimeout(async () => {
-	// this is to avoid adding this import unless needed as it can cause conflicts
-    const { broadcastResponseToMainFrame } = await import('@azure/msal-browser/redirect-bridge');
-	broadcastResponseToMainFrame().catch(() => {
-	  // don't really care about this throwing an error
-	});
-  }, 0);
-}
 
 export interface IAngularWrapperWebPartProps {
   tag: string;
@@ -47,7 +36,7 @@ export default class AngularWrapperWebPart extends BaseClientSideWebPart<IAngula
     if (this.properties.esb) {
       if (~src.toLowerCase().indexOf('://localhost'))
         this.requireClientSide(src + '/@vite/client');
-      
+
       this.requireClientSide(src + '/styles.css');
       this.requireClientSide(src + '/polyfills.js');
       this.requireClientSide(src + '/main.js');
@@ -56,7 +45,7 @@ export default class AngularWrapperWebPart extends BaseClientSideWebPart<IAngula
       this.requireClientSide(src + '/runtime.js');
       this.requireClientSide(src + '/main.js');
       this.requireClientSide(src + '/styles.css');
-      
+
       if (~src.toLowerCase().indexOf('//localhost'))
         this.requireClientSide(src + '/vendor.js');
     }
@@ -132,4 +121,3 @@ export default class AngularWrapperWebPart extends BaseClientSideWebPart<IAngula
     };
   }
 }
-
