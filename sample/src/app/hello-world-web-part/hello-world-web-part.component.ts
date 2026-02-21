@@ -4,7 +4,7 @@ import { SharepointChoiceUtils, SharepointChoiceLogging } from 'sharepoint-choic
 import { ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SharepointChoiceComponent } from 'sharepoint-choice';
+import { SharepointChoiceComponent, SharepointChoiceTable } from 'sharepoint-choice';
 
 import "@pnp/sp/webs";
 import "@pnp/sp/lists";
@@ -19,7 +19,8 @@ import "@pnp/sp/site-groups";
   imports: [
     CommonModule,
     FormsModule,
-    SharepointChoiceComponent
+    SharepointChoiceComponent,
+    SharepointChoiceTable
   ]
 })
 export class HelloWorldWebPartComponent implements OnInit {
@@ -76,7 +77,7 @@ export class HelloWorldWebPartComponent implements OnInit {
       for (var f in this.tabs)
         this.files[this.tabs[f].tab] = {results:[]};
   
-      var id = parseInt(this._spUtils.param('aid'));
+      var id = parseInt(this._spUtils.param('aid') || '0');
       this.dashboard = !(id > 0 || id === 0);
   
       this.list = 'List';
@@ -105,7 +106,7 @@ export class HelloWorldWebPartComponent implements OnInit {
       this.searchText = '';
       this.currentPage = 1;
       this.itemsPerPage = 25;
-      this.orderKey = null;
+      this.orderKey = undefined;
       this.orderDir = false;
       this.refresh = -1;
       this.status = [];
@@ -182,7 +183,7 @@ export class HelloWorldWebPartComponent implements OnInit {
     localStorage.setItem(`${this._prefix}-${this._spUtils.context}`, JSON.stringify(cur));
 
     if (r) {
-      this.selected = null;
+      this.selected = undefined;
       this.loadData(true);
     }
   }
@@ -190,7 +191,7 @@ export class HelloWorldWebPartComponent implements OnInit {
   // select sub heading
   select(s) {
     if (this.selected == s)
-      this.selected = null;
+      this.selected = undefined;
     else
       this.selected = s;
   }
