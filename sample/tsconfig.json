@@ -16,7 +16,7 @@
     "downlevelIteration": true,
     "experimentalDecorators": true,
     "moduleResolution": "bundler",
-    "isolateModules": true,
+    "isolatedModules": true,
     "esModuleInterop": true,
     "importHelpers": true,
     "target": "ESNext",
