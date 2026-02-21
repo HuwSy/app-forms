@@ -16,12 +16,9 @@ var loadComponents = () => {
     // flag loaded on this page
     el.setAttribute('loaded', 'true');
     // bootstrap the component
-    bootstrapApplication(component.com,
-      provideZonelessChangeDetection(),
-      providers: [{
-        provide: ErrorHandler,
-        useClass: SharepointChoiceLogging
-      }])
+    bootstrapApplication(component.com, {
+        providers: [provideZonelessChangeDetection(), {provide: ErrorHandler, useClass: SharepointChoiceLogging}]
+      })
       .catch((err) => console.error(err));
   });
 };
@@ -29,7 +26,7 @@ var loadComponents = () => {
 // on partial page load trigger bootstrap load
 setTimeout(() => {
   var w = window as any;
-  w.pushstateOriginal = w.history.pushState.bind(w.history);
+  w.pushStateOriginal = w.history.pushState.bind(w.history);
   w.history.pushState = function () {
     w.pushStateOriginal(...Array.prototype.slice.call(arguments, 0));
     setTimeout(loadComponents, 2000);
