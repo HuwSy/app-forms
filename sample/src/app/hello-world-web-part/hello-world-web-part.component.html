@@ -22,9 +22,14 @@
   <div *ngIf="loading">
     Loading...
   </div>
+  
+  <app-table *ngIf="!loading"
+             [allData]="{'Results Sample Table':data}"
+             [allCols]="[{'headerName': 'Id', 'field': 'Id'}]">
+  </app-table>
 
   <table *ngIf="!loading" class="table">
-    <tr *ngIf="maxPage(null, false) == 0">
+    <tr *ngIf="maxPage(undefined, false) == 0">
         <td colspan="99">No data for specified search, or you do not have permission to this data</td>
     </tr>
     <tbody *ngFor="let s of status">
@@ -51,7 +56,7 @@
             <i *ngIf="orderKey == 'Created' && !orderDir">&uarr;</i>
             <i *ngIf="orderKey == 'Created' && orderDir">&darr;</i>
           </th>
-          <th (click)="sort(null)" style="min-width: 0;cursor: pointer;">
+          <th (click)="sort(undefined)" style="min-width: 0;cursor: pointer;">
             Last Modified
             <i *ngIf="orderKey == null && !orderDir">&uarr;</i>
             <i *ngIf="orderKey == null && orderDir">&darr;</i>
