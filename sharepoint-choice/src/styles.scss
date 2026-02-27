@@ -355,7 +355,7 @@ a.fc-event {
     width: 100%;
     border-spacing: 0;
 
-    tr:nth-child(odd) {
+    tr:nth-child(even) {
       background-color: #e6e6e6;
     }
 
@@ -496,7 +496,7 @@ a.fc-event {
         position: inherit;
       }
 
-      tr:nth-child(odd) {
+      tr:nth-child(even) {
         background-color: transparent;
       }
 
@@ -565,6 +565,10 @@ a.fc-event {
         transition: width 1s ease-in-out;
       }
 
+      tr:hover {
+        background-color: transparent !important;
+      }
+
       position: sticky;
       bottom: 0px;
     }
@@ -594,7 +598,7 @@ a.fc-event {
     padding: 8px
   }
 
-  .files>div:nth-child(odd) {
+  .files>div:nth-child(even) {
     background: #e6e6e6;
   }
 
@@ -665,7 +669,7 @@ a.fc-event {
     padding: 0;
     border-bottom: 1px solid #20476b;
     position: relative;
-    
+
     li {
       float: right;
       color: #20476b;
