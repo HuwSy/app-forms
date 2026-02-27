@@ -400,7 +400,8 @@
     </tbody>
     <tfoot>
       <tr>
-        <td colspan="999">
+        <td colspan="999"
+            [style.height.px]="currentPage.length >= 5 ? 26 : currentPage.length == 4 ? 62 : currentPage.length == 3 ? 98 : currentPage.length == 2 ? 164 : 200">
           <!-- Spacer row to prevent scrollbar cutting off last row -->
         </td>
       </tr>
