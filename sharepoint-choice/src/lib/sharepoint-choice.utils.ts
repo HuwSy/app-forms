@@ -306,7 +306,8 @@ export class SharepointChoiceUtils {
         redirectUri: this.context?.replace(/\/$/, '')
       },
       cache: {
-        cacheLocation: "sessionStorage"
+        cacheLocation: "localStorage",
+        cacheRetentionDays: 1
       },
       system: {
         allowRedirectInIframe: true,
@@ -315,6 +316,8 @@ export class SharepointChoiceUtils {
         redirectNavigationTimeout: 240000 // this needs to allow for user interaction in some cases
       }
     });
+
+    var login;
 
     await msal.initialize();
 
@@ -325,7 +328,6 @@ export class SharepointChoiceUtils {
     };
 
     // attempt to get token or login and get token
-    var login;
     try {
       login = await msal.acquireTokenSilent(params);
     } catch (e) {
