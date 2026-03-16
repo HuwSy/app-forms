@@ -987,6 +987,9 @@ a.fc-event {
           border: 1px solid #ddd;
           border-radius: 4px
         }
+        *[hidden] {
+          display: none;
+        }
       }
     }
   }
