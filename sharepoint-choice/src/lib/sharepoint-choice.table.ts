@@ -1,7 +1,7 @@
 import { Component, Input, ErrorHandler, EventEmitter, Output, ChangeDetectorRef, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SharepointChoiceColumn, SharepointChoiceTabs, SharepointChoiceRow, SharepointChoiceForm, SharepointChoiceField, SharepointChoiceList, ExcelIcon } from './sharepoint-choice.models';
+import { SharepointChoiceColumn, SharepointChoiceTabs, SharepointChoiceRow, SharepointChoiceForm, SharepointChoiceField, SharepointChoiceList, SharepointChoiceRowChild, ExcelIcon } from './sharepoint-choice.models';
 import { SharepointChoiceComponent } from './sharepoint-choice.component';
 import { SharepointChoiceRender } from './sharepoint-choice.render';
 
@@ -136,6 +136,16 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     return this._loading;
   }
   private _loading: boolean = false;
+
+  @Input() set search(value: SharepointChoiceRowChild) {
+    this._search = value ?? {};
+    this._rowsCache.clear();
+    this.debounceAndMark();
+  }
+  get search(): SharepointChoiceRowChild {
+    return this._search;
+  }
+  private _search: SharepointChoiceRowChild = {};
 
   // simple inputs that dont need getter/setter
   @Input() prefix: string = document.location.href.toLowerCase().split('?')[0].split('#')[0];
@@ -278,7 +288,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   selectionChanged(row: SharepointChoiceRow): void {
     row._selected = !row._selected;
     // if there is filtering on selected, debounce so users can click and unclick multiple without multiple emits or the item vanishing immediately
-    if (this.selectedTab && !!(this.filter[this.selectedTab]?.['_selected']))
+    if (this.selectedTab && (!!(this.filter[this.selectedTab]?.['_selected']) || !!this.search['_selected']))
       this.debounceAndMark();
     else
       this.emitSelection();
@@ -642,6 +652,17 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this._nodeCache.clear();
 
     var filter = this.filter[tab] || {};
+    for (let t in this.search) {
+      if (this.search[t] === null || this.search[t] === undefined)
+        continue;
+      if (!filter[t])
+        filter[t] = {};
+      if (typeof this.search[t] == "string")
+        filter[t].contains = this.search[t];
+      else
+        filter[t].equals = this.search[t];
+    }
+
     var sort = this.sort[tab] || [];
 
     if (filter['_selected'])
