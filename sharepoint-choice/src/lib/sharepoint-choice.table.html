@@ -6,7 +6,7 @@
 <ul class="Tabs">
   @if (showSingleTab || allowHideColumns || allTabs.length > 1) {
   @for (s of allTabs; track s) {
-  @let count = s == selectedTab ? currentRows.length : (allData[s]?.length || 0);
+  @let count = (allData[s]?.length || 0);
   <li (click)="tabChange(s)"
       [ngClass]="{Active: s == selectedTab}"
       [style.maxWidth]="'calc(100% / '+(allTabs.length + 5)+')'"
