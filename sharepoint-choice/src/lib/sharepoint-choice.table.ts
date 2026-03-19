@@ -46,14 +46,15 @@ interface SharepointChoiceFilter {
 export class SharepointChoiceTable implements OnInit, OnDestroy {
   // all data passed in keyed by tab name (not via signals which reduce performance on large data sets)
   @Input() set allData(value: SharepointChoiceTabs) {
-    this._allData = value;
+    this._allDataIn = value;
+    this._allData = {};
 
-    // add _tracking to each row for ngFor tracking and node cache
     this._dataLoadCycles++;
-    let tabs = Object.keys(this._allData);
+    let tabs = Object.keys(this._allDataIn);
     for (let tab of tabs) {
-      if (this._allData[tab]) {
-        this._allData[tab].forEach((row, index) => {
+      if (this._allDataIn[tab]) {
+        // add _tracking to each row for ngFor tracking and node cache
+        this._allDataIn[tab].forEach((row, index) => {
           if (row['_tracking'])
             return;
 
@@ -64,6 +65,21 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
           else // generate unique tracking key each time data changes too
             row['_tracking'] = `${tab}-${this._dataLoadCycles}-${index}`;
         });
+        // cleanup all data to only external filtered
+        let filtered = this._allDataIn[tab].filter(row => {
+          for (let t in this.search) {
+            if (this.search[t] === null || this.search[t] === undefined)
+              continue;
+            if (row[t] === null || row[t] === undefined)
+              return false;
+            if (!(row[t].toString().toLowerCase().includes(this.search[t].toString().toLowerCase())))
+              return false;
+          }
+          return true;
+        });
+        // only have tabs for ones with data
+        if (filtered.length > 0)
+          this._allData[tab] = filtered;
       }
     }
 
@@ -74,6 +90,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   get allData(): SharepointChoiceTabs {
     return this._allData;
   }
+  private _allDataIn: SharepointChoiceTabs = {};
   private _allData: SharepointChoiceTabs = {};
 
   // all columns
@@ -94,7 +111,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this.chRef.markForCheck();
   }
   get allTabs(): string[] {
-    return this._allTabs || Object.keys(this._allData) || [];
+     return this._allTabs || Object.keys(this.allData) || [];
   }
   private _allTabs?: string[];
 
@@ -139,6 +156,8 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   @Input() set search(value: SharepointChoiceRowChild) {
     this._search = value ?? {};
+    // trigger setter to apply search filter to all data and reset caches
+    this.allData = this._allDataIn;
     this._rowsCache.clear();
     this.debounceAndMark();
   }
@@ -150,7 +169,6 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   // simple inputs that dont need getter/setter
   @Input() prefix: string = document.location.href.toLowerCase().split('?')[0].split('#')[0];
   @Input() tableHeight: string = 'calc(100vh - 360px)';
-  @Input() showSingleTab: boolean = true;
   @Input() allEditing: boolean = false; // all with spec render as app-choice else edit per cell on click
   @Input() allowHideColumns: boolean = true;
 
@@ -288,7 +306,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   selectionChanged(row: SharepointChoiceRow): void {
     row._selected = !row._selected;
     // if there is filtering on selected, debounce so users can click and unclick multiple without multiple emits or the item vanishing immediately
-    if (this.selectedTab && (!!(this.filter[this.selectedTab]?.['_selected']) || !!this.search['_selected']))
+    if (this.selectedTab && !!(this.filter[this.selectedTab]?.['_selected']))
       this.debounceAndMark();
     else
       this.emitSelection();
@@ -652,17 +670,6 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this._nodeCache.clear();
 
     var filter = this.filter[tab] || {};
-    for (let t in this.search) {
-      if (this.search[t] === null || this.search[t] === undefined)
-        continue;
-      if (!filter[t])
-        filter[t] = {};
-      if (typeof this.search[t] == "string")
-        filter[t].contains = this.search[t];
-      else
-        filter[t].equals = this.search[t];
-    }
-
     var sort = this.sort[tab] || [];
 
     if (filter['_selected'])

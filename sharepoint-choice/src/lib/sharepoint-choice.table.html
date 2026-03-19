@@ -4,19 +4,23 @@
 @let maxpage = ceil(currentRows.length / pageSize);
 
 <ul class="Tabs">
-  @if (showSingleTab || allowHideColumns || allTabs.length > 1) {
   @for (s of allTabs; track s) {
   @let count = (allData[s]?.length || 0);
   <li (click)="tabChange(s)"
       [ngClass]="{Active: s == selectedTab}"
-      [style.maxWidth]="'calc(100% / '+(allTabs.length + 5)+')'"
-      [title]="s + ' (' + count + ' items)'">
+      [style.maxWidth]="'calc(100% / '+(allTabs.length + 3)+')'"
+      [title]="s + ' (' + count + ' items)'"
+      [hidden]="count == 0">
     {{s}}
     @if (count > 0) {
     ({{count}})
     }
   </li>
   }
+  @if (allTabs.filter(t => (allData[t]?.length || 0) > 0).length == 0) {
+  <li class="Active">
+    No Results
+  </li>
   }
   @if (allowHideColumns) {
   <li class="Edit"
