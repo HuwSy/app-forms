@@ -10,14 +10,14 @@
       [ngClass]="{Active: s == selectedTab}"
       [style.maxWidth]="'calc(100% / '+(allTabs.length + 3)+')'"
       [title]="s + ' (' + count + ' items)'"
-      [hidden]="count == 0">
+      [hidden]="!showEmptyTabs && count == 0">
     {{s}}
     @if (count > 0) {
     ({{count}})
     }
   </li>
   }
-  @if (allTabs.filter(t => (allData[t]?.length || 0) > 0).length == 0) {
+  @if (!showEmptyTabs && allTabs.filter(t => (allData[t]?.length || 0) > 0).length == 0) {
   <li class="Active">
     No Results
   </li>

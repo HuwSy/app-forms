@@ -66,19 +66,19 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
             row['_tracking'] = `${tab}-${this._dataLoadCycles}-${index}`;
         });
         // cleanup all data to only external filtered
-        let filtered = this._allDataIn[tab].filter(row => {
+        let filtered = !this.search ? this._allDataIn[tab] : this._allDataIn[tab].filter(row => {
           for (let t in this.search) {
             if (this.search[t] === null || this.search[t] === undefined)
               continue;
             if (row[t] === null || row[t] === undefined)
               return false;
-            if (!(row[t].toString().toLowerCase().includes(this.search[t].toString().toLowerCase())))
+            if (!(row[t].toString().toLowerCase().includes(this.search[t]!.toString().toLowerCase())))
               return false;
           }
           return true;
         });
         // only have tabs for ones with data
-        if (filtered.length > 0)
+        if (this.showEmptyTabs || filtered.length > 0)
           this._allData[tab] = filtered;
       }
     }
@@ -154,23 +154,24 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   }
   private _loading: boolean = false;
 
-  @Input() set search(value: SharepointChoiceRowChild) {
-    this._search = value ?? {};
+  @Input() set search(value: SharepointChoiceRowChild | undefined) {
+    this._search = value;
     // trigger setter to apply search filter to all data and reset caches
     this.allData = this._allDataIn;
     this._rowsCache.clear();
     this.debounceAndMark();
   }
-  get search(): SharepointChoiceRowChild {
+  get search(): SharepointChoiceRowChild | undefined {
     return this._search;
   }
-  private _search: SharepointChoiceRowChild = {};
+  private _search?: SharepointChoiceRowChild;
 
   // simple inputs that dont need getter/setter
   @Input() prefix: string = document.location.href.toLowerCase().split('?')[0].split('#')[0];
   @Input() tableHeight: string = 'calc(100vh - 360px)';
   @Input() allEditing: boolean = false; // all with spec render as app-choice else edit per cell on click
   @Input() allowHideColumns: boolean = true;
+  @Input() showEmptyTabs: boolean = false;
 
   // allow selection and emit selected items and tab
   @Input() allowSelection: boolean = false;
