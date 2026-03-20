@@ -646,6 +646,13 @@ a.fc-event {
       overflow: hidden;
       height: 36px;
       margin-bottom: -6px;
+
+      .count {
+        position: absolute;
+        bottom: 2px;
+        right: 4px;
+        font-size: small;
+      }
     }
 
     li[hidden] {
