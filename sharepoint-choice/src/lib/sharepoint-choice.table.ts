@@ -168,7 +168,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   // simple inputs that dont need getter/setter
   @Input() prefix: string = document.location.href.toLowerCase().split('?')[0].split('#')[0];
-  @Input() tableHeight: string = 'calc(100vh - 360px)';
+  @Input() tableHeight: string = 'calc(100vh - 310px)';
   @Input() allEditing: boolean = false; // all with spec render as app-choice else edit per cell on click
   @Input() allowHideColumns: boolean = true;
   @Input() showEmptyTabs: boolean = false;
