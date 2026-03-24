@@ -8,7 +8,7 @@
   @let count = (allData[s]?.length || 0);
   <li (click)="tabChange(s)"
       [ngClass]="{Active: s == selectedTab}"
-      [style.maxWidth]="'calc(100% / '+(allTabs.length + 4)+')'"
+      [style.maxWidth]="'calc(100% / '+(allTabs.length + 1)+')'"
       [title]="s + ' (' + count + ' items)'"
       [hidden]="!showEmptyTabs && count == 0">
     {{s}}
