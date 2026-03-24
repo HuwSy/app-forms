@@ -644,8 +644,9 @@ a.fc-event {
 
       position: relative;
       overflow: hidden;
-      height: 36px;
+      height: 54px;
       margin-bottom: -6px;
+      box-sizing: border-box;
 
       .count {
         position: absolute;
@@ -668,7 +669,7 @@ a.fc-event {
     }
 
     .Edit {
-      height: 20px;
+      height: 32px;
     }
 
     .Export {
