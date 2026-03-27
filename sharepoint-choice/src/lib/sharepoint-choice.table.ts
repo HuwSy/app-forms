@@ -360,11 +360,15 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
     e.stopPropagation();
     var target = (e.target as HTMLElement);
+
+    let v = target.innerText;
+    if (v === null || v === undefined || v === '')
+      return this.filterChange(col, 'equals', []);
+    
     let scrollTop = 0;
     if (target.parentElement)
       scrollTop = target.parentElement.scrollTop;
 
-    let v = target.innerText;
     let current:string[] = [];
     try {
       current = this.filter[this.selectedTab][col.field]['equals'] as string[] ?? [];
@@ -407,7 +411,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     if (!currentFilter[this.selectedTab])
       currentFilter[this.selectedTab] = {};
 
-    if (value === undefined || value === null || value === '' || (value instanceof Array && (value.length == 0 || value.some(v => v === null || v === undefined || v === '')))) {
+    if (value === undefined || value === null || value === '' || value.length == 0) {
       if (currentFilter[this.selectedTab][col.field]) {
         delete currentFilter[this.selectedTab][col.field][op];
         if (Object.keys(currentFilter[this.selectedTab][col.field]).length == 0)
