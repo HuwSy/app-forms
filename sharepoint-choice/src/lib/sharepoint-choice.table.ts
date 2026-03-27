@@ -367,7 +367,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     let v = target.innerText;
     let current:string[] = [];
     try {
-      current = this.filter[this.selectedTab][col.field]['equals'] ?? [];
+      current = this.filter[this.selectedTab][col.field]['equals'] as string[] ?? [];
     } catch (e) {
       // lazy drop out
     }
