@@ -355,7 +355,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   // on multi select, not using ctrl key
   changed(col: SharepointChoiceColumn, e: Event): void {
-    if (!this.selectedTab)
+    if (!this.selectedTab || !col.field)
       return;
 
     e.stopPropagation();
