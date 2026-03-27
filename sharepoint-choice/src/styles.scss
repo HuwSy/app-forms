@@ -113,6 +113,14 @@ a.fc-event {
     font-family: inherit;
   }
 
+  select.multismall {
+    height: 100px !important;
+  }
+
+  select.multilarge {
+    height: 200px !important;
+  }
+
   textarea {
     height: 150px;
   }
@@ -182,14 +190,6 @@ a.fc-event {
     select,
     textarea {
       width: 100%;
-    }
-
-    select.multismall {
-      height: 100px !important;
-    }
-
-    select.multilarge {
-      height: 200px !important;
     }
 
     div {
@@ -400,6 +400,7 @@ a.fc-event {
     tr:first-child {
       position: sticky;
       top: 0;
+      z-index: 9;
     }
 
     tr:last-child {
@@ -963,9 +964,9 @@ a.fc-event {
       overflow-x: auto;
 
       max-height: 75vh;
-      min-width: 30vw;
-      width: 825px;
-      max-width: 90vw;
+      min-width: 300px;
+      width: 80vw;
+      max-width: 1000px;
 
       .Reset {
         position: absolute;
