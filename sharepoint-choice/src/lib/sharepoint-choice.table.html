@@ -68,13 +68,14 @@
         }
         @for (col of columns; track col.field || col.headerName || $index; let colIndex = $index) {
         @let filter = filterContains(col.field);
+        @let name = niceName(col);
         <th [style.minWidth.px]="col.width"
             [title]="col.headerTooltip || col.headerName || ''"
             [ngClass]="{'pointer': col.sortable !== false}"
             (click)="sortChange(col)"
             [colSpan]="col.children?.length || 1"
             [rowSpan]="(col.children?.length || 1) == 1 ? 2 : 1">
-          {{niceName(col)}}
+          {{name}}
           @if (sortContains(col.field, 'desc')) {
           <i>&uarr;</i>
           }
@@ -91,7 +92,11 @@
             <select (click)="$event.stopPropagation()"
                     [name]="'ColFlt_'+colIndex"
                     (ngModelChange)="filterChange(col, 'equals', $event)"
-                    [ngModel]="filter.equals">
+                    [ngModel]="filter.equals"
+                    multiple="multiple"
+                    title="Filter by {{name}}, use ctrl+click to select multiple"
+                    class="multilarge">
+              <option disabled selected hidden>Filter by {{name}}</option>
               <option value="">-- All --</option>
               @for (option of filterDistinct(col.field); track option) {
               <option [value]="option">{{option}}</option>
@@ -104,21 +109,24 @@
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_'+colIndex"
                    (ngModelChange)="filterChange(col, 'equals', $event)"
-                   [ngModel]="filter.equals" />
+                   [ngModel]="filter.equals"
+                   placeholder="Filter by {{name}} equals" />
             <br>
             From:<br>
             <input type="number"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_S'+colIndex"
                    (ngModelChange)="filterChange(col, 'greater', $event)"
-                   [ngModel]="filter.greater" />
+                   [ngModel]="filter.greater"
+                   placeholder="Filter by {{name}} from" />
             <br>
             To:<br>
             <input type="number"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_E'+colIndex"
                    (ngModelChange)="filterChange(col, 'less', $event)"
-                   [ngModel]="filter.less" />
+                   [ngModel]="filter.less"
+                   placeholder="Filter by {{name}} to" />
             }
             @case ('date') {
             From:<br>
@@ -126,21 +134,24 @@
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_S'+colIndex"
                    (ngModelChange)="filterChange(col, 'greater', $event)"
-                   [ngModel]="filter.greater" />
+                   [ngModel]="filter.greater"
+                   placeholder="Filter by {{name}} from" />
             <br>
             To:<br>
             <input type="date"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_E'+colIndex"
                    (ngModelChange)="filterChange(col, 'less', $event)"
-                   [ngModel]="filter.less" />
+                   [ngModel]="filter.less"
+                   placeholder="Filter by {{name}} to" />
             }
             @default {
             <input type="text"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_'+colIndex"
                    (ngModelChange)="filterChange(col, 'contains', $event)"
-                   [ngModel]="filter.contains" />
+                   [ngModel]="filter.contains"
+                   placeholder="Filter by {{name}} contains" />
             }
             }
             <div><button (click)="filterToggle(col, $event)">Close</button></div>
@@ -158,11 +169,12 @@
         @if (parent.children?.length || 1 > 1) {
         @for (col of parent.children; track col.field || col.headerName || $index; let colIndex = $index) {
         @let filter = filterContains(col.field);
+        @let name = niceName(col);
         <th [style.minWidth.px]="col.width"
             [title]="col.headerTooltip || col.headerName || ''"
             [ngClass]="{'pointer': col.sortable !== false}"
             (click)="sortChange(col)">
-          {{niceName(col)}}
+          {{name}}
           @if (sortContains(col.field, 'desc')) {
           <i>&uarr;</i>
           }
@@ -179,7 +191,11 @@
             <select (click)="$event.stopPropagation()"
                     [name]="'ColFlt_'+colIndex"
                     (ngModelChange)="filterChange(col, 'equals', $event)"
-                    [ngModel]="filter.equals">
+                    [ngModel]="filter.equals"
+                    multiple="multiple"
+                    title="Filter by {{name}}, use ctrl+click to select multiple"
+                    class="multilarge">
+              <option disabled selected hidden>Filter by {{name}}</option>
               <option value="">-- All --</option>
               @for (option of filterDistinct(col.field); track option) {
               <option [value]="option">{{option}}</option>
@@ -192,21 +208,24 @@
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_'+colIndex"
                    (ngModelChange)="filterChange(col, 'equals', $event)"
-                   [ngModel]="filter.equals" />
+                   [ngModel]="filter.equals"
+                   placeholder="Filter by {{name}} equals" />
             <br>
             From:<br>
             <input type="number"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_S'+colIndex"
                    (ngModelChange)="filterChange(col, 'greater', $event)"
-                   [ngModel]="filter.greater" />
+                   [ngModel]="filter.greater"
+                   placeholder="Filter by {{name}} from" />
             <br>
             To:<br>
             <input type="number"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_E'+colIndex"
                    (ngModelChange)="filterChange(col, 'less', $event)"
-                   [ngModel]="filter.less" />
+                   [ngModel]="filter.less"
+                   placeholder="Filter by {{name}} to" />
             }
             @case ('date') {
             From:<br>
@@ -214,21 +233,24 @@
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_S'+colIndex"
                    (ngModelChange)="filterChange(col, 'greater', $event)"
-                   [ngModel]="filter.greater" />
+                   [ngModel]="filter.greater"
+                   placeholder="Filter by {{name}} from" />
             <br>
             To:<br>
             <input type="date"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_E'+colIndex"
                    (ngModelChange)="filterChange(col, 'less', $event)"
-                   [ngModel]="filter.less" />
+                   [ngModel]="filter.less"
+                   placeholder="Filter by {{name}} to" />
             }
             @default {
             <input type="text"
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_'+colIndex"
                    (ngModelChange)="filterChange(col, 'contains', $event)"
-                   [ngModel]="filter.contains" />
+                   [ngModel]="filter.contains"
+                   placeholder="Filter by {{name}} contains" />
             }
             }
             <div><button (click)="filterToggle(col, $event)">Close</button></div>
@@ -458,6 +480,9 @@
         <th>
           Column
         </th>
+        <th [style.backgroundColor]="'#d5d5d5'">
+          All Tabs
+        </th>
         @for (t of allTabs; track t) {
         <th [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : '#f7f7f7'">
           {{t}}
@@ -466,14 +491,37 @@
       </tr>
       @for (heading of allCols; track heading.field || heading.headerName || $index; let colIndex = $index) {
       @if (heading.children) {
+      <tr>
+        <td>
+          {{niceName(heading)}}
+        </td>
+        <td>
+          <input type="checkbox"
+                 [name]="'HideCol_'+colIndex+'_'+'all'"
+                 (click)="toggleChildren(heading, null, $event.target.checked)"/>
+        </td>
+        @for (t of allTabs; track t) {
+        <td [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : null">
+          <input type="checkbox"
+                 [name]="'HideCol_'+colIndex+'_'+t"
+                 (click)="toggleChildren(heading, t, $event.target.checked)"/>
+        </td>
+        }
+      </tr>
       @for (child of heading.children; track child.field || child.headerName || $index; let childIndex = $index) {
       @if (child.field) {
       <tr>
+        <td style="text-align: right;">
+          {{niceName(child)}}
+        </td>
         <td>
-          {{niceName(heading)}} - {{niceName(child)}}
+          <input type="checkbox"
+                 (click)="toggleRow(child, $event.target.checked)"
+                 [name]="'HideCol_'+colIndex+'_'+childIndex+'_'+'all'"
+                 [hidden]="typeof child.hide === 'function'" />
         </td>
         @for (t of allTabs; track t) {
-        <td>
+        <td [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : null">
           <input type="checkbox"
                  (click)="columnToggle(child, t)"
                  [ngModel]="isHidden(child, t)"
@@ -490,8 +538,14 @@
         <td>
           {{niceName(heading)}}
         </td>
-        @for (t of allTabs; track t) {
         <td>
+          <input type="checkbox"
+                 (click)="toggleRow(heading, $event.target.checked)"
+                 [name]="'HideCol_'+colIndex+'_'+'all'"
+                 [hidden]="typeof heading.hide === 'function'" />
+        </td>
+        @for (t of allTabs; track t) {
+        <td [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : null">
           <input type="checkbox"
                  (click)="columnToggle(heading, t)"
                  [ngModel]="isHidden(heading, t)"

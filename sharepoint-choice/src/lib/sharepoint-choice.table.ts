@@ -19,7 +19,7 @@ interface SharepointChoiceSort {
 interface SharepointChoiceFilter {
   [tabName: string]: {
     [fieldName:string]: {
-      equals?: string | number | boolean | Date | null;
+      equals?: Array<string> | string | number | boolean | Date | null;
       contains?: string | null;
       greater?: number | Date | null;
       less?: number | Date | null;
@@ -223,10 +223,8 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   set hiddenColumns(value: SharepointChoiceHide) {
     this._hiddenColumns = value;
     this.setStorage(`Hide`, this.hiddenColumns);
-    // Clear cache after adjusting columns which impact filters/sorts
-    if (!this._selectedTab)
-      return;
-    this._colsCache.delete(this._selectedTab);
+    // rebuild all on change as the ticks can be any
+    this._colsCache.clear();
     this.chRef.markForCheck();
   }
   get hiddenColumns(): SharepointChoiceHide {
@@ -355,7 +353,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this.sort = currentSort;
   }
 
-  filterChange(col: SharepointChoiceColumn, op: string, value: Date | string | number | null): void {
+  filterChange(col: SharepointChoiceColumn, op: string, value: Array<string> | Date | string | number | null): void {
     if (!col.field || col.filter == 'none' || !this.selectedTab)
       return;
 
@@ -375,7 +373,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     if (!currentFilter[this.selectedTab])
       currentFilter[this.selectedTab] = {};
 
-    if (value === undefined || value === null || value === '') {
+    if (value === undefined || value === null || value === '' || (value instanceof Array && (value.length == 0 || value.some(v => v === null || v === undefined || v === '')))) {
       if (currentFilter[this.selectedTab][col.field]) {
         delete currentFilter[this.selectedTab][col.field][op];
         if (Object.keys(currentFilter[this.selectedTab][col.field]).length == 0)
@@ -433,10 +431,10 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   }
 
   columnToggle(col: SharepointChoiceColumn, tab: string): void {
+    let currentHidden = { ...this.hiddenColumns };
     if (!col.field)
       return;
 
-    let currentHidden = { ...this.hiddenColumns };
     if (!currentHidden[tab])
       currentHidden[tab] = [];
 
@@ -447,6 +445,28 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
     // Reassign to trigger setter
     this.hiddenColumns = currentHidden;
+  }
+
+  toggleRow(col: SharepointChoiceColumn, checked: boolean): void {
+    this.allTabs.forEach(t => {
+      if (checked && !this.isHidden(col, t))
+        this.columnToggle(col, t);
+      else if (!checked && this.isHidden(col, t))
+        this.columnToggle(col, t);
+    });
+  }
+
+  toggleChildren (col: SharepointChoiceColumn, tab: string | null, checked: boolean): void {
+    this.allTabs.filter(t => !tab || t == tab).forEach(t => {
+      if (!col.children)
+        return;
+      col.children.forEach(child => {
+        if (checked && !this.isHidden(child, t))
+          this.columnToggle(child, t);
+        else if (!checked && this.isHidden(child, t))
+          this.columnToggle(child, t);
+      });
+    });
   }
 
   // handle column resizing drag
@@ -565,10 +585,10 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   }
 
   isHidden(col: SharepointChoiceColumn, tab: string): boolean {
-    if (typeof col.hide == 'function' && col.hide(tab))
-      return true;
-    if (!col.field || !this.hiddenColumns[tab])
-      return false;
+    if (typeof col.hide == 'function')
+      return col.hide(tab);
+    if (!col.field || !this.allowHideColumns)
+       return false;
     return this.hiddenColumns[tab]?.includes(col.field);
   }
 
@@ -581,14 +601,13 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
     this._rowsCache.delete(tab);
 
-    let cols = this.allowHideColumns ? this.hiddenColumns[tab] || [] : [];
     // hide based on tab function or hide state
     const columns = this.allCols.filter(c => {
-      return !cols.includes(c.field ?? '') && (!c.hide || (typeof c.hide == 'function' && !c.hide(tab)));
+      return !this.isHidden(c, tab);
     }).map(c => {
       if (c.children) {
         let nc = { ...c };
-        nc.children = nc.children?.filter(ch => !cols.includes(ch.field ?? '') && (!ch.hide || (typeof ch.hide == 'function' && !ch.hide(tab))));
+        nc.children = nc.children?.filter(ch => !this.isHidden(ch, tab));
         return nc;
       }
       return c;
@@ -677,13 +696,13 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       filter = { '_selected': filter['_selected'] };
 
     const hasFilter = Object.keys(filter).some(field => {
-      if (this.allowHideColumns && this.hiddenColumns[tab]?.includes(field))
+      if (this.isHidden({ field }, tab))
         return false;
       return true;
     });
 
     const hasSort = sort && sort.length > 0 && sort.some(s => {
-      if (this.allowHideColumns && this.hiddenColumns[tab]?.includes(s.field))
+      if (this.isHidden({ field: s.field }, tab))
         return false;
       return true;
     });
@@ -696,7 +715,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
         // apply all filters
         for (let field in filter) {
           // user hidden columns to skip filters
-          if (this.allowHideColumns && this.hiddenColumns[tab]?.includes(field))
+          if (this.isHidden({ field }, tab))
             continue;
 
           let ops = filter[field];
@@ -709,7 +728,10 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
               if (!(c?.toString().toLowerCase().includes(value.toString().toLowerCase())))
                 return false;
             } else if (op == 'equals') {
-              if (!(c?.toString() === value?.toString() || (value == '(blanks)' && (c === null || c === undefined || c === ''))))
+              if (value instanceof Array) {
+                if (!value.some((v: any) => c?.toString() === v?.toString() || (v == '(blanks)' && (c === null || c === undefined || c === ''))))
+                  return false;
+              } else if (!(c?.toString() === value?.toString() || (value == '(blanks)' && (c === null || c === undefined || c === ''))))
                 return false;
             } else if (op == 'greater') {
               if (!(c > value))
@@ -728,7 +750,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       result.sort((a: SharepointChoiceRow, b: SharepointChoiceRow) => {
         for (let s of sort) {
           // user hidden columns to skip sorts
-          if (this.allowHideColumns && this.hiddenColumns[tab]?.includes(s.field))
+          if (this.isHidden({ field: s.field }, tab))
             continue;
 
           let aValue = this.fieldValue(a, s.field);
