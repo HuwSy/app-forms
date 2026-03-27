@@ -90,9 +90,8 @@
             @switch (col.filter) {
             @case ('select') {
             <select (mousedown)="false"
-                    (click)="changedM($event)"
+                    (click)="changed(col, $event)"
                     [name]="'ColFlt_'+colIndex"
-                    (ngModelChange)="filterChange(col, 'equals', $event)"
                     [ngModel]="filter.equals"
                     multiple="multiple"
                     title="Filter by {{name}}"
@@ -190,9 +189,8 @@
             @switch (col.filter) {
             @case ('select') {
             <select (mousedown)="false"
-                    (click)="changedM($event)"
+                    (click)="changed(col, $event)"
                     [name]="'ColFlt_'+colIndex"
-                    (ngModelChange)="filterChange(col, 'equals', $event)"
                     [ngModel]="filter.equals"
                     multiple="multiple"
                     title="Filter by {{name}}"
