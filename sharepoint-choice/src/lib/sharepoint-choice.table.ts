@@ -353,6 +353,37 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this.sort = currentSort;
   }
 
+  // on multi select, not using ctrl key
+  changed(col: SharepointChoiceColumn, e: Event): void {
+    e.stopPropagation();
+    var target = (e.target as HTMLElement);
+    let scrollTop = 0;
+    if (target.parentElement)
+      scrollTop = target.parentElement.scrollTop;
+
+    let v = target.innerText;
+    let current = [];
+    try {
+      current = this.filter[this.selectedTab][col.field]['equals'] ?? [];
+    } catch (e) {
+      // lazy drop out
+    }
+    
+    // if there are selected results set the field to add/remove the most recent click
+    let i = current.indexOf(v);
+    if (i >= 0)
+      current.splice(i, 1);
+    else
+      current.push(v);
+
+    this.filterChange(col, 'equals', current);
+    
+    if (target.parentElement) {
+      setTimeout((function () { target.parentElement ? target.parentElement.scrollTop = scrollTop : null; }), 10);
+      setTimeout((function () { target.parentElement ? target.parentElement.focus() : null; }), 10);
+    }
+  }
+
   filterChange(col: SharepointChoiceColumn, op: string, value: Array<string> | Date | string | number | null): void {
     if (!col.field || col.filter == 'none' || !this.selectedTab)
       return;
