@@ -355,6 +355,9 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   // on multi select, not using ctrl key
   changed(col: SharepointChoiceColumn, e: Event): void {
+    if (!this.selectedTab)
+      return;
+
     e.stopPropagation();
     var target = (e.target as HTMLElement);
     let scrollTop = 0;
@@ -362,7 +365,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       scrollTop = target.parentElement.scrollTop;
 
     let v = target.innerText;
-    let current = [];
+    let current:string[] = [];
     try {
       current = this.filter[this.selectedTab][col.field]['equals'] ?? [];
     } catch (e) {
