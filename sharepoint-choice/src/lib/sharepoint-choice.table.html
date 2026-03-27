@@ -89,12 +89,13 @@
           <div class="options">
             @switch (col.filter) {
             @case ('select') {
-            <select (click)="$event.stopPropagation()"
+            <select (mousedown)="false"
+                    (click)="changedM($event)"
                     [name]="'ColFlt_'+colIndex"
                     (ngModelChange)="filterChange(col, 'equals', $event)"
                     [ngModel]="filter.equals"
                     multiple="multiple"
-                    title="Filter by {{name}}, use ctrl+click to select multiple"
+                    title="Filter by {{name}}"
                     class="multilarge">
               <option disabled selected hidden>Filter by {{name}}</option>
               <option value="">-- All --</option>
@@ -188,12 +189,13 @@
           <div class="options">
             @switch (col.filter) {
             @case ('select') {
-            <select (click)="$event.stopPropagation()"
+            <select (mousedown)="false"
+                    (click)="changedM($event)"
                     [name]="'ColFlt_'+colIndex"
                     (ngModelChange)="filterChange(col, 'equals', $event)"
                     [ngModel]="filter.equals"
                     multiple="multiple"
-                    title="Filter by {{name}}, use ctrl+click to select multiple"
+                    title="Filter by {{name}}"
                     class="multilarge">
               <option disabled selected hidden>Filter by {{name}}</option>
               <option value="">-- All --</option>
