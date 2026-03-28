@@ -27,9 +27,9 @@
     "@pnp/sp": "git+https://github.com/pnp/pnpjs.git#main",
     "buffer": "git+https://github.com/feross/buffer.git#master",
     "eml-parse-js": "git+https://github.com/MQpeng/eml-parse-js.git#master",
-    "exceljs": "git+https://github.com/exceljs/exceljs.git#master",
-    "jszip": "git+https://github.com/Stuk/jszip.git#master",
-    "ngx-editor": "git+https://github.com/surmon-china/ngx-editor.git#master",
+    "exceljs": "git+https://github.com/rmartin93/exceljs-fork.git#master",
+    "jszip": "git+https://github.com/TurboWarp/jszip.git#main",
+    "ngx-editor": "git+https://github.com/bobbyquantum/ngx-editor.git#main",
     "stacktrace-js": "git+https://github.com/stacktracejs/stacktrace.js.git#master"
   },
   "devDependencies": {
