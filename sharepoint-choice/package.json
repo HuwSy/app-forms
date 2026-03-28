@@ -3,6 +3,7 @@
   "version": "99.0.0",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
+    "postinstall": "node ./build-git-deps.js",
     "ng": "ng",
     "build": "ng build sharepoint-choice",
     "version": "npx -y shx sed -i \"s/\\\"peerDependencies\\\":/\\\"dependencies\\\":/\" package.json && npx -y npm-check-updates -u && npx -y shx sed -i \"s/\\\"dependencies\\\":/\\\"peerDependencies\\\":/\" package.json && npx -y shx rm -rf node_modules package-lock.json && npm install && npm version patch --no-git-tag-version --ignore-scripts && npm run build && git add . && git commit -m \"Version bump\" && git push"
