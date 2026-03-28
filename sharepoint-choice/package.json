@@ -17,26 +17,26 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@angular/common": "github:angular/angular#main",
-    "@angular/core": "github:angular/angular#main",
-    "@angular/forms": "github:angular/angular#main",
-    "@angular/platform-browser": "github:angular/angular#main",
-    "@azure/msal-browser": "github:AzureAD/microsoft-authentication-library-for-js#dev",
-    "@kenjiuno/msgreader": "github:KenjiUno/msgreader#master",
-    "@pnp/sp": "github:pnp/pnpjs#main",
-    "buffer": "github:feross/buffer#master",
-    "eml-parse-js": "github:Ziv-Barber/eml-parse-js#master",
-    "exceljs": "github:exceljs/exceljs#master",
-    "jszip": "github:Stuk/jszip#master",
-    "ngx-editor": "github:sibiraj-s/ngx-editor#master",
-    "stacktrace-js": "github:stacktracejs/stacktrace.js#master"
+    "@angular/common": "git+https://github.com/angular/angular.git#main",
+    "@angular/core": "git+https://github.com/angular/angular.git#main",
+    "@angular/forms": "git+https://github.com/angular/angular.git#main",
+    "@angular/platform-browser": "git+https://github.com/angular/angular.git#main",
+    "@azure/msal-browser": "git+https://github.com/AzureAD/microsoft-authentication-library-for-js.git#main",
+    "@kenjiuno/msgreader": "git+https://github.com/kenjiuno/msgreader.git#master",
+    "@pnp/sp": "git+https://github.com/pnp/pnpjs.git#main",
+    "buffer": "git+https://github.com/feross/buffer.git#master",
+    "eml-parse-js": "git+https://github.com/MQpeng/eml-parse-js.git#master",
+    "exceljs": "git+https://github.com/exceljs/exceljs.git#master",
+    "jszip": "git+https://github.com/Stuk/jszip.git#master",
+    "ngx-editor": "git+https://github.com/surmon-china/ngx-editor.git#master",
+    "stacktrace-js": "git+https://github.com/stacktracejs/stacktrace.js.git#master"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "github:angular/angular-cli#main",
-    "@angular/build": "github:angular/angular-cli#main",
-    "@angular/cli": "github:angular/angular-cli#main",
-    "@types/office-js": "github:DefinitelyTyped/DefinitelyTyped#master",
-    "ng-packagr": "github:ng-packagr/ng-packagr#master",
-    "typescript": "github:microsoft/TypeScript#main"
+    "@angular-devkit/build-angular": "git+https://github.com/angular/angular-cli.git#main",
+    "@angular/build": "git+https://github.com/angular/angular-cli.git#main",
+    "@angular/cli": "git+https://github.com/angular/angular-cli.git#main",
+    "@types/office-js": "git+https://github.com/DefinitelyTyped/DefinitelyTyped.git#master",
+    "ng-packagr": "git+https://github.com/ng-packagr/ng-packagr.git#master",
+    "typescript": "git+https://github.com/microsoft/TypeScript.git#main"
   }
 }
