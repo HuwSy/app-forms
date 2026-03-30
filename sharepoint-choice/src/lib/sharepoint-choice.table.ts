@@ -411,7 +411,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     if (!currentFilter[this.selectedTab])
       currentFilter[this.selectedTab] = {};
 
-    if (value === undefined || value === null || value === '' || value.length == 0) {
+    if (value === undefined || value === null || value === '' || (typeof value === 'object' && 'length' in value && value.length == 0)) {
       if (currentFilter[this.selectedTab][col.field]) {
         delete currentFilter[this.selectedTab][col.field][op];
         if (Object.keys(currentFilter[this.selectedTab][col.field]).length == 0)
