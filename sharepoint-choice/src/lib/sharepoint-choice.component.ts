@@ -2,10 +2,10 @@ import { Component, OnInit, OnDestroy, Input, ElementRef, ChangeDetectorRef, Err
 import "@pnp/sp/webs";
 import { Web } from "@pnp/sp/webs";
 import { IPeoplePickerEntity } from "@pnp/sp/profiles";
-import { Editor, NgxEditorModule, Toolbar } from 'ngx-editor';
+import { Editor, NgxEditorModule, Toolbar } from '@bobbyquantum/ngx-editor';
 import MsgReader from '@kenjiuno/msgreader';
 import { Attachment, readEml } from 'eml-parse-js';
-import { loadAsync } from 'jszip';
+import { loadAsync } from '@turbowarp/jszip';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { SharepointChoiceUtils } from './sharepoint-choice.utils';
@@ -133,7 +133,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     doctype?: string, // document type field name
 
     notes?: string, // notes input field name for singular note input space
-    spec?: SharepointChoiceList // field spec for additional fields, 
+    spec?: SharepointChoiceList // field spec for additional fields,
   } = {};
 
   tooltip?: boolean;
@@ -197,7 +197,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         this.chRef.markForCheck();
     });
   }
-  
+
   ngOnDestroy(): void {
     this.editor?.destroy();
     this.textKey?.complete();
@@ -205,11 +205,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.refreshSub?.unsubscribe();
   }
 
-  /* 
+  /*
   Common parts between multiple field types or minimal functions
   */
 
-  // show or hide tooltips 
+  // show or hide tooltips
   showHideTooltip(show: boolean): void {
     this.tooltip = show;
     this.chRef.markForCheck();
@@ -269,7 +269,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  // get outcomes of non standard fields into a plain text field for [required] to be triggered automatically 
+  // get outcomes of non standard fields into a plain text field for [required] to be triggered automatically
   validator(type?: string): string {
     switch (type) {
       case 'User':
@@ -333,7 +333,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             distinctUntilChanged()
           ).subscribe((key) => this.onUpUserSearch(key));
         }
-        // if its a url, ensure the correct object type and clone data into url for flat stored occurrences 
+        // if its a url, ensure the correct object type and clone data into url for flat stored occurrences
       } else if (p == 'URL') {
         if (!this.form[this.field] || this.form[this.field].Description === undefined || this.form[this.field].Description === null)
           this.form[this.field] = {
@@ -423,18 +423,22 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // on multi select, not using ctrl key
   changedM(e: Event): void {
     e.stopPropagation();
-    var target = (e.target as HTMLElement);
+    var target = (e.target as HTMLOptionElement);
+
     let scrollTop = 0;
     if (target.parentElement)
       scrollTop = target.parentElement.scrollTop;
 
+    // use inner text as value gets adjusted by angular
     let v = target.innerText;
-    // ensure object type is correct
+
+    // ensure object type is correct or replace the object
     if (!this.form[this.field] || !this.form[this.field].__metadata)
       this.form[this.field] = {
         __metadata: { type: "Collection(Edm.String)" },
         results: !this.form[this.field] ? [] : this.form[this.field].results ? this.form[this.field].results : typeof this.form[this.field] == "object" ? this.form[this.field] : [this.form[this.field]]
       }
+
     // if there are selected results set the field to add/remove the most recent click
     let i = this.form[this.field].results.indexOf(v);
     if (i >= 0)
@@ -442,16 +446,14 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     else
       this.form[this.field].results.push(v);
 
-    const tmp = this.form[this.field].results;
-    this.form[this.field].results = [];
-    for (let i = 0; i < tmp.length; i++)
-      this.form[this.field].results[i] = tmp[i];
-
     if (target.parentElement) {
+      // manually toggle html select state as mousedown false prevents the toggle as well as prevent the unselect all
+      target.selected = !target.selected;
       setTimeout((function () { target.parentElement ? target.parentElement.scrollTop = scrollTop : null; }), 10);
       setTimeout((function () { target.parentElement ? target.parentElement.focus() : null; }), 10);
     }
 
+    // push the change to any emitters
     this.changed();
   }
 
@@ -462,7 +464,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.changed();
   }
 
-  /* 
+  /*
   Common parts between text fields
   */
 
@@ -513,7 +515,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.changed();
   }
 
-  /* 
+  /*
   Common parts between choice fields
   */
 
@@ -556,7 +558,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.changed();
   }
 
-  /* 
+  /*
   Common parts between file upload field types
   */
 
@@ -1153,7 +1155,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           if (attachment.inline)
             return;
           try {
-            // work out the name from id which is more consistent across sources, otherwise from name. 
+            // work out the name from id which is more consistent across sources, otherwise from name.
             var name = attachment.id?.replace(/^</, '').replace(/>$/, '').split('@')[0];
             if (!name || name.indexOf('.') < 0)
               name = attachment.name;
@@ -1213,7 +1215,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
   }
 
-  /* 
+  /*
   Common parts between user field types
   */
 

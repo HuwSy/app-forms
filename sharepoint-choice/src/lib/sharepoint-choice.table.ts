@@ -355,27 +355,28 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   // on multi select, not using ctrl key
   changed(col: SharepointChoiceColumn, e: Event): void {
-    if (!this.selectedTab || !col.field)
-      return;
-
     e.stopPropagation();
-    var target = (e.target as HTMLElement);
+    var target = (e.target as HTMLOptionElement);
 
-    let v = target.innerText;
-    if (v === null || v === undefined || v === '')
-      return this.filterChange(col, 'equals', []);
-    
     let scrollTop = 0;
     if (target.parentElement)
       scrollTop = target.parentElement.scrollTop;
 
+    // use inner text as value gets adjusted by angular
+    let v = target.innerText;
+    if (v === '-- All --')
+      return this.filterChange(col, 'equals', []);
+
+    // ensure object type is correct or replace the object
     let current:string[] = [];
     try {
+      if (!this.selectedTab || !col.field)
+        return;
       current = this.filter[this.selectedTab][col.field]['equals'] as string[] ?? [];
     } catch (e) {
       // lazy drop out
     }
-    
+
     // if there are selected results set the field to add/remove the most recent click
     let i = current.indexOf(v);
     if (i >= 0)
@@ -383,12 +384,15 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     else
       current.push(v);
 
-    this.filterChange(col, 'equals', current);
-    
     if (target.parentElement) {
+      // manually toggle html select state as mousedown false prevents the toggle as well as prevent the unselect all
+      target.selected = !target.selected;
       setTimeout((function () { target.parentElement ? target.parentElement.scrollTop = scrollTop : null; }), 10);
       setTimeout((function () { target.parentElement ? target.parentElement.focus() : null; }), 10);
     }
+
+    // push the change to trigger getter
+    this.filterChange(col, 'equals', current);
   }
 
   filterChange(col: SharepointChoiceColumn, op: string, value: Array<string> | Date | string | number | null): void {
@@ -702,7 +706,13 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       else if ((c === 0 || c === false || c) && !values.includes(c))
         values.push(c);
     });
-    return values;
+    return values.sort((a, b) => {
+      if (a === '(blanks)') return -1;
+      if (b === '(blanks)') return 1;
+      if (a < b) return -1;
+      if (a > b) return 1;
+      return 0;
+    });
   }
 
   currentPageRows(rows: SharepointChoiceRow[]): SharepointChoiceRow[] {

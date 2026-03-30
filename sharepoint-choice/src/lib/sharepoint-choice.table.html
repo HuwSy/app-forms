@@ -56,7 +56,8 @@
             <select (click)="$event.stopPropagation()"
                     [name]="'ColFlt_Selection'"
                     (ngModelChange)="filterChange(col, 'equals', $event)"
-                    [ngModel]="filter.equals">
+                    [ngModel]="filter.equals"
+                    title="Filter by selection">
               <option value="">-- All --</option>
               <option [value]="true">True</option>
               <option [value]="false">False</option>
@@ -97,7 +98,7 @@
                     title="Filter by {{name}}"
                     class="multilarge">
               <option disabled selected hidden>Filter by {{name}}</option>
-              <option value="">-- All --</option>
+              <option>-- All --</option>
               @for (option of filterDistinct(col.field); track option) {
               <option [value]="option">{{option}}</option>
               }
@@ -196,7 +197,7 @@
                     title="Filter by {{name}}"
                     class="multilarge">
               <option disabled selected hidden>Filter by {{name}}</option>
-              <option value="">-- All --</option>
+              <option>-- All --</option>
               @for (option of filterDistinct(col.field); track option) {
               <option [value]="option">{{option}}</option>
               }
@@ -449,7 +450,8 @@
   <select [(ngModel)]="pageSize"
           style="float: right;"
           name="PageSize"
-          (change)="this.pageNumber = 1">
+          (change)="this.pageNumber = 1"
+          title="Select number of rows to display per page">
     <option [value]="10">10</option>
     <option [value]="25">25</option>
     <option [value]="50">50</option>
@@ -498,13 +500,15 @@
         <td>
           <input type="checkbox"
                  [name]="'HideCol_'+colIndex+'_'+'all'"
-                 (click)="toggleChildren(heading, null, $event.target.checked)"/>
+                 (click)="toggleChildren(heading, null, $event.target.checked)"
+                 title="Toggle visibility for this group for all tabs"/>
         </td>
         @for (t of allTabs; track t) {
         <td [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : null">
           <input type="checkbox"
                  [name]="'HideCol_'+colIndex+'_'+t"
-                 (click)="toggleChildren(heading, t, $event.target.checked)"/>
+                 (click)="toggleChildren(heading, t, $event.target.checked)"
+                 title="Toggle visibility for this group for {{t}} tab"/>
         </td>
         }
       </tr>
@@ -518,7 +522,8 @@
           <input type="checkbox"
                  (click)="toggleRow(child, $event.target.checked)"
                  [name]="'HideCol_'+colIndex+'_'+childIndex+'_'+'all'"
-                 [hidden]="typeof child.hide === 'function'" />
+                 [hidden]="typeof child.hide === 'function'"
+                 title="Toggle visibility for all tabs"/>
         </td>
         @for (t of allTabs; track t) {
         <td [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : null">
@@ -526,7 +531,8 @@
                  (click)="columnToggle(child, t)"
                  [ngModel]="isHidden(child, t)"
                  [name]="'HideCol_'+colIndex+'_'+childIndex+'_'+t"
-                 [disabled]="typeof child.hide === 'function'" />
+                 [disabled]="typeof child.hide === 'function'"
+                 title="Toggle visibility for {{t}} tab"/>
         </td>
         }
       </tr>
@@ -542,7 +548,8 @@
           <input type="checkbox"
                  (click)="toggleRow(heading, $event.target.checked)"
                  [name]="'HideCol_'+colIndex+'_'+'all'"
-                 [hidden]="typeof heading.hide === 'function'" />
+                 [hidden]="typeof heading.hide === 'function'"
+                 title="Toggle visibility for all tabs"/>
         </td>
         @for (t of allTabs; track t) {
         <td [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : null">
@@ -550,7 +557,8 @@
                  (click)="columnToggle(heading, t)"
                  [ngModel]="isHidden(heading, t)"
                  [name]="'HideCol_'+colIndex+'_'+t"
-                 [disabled]="typeof heading.hide === 'function'" />
+                 [disabled]="typeof heading.hide === 'function'"
+                 title="Toggle visibility for {{t}} tab"/>
         </td>
         }
       </tr>
