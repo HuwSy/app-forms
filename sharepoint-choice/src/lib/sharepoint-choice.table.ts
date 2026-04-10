@@ -70,7 +70,12 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
           for (let t in this.search) {
             if (this.search[t] === null || this.search[t] === undefined)
               continue;
-            if (row[t] === null || row[t] === undefined)
+            if (this.search[t] === '(blanks)') {
+              if (row[t] !== null && row[t] !== undefined && row[t] !== '')
+                return false;
+              continue;
+            }
+            if (row[t] === null || row[t] === undefined || row[t] === '')
               return false;
             if (!(row[t].toString().toLowerCase().includes(this.search[t]!.toString().toLowerCase())))
               return false;
