@@ -187,9 +187,45 @@ export class SharepointChoiceUtils {
   }
 
   private async cleanLoadKeys(d: SharepointChoiceForm, listTitle?: string, id?: number) {
+    // exclude these fields from data entirely
+    let excludedFields = [
+      'IsCurrentVersion',
+      'VersionId',
+      'File_x005f_x0020_x005f_Type',
+      'owshiddenversion',
+      'Order',
+      'Last_x005f_x0020_x005f_Modified',
+      'Created_x005f_x0020_x005f_Date',
+      'ParentUniqueId',
+      'ScopeId',
+      'NoExecute',
+      'ContentVersion',
+      'SMLastModifiedDate',
+      'SMTotalFileStreamSize',
+      'WorkflowVersion',
+      'ProgId',
+      'MetaInfo',
+      'Restricted',
+      'OriginatorId',
+      'AccessPolicy',
+      'SortBehavior'
+    ];
+
     for (var key in d) {
+      // excludedFields
+      if (excludedFields.includes(key)) {
+        delete d[key];
+        continue;
+      }
+
       // people fields return twice
       if (key.endsWith('StringId') && (d[key.replace(/StringId$/, 'Id')] || d[key.replace(/StringId$/, 'Id')] === null)) {
+        delete d[key];
+        continue;
+      }
+
+      // remove odata. prefixed
+      if (key.startsWith('odata.') || key == '__metadata') {
         delete d[key];
         continue;
       }
@@ -200,12 +236,6 @@ export class SharepointChoiceUtils {
           d[key] = { results: await this.sp.web.lists.getByTitle(listTitle).items.getById(id).attachmentFiles() };
         else
           d[key] = { results: [] };
-        continue;
-      }
-
-      // remove odata. prefixed
-      if (key.startsWith('odata.') || key == '__metadata') {
-        delete d[key];
         continue;
       }
 
@@ -226,6 +256,18 @@ export class SharepointChoiceUtils {
         continue;
       }
 
+      // version history objects have name fields as this
+      if (typeof d[key] == "object" && d[key].LookupValue)
+        d[key] = d[key].LookupValue;
+
+      // dates and date times
+      let i = d[key].toString();
+      if (/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9]:*[0-9]*\.*[0-9]*Z*$/.test(i)
+        || /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]$/.test(i)) {
+        d[key] = new Date(d[key]);
+        continue;
+      }
+
       // parse objects within text fields for looped data
       try {
         let f = d[key].toString().trim().substring(0, 1);
@@ -235,14 +277,6 @@ export class SharepointChoiceUtils {
           continue;
         }
       } catch (e) { }
-
-      // dates and date times
-      let i = d[key].toString();
-      if (/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9]:*[0-9]*\.*[0-9]*Z*$/.test(i)
-        || /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]$/.test(i)) {
-        d[key] = new Date(d[key]);
-        continue;
-      }
     }
   }
 
@@ -258,6 +292,70 @@ export class SharepointChoiceUtils {
       throw e;
     }
 
+    return d;
+  }
+
+  public async version(id: number, listTitle: string, spec: SharepointChoiceList | null = null): Promise<SharepointChoiceForm[]> {
+    let d = await this.sp.web.lists.getByTitle(listTitle).items.getById(id).versions.top(5000)();
+
+    // exclude these fields
+    let excludedFields = [
+      'ID',
+      'Created',
+      'Author',
+      'Editor',
+      'Modified',
+      'FileRef',
+      'FileDirRef',
+      'FileLeafRef',
+      'ItemChildCount',
+      'FolderChildCount',
+      'Attachments',
+      'FSObjType',
+      'VersionLabel',
+      'GUID',
+      'UniqueId'
+    ];
+
+    let format = (v) => {
+      if (!v || typeof v != 'object')
+        return v;
+      if (v instanceof Date)
+        return v.toLocaleString();
+      if (v.results)
+        return v.results.sort().join(', ');
+      return null;
+    }
+
+    // versions return reverse order, so process from oldest to newest
+    let i = d.length - 1;
+    let lastVersion: any = null;
+    do {
+      await this.cleanLoadKeys(d[i]);
+      d[i].ChangedFields = [];
+
+      for (const k of Object.keys(d[i])) {
+        if ((spec && !spec[k]) || excludedFields.includes(k))
+          continue;
+
+        let c = format(d[i][k]);
+        let f = lastVersion ? format(lastVersion[k]) : null;
+
+        if (c == f)
+          continue;
+
+        d[i].ChangedFields.push({
+          field: spec ? spec[k]?.Title || k : k,
+          from: f,
+          to: c
+        });
+      }
+
+      lastVersion = d[i];
+      i--;
+    } while (i >= 0);
+
+    // output history with exisiting version info plus the changes for each version for use in history tabs
     return d;
   }
 

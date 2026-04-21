@@ -100,7 +100,7 @@
               <option disabled selected hidden>Filter by {{name}}</option>
               <option>-- All --</option>
               @for (option of filterDistinct(col.field); track option) {
-              <option [value]="option">{{option}}</option>
+              <option [value]="option.toString()">{{option}}</option>
               }
             </select>
             }
@@ -199,7 +199,7 @@
               <option disabled selected hidden>Filter by {{name}}</option>
               <option>-- All --</option>
               @for (option of filterDistinct(col.field); track option) {
-              <option [value]="option">{{option}}</option>
+              <option [value]="option.toString()">{{option}}</option>
               }
             </select>
             }

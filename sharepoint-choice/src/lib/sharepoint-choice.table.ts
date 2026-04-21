@@ -30,7 +30,7 @@ interface SharepointChoiceFilter {
 @Component({
   selector: 'app-table',
   templateUrl: './sharepoint-choice.table.html',
-  styleUrls: ['../styles.scss'],
+  styleUrls: ['./styles.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -152,6 +152,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   // should show loading state and disable clicks etc
   @Input() set loading(value: boolean) {
     this._loading = value;
+    this._rowsCache.clear();
     this.chRef.markForCheck();
   }
   get loading(): boolean {

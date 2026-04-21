@@ -24,7 +24,7 @@ interface SharepointChoiceUser {
 @Component({
   selector: 'app-choice',
   templateUrl: './sharepoint-choice.component.html',
-  styleUrls: ['../styles.scss'],
+  styleUrls: ['./styles.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
