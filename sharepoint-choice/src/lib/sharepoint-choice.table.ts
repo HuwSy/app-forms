@@ -404,6 +404,8 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   filterChange(col: SharepointChoiceColumn, op: string, value: Array<string> | Date | string | number | null): void {
     if (!col.field || col.filter == 'none' || !this.selectedTab)
       return;
+    if (value === '-- All --')
+      value = null;
 
     if (typeof value === 'string') {
       value = value.trim();
@@ -701,7 +703,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     return parts;
   }
 
-  filterDistinct(field?: string): any[] {
+  filterDistinct(field?: string, split: boolean = false): any[] {
     if (!field || !this.allData || !this.selectedTab || !this.allData[this.selectedTab])
       return [];
     let values: any[] = [];
@@ -709,8 +711,17 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       var c = this.fieldValue(d, field);
       if ((c === null || c === undefined || c === '') && !values.includes('(blanks)'))
         values.push('(blanks)');
-      else if ((c === 0 || c === false || c) && !values.includes(c))
-        values.push(c);
+      else if (c === 0 || c === false || c) {
+        // if filter is split then split the value by comma or semicolon and trim to get distinct values for multi choice fields
+        if (split && typeof c === 'string' && (c.includes(',') || c.includes(';'))) {
+          c.split(/[,;]/).map((v: string) => v.trim()).forEach((v: string) => {
+            if (!values.includes(v))
+              values.push(v);
+          });
+        } else {
+          values.push(c);
+        }
+      }
     });
     return values.sort((a, b) => {
       if (a === '(blanks)') return -1;

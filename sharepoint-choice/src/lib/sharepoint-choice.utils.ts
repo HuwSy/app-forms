@@ -333,6 +333,9 @@ export class SharepointChoiceUtils {
     do {
       await this.cleanLoadKeys(d[i]);
       d[i].ChangedFields = [];
+      // these dates are always utc but lack the z
+      d[i].Created = new Date(d[i].Created + 'Z');
+      d[i].Modified = new Date(d[i].Modified + 'Z');
 
       for (const k of Object.keys(d[i])) {
         if ((spec && !spec[k]) || excludedFields.includes(k))
@@ -418,6 +421,10 @@ export class SharepointChoiceUtils {
     var login;
 
     await msal.initialize();
+    // Completing any pending redirect flow clears stale temporary auth state.
+    try {
+      await msal.handleRedirectPromise();
+    } catch (e) { }
 
     // permission settings
     var params = {
@@ -429,12 +436,19 @@ export class SharepointChoiceUtils {
     try {
       login = await msal.acquireTokenSilent(params);
     } catch (e) {
-      await msal.loginPopup(params);
-      params.account = msal.getAllAccounts()[0];
       try {
+        await msal.loginPopup(params);
+        params.account = msal.getAllAccounts()[0];
         login = await msal.acquireTokenSilent(params);
-      } catch (e) {
-        throw `Exception acquiring token silently or via popup for tenant ${tenancyOnMicrosoft || App.Tenancy} with error ${e}`;
+      } catch (inner) {
+        if (this.isMsalInteractionInProgress(inner)) {
+          const staleKeys = this.getMsalInteractionKeys();
+          this.clearMsalInteractionState();
+          alert('Error logging in, please refresh the page and try again.');
+          throw `MSAL interaction_in_progress detected. Cleared stale keys (${staleKeys.length}${staleKeys.length > 0 ? `: ${staleKeys.join(', ')}` : ''})`;
+        }
+
+        throw `Exception acquiring token silently or via popup for tenant ${tenancyOnMicrosoft || App.Tenancy} with error ${inner}`;
       }
     }
 
@@ -467,6 +481,54 @@ export class SharepointChoiceUtils {
     } catch (e) {
       throw `Exception getting API data with status ${r?.status} response ${e} and body ${r?.body}`;
     }
+  }
+
+  private isMsalInteractionInProgress(error: unknown): boolean {
+    const raw = error as any;
+    const code = `${raw?.errorCode || raw?.code || ''}`.toLowerCase();
+    const message = `${raw?.errorMessage || raw?.message || raw || ''}`.toLowerCase();
+    return code.includes('interaction_in_progress') || message.includes('interaction_in_progress');
+  }
+
+  private getMsalInteractionKeys(): string[] {
+    const keys: string[] = [];
+    const collect = (storage?: Storage) => {
+      if (!storage)
+        return;
+      for (let i = 0; i < storage.length; i++) {
+        const key = storage.key(i);
+        if (!key)
+          continue;
+        if (/^msal\./i.test(key) && /interaction|request|urlhash|state|nonce/i.test(key))
+          keys.push(key);
+      }
+    };
+
+    try { collect(window.sessionStorage); } catch (e) { }
+    try { collect(window.localStorage); } catch (e) { }
+
+    return keys.filter((k, i, a) => a.indexOf(k) === i);
+  }
+
+  private clearMsalInteractionState(): void {
+    const clear = (storage?: Storage) => {
+      if (!storage)
+        return;
+
+      const remove: string[] = [];
+      for (let i = 0; i < storage.length; i++) {
+        const key = storage.key(i);
+        if (!key)
+          continue;
+        if (/^msal\./i.test(key) && /interaction|request|urlhash|state|nonce/i.test(key))
+          remove.push(key);
+      }
+
+      remove.forEach((key) => storage.removeItem(key));
+    };
+
+    try { clear(window.sessionStorage); } catch (e) { }
+    try { clear(window.localStorage); } catch (e) { }
   }
 
   private cleanSaveKeys(save: SharepointChoiceForm, uned?: SharepointChoiceForm): void {

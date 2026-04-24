@@ -144,7 +144,7 @@ export interface SharepointChoiceColumn {
       ${val}
     `;
   */
-  filter?: 'text' | 'number' | 'date' | 'select' | 'none'; // filter type
+  filter?: 'text' | 'number' | 'date' | 'select' | 'split' | 'none'; // filter type
   width?: number; // minwidth of the column
   children?: SharepointChoiceColumn[] // children columns, only 1 layer deep supported
   center?: boolean; // center align the column
