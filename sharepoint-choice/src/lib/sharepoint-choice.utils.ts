@@ -257,12 +257,14 @@ export class SharepointChoiceUtils {
       }
 
       // version history objects have name fields as this
-      if (typeof d[key] == "object" && d[key].LookupValue)
+      if (typeof d[key] == "object" && d[key].LookupValue) {
         d[key] = d[key].LookupValue;
+        continue;
+      }
 
       // dates and date times
       let i = d[key].toString();
-      if (/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9]:*[0-9]*\.*[0-9]*Z*$/.test(i)
+      if (/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9](:[0-5][0-9](\.[0-9]+)?)?(Z|\(+|-)[0-1][0-9](:?[0-5][0-9])?)?$/.test(i)
         || /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]$/.test(i)) {
         d[key] = new Date(d[key]);
         continue;
