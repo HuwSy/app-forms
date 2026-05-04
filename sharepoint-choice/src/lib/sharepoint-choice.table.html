@@ -148,7 +148,7 @@
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_S'+colIndex"
                    (ngModelChange)="filterChange(col, 'greater', $event)"
-                   [ngModel]="filter.greater"
+                   [ngModel]="filter.greater | date:'yyyy-MM-dd'"
                    placeholder="Filter by {{name}} from" />
             <br>
             To:<br>
@@ -156,7 +156,7 @@
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_E'+colIndex"
                    (ngModelChange)="filterChange(col, 'less', $event)"
-                   [ngModel]="filter.less"
+                   [ngModel]="filter.less | date:'yyyy-MM-dd'"
                    placeholder="Filter by {{name}} to" />
             }
             @default {
@@ -260,7 +260,7 @@
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_S'+colIndex"
                    (ngModelChange)="filterChange(col, 'greater', $event)"
-                   [ngModel]="filter.greater"
+                   [ngModel]="filter.greater | date:'yyyy-MM-dd'"
                    placeholder="Filter by {{name}} from" />
             <br>
             To:<br>
@@ -268,7 +268,7 @@
                    (click)="$event.stopPropagation()"
                    [name]="'ColFlt_E'+colIndex"
                    (ngModelChange)="filterChange(col, 'less', $event)"
-                   [ngModel]="filter.less"
+                   [ngModel]="filter.less | date:'yyyy-MM-dd'"
                    placeholder="Filter by {{name}} to" />
             }
             @default {

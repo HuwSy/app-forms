@@ -257,14 +257,12 @@ export class SharepointChoiceUtils {
       }
 
       // version history objects have name fields as this
-      if (typeof d[key] == "object" && d[key].LookupValue) {
+      if (typeof d[key] == "object" && d[key].LookupValue)
         d[key] = d[key].LookupValue;
-        continue;
-      }
 
       // dates and date times
       let i = d[key].toString();
-      if (/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9]:*[0-9]*\.*[0-9]*Z*\+*[0-9]*:*[0-9]*$/.test(i)
+      if (/^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9]:*[0-9]*\.*[0-9]*Z*$/.test(i)
         || /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]$/.test(i)) {
         d[key] = new Date(d[key]);
         continue;
@@ -333,11 +331,11 @@ export class SharepointChoiceUtils {
     let i = d.length - 1;
     let lastVersion: any = null;
     do {
-      // these dates are always utc when they lack z or +
-      d[i].Created += d[i].Created.includes('Z') || d[i].Created.includes('+') ? '' : 'Z';
-      d[i].Modified += d[i].Modified.includes('Z') || d[i].Modified.includes('+') ? '' : 'Z';
       await this.cleanLoadKeys(d[i]);
       d[i].ChangedFields = [];
+      // these dates are always utc but lack the z
+      d[i].Created = new Date(d[i].Created + 'Z');
+      d[i].Modified = new Date(d[i].Modified + 'Z');
 
       for (const k of Object.keys(d[i])) {
         if ((spec && !spec[k]) || excludedFields.includes(k))

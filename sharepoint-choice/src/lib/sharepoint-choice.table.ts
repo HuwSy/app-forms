@@ -162,9 +162,17 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   @Input() set search(value: SharepointChoiceRowChild | undefined) {
     this._search = value;
+
+    this.sort = this.getStorage(`Sort`);
+    this.filter = this.getStorage(`Filter`);
+    this.hiddenColumns = this.getStorage(`Hide`);
+    this.selectedTab = this.getStorage(`Tab`);
+    this.pageSize = this.getStorage(`Size`);
+
     // trigger setter to apply search filter to all data and reset caches
     this.allData = this._allDataIn;
     this._rowsCache.clear();
+
     this.debounceAndMark();
   }
   get search(): SharepointChoiceRowChild | undefined {
@@ -718,7 +726,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
             if (!values.includes(v))
               values.push(v);
           });
-        } else {
+        } else if (!values.includes(c)) {
           values.push(c);
         }
       }
@@ -755,6 +763,14 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this._nodeCache.clear();
 
     var filter = this.filter[tab] || {};
+    // ensure any date filters are correctly converted
+    for (let f in filter) {
+      if (filter[f].greater)
+        filter[f].greater = typeof filter[f].greater === 'string' ? new Date(filter[f].greater as string) : filter[f].greater;
+      if (filter[f].less)
+        filter[f].less = typeof filter[f].less === 'string' ? new Date(filter[f].less as string) : filter[f].less;
+    }
+
     var sort = this.sort[tab] || [];
 
     if (filter['_selected'])
@@ -799,10 +815,10 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
               } else if (!(c?.toString() === value?.toString() || (value == '(blanks)' && (c === null || c === undefined || c === ''))))
                 return false;
             } else if (op == 'greater') {
-              if (!(c > value))
+              if (!(c >= value))
                 return false;
             } else if (op == 'less') {
-              if (!(c === null || c < value))
+              if (!(c === null || c <= value))
                 return false;
             }
           }
