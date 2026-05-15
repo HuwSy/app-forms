@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-choice",
-  "version": "21.2.26",
+  "version": "21.2.29",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
@@ -17,11 +17,11 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@angular/common": "^21.2.10",
-    "@angular/core": "^21.2.10",
-    "@angular/forms": "^21.2.10",
-    "@angular/platform-browser": "^21.2.10",
-    "@azure/msal-browser": "^5.8.0",
+    "@angular/common": "^21.2.13",
+    "@angular/core": "^21.2.13",
+    "@angular/forms": "^21.2.13",
+    "@angular/platform-browser": "^21.2.13",
+    "@azure/msal-browser": "^5.10.1",
     "@bobbyquantum/ngx-editor": "^21.0.0",
     "@kenjiuno/msgreader": "^1.28.0",
     "@pnp/sp": "^4.19.0",
@@ -32,10 +32,10 @@
     "stacktrace-js": "^2.0.2"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^21.2.8",
-    "@angular/build": "^21.2.8",
-    "@angular/cli": "^21.2.8",
-    "@types/office-js": "^1.0.589",
+    "@angular-devkit/build-angular": "^21.2.11",
+    "@angular/build": "^21.2.11",
+    "@angular/cli": "^21.2.11",
+    "@types/office-js": "^1.0.591",
     "ng-packagr": "^21.2.3",
     "typescript": "~5.9.3"
   }
