@@ -97,7 +97,10 @@
                     multiple="multiple"
                     title="Filter by {{name}}"
                     class="multilarge">
-              <option disabled selected hidden [value]="null">Filter by {{name}}</option>
+              <option disabled
+                      selected
+                      hidden
+                      [value]="null">Filter by {{name}}</option>
               <option>-- All --</option>
               @for (option of filterDistinct(col.field); track option) {
               <option [value]="option.toString()">{{option}}</option>
@@ -110,7 +113,10 @@
                     [name]="'ColFlt_'+colIndex"
                     [ngModel]="filter.contains"
                     title="Filter by {{name}}">
-              <option disabled selected hidden [value]="null">Filter by {{name}}</option>
+              <option disabled
+                      selected
+                      hidden
+                      [value]="null">Filter by {{name}}</option>
               <option>-- All --</option>
               @for (option of filterDistinct(col.field, true); track option) {
               <option [value]="option.toString()">{{option}}</option>
@@ -209,7 +215,10 @@
                     multiple="multiple"
                     title="Filter by {{name}}"
                     class="multilarge">
-              <option disabled selected hidden [value]="null">Filter by {{name}}</option>
+              <option disabled
+                      selected
+                      hidden
+                      [value]="null">Filter by {{name}}</option>
               <option>-- All --</option>
               @for (option of filterDistinct(col.field); track option) {
               <option [value]="option.toString()">{{option}}</option>
@@ -222,7 +231,10 @@
                     [name]="'ColFlt_'+colIndex"
                     [ngModel]="filter.contains"
                     title="Filter by {{name}}">
-              <option disabled selected hidden [value]="null">Filter by {{name}}</option>
+              <option disabled
+                      selected
+                      hidden
+                      [value]="null">Filter by {{name}}</option>
               <option>-- All --</option>
               @for (option of filterDistinct(col.field, true); track option) {
               <option [value]="option.toString()">{{option}}</option>
@@ -353,7 +365,8 @@
           }
           @case ('date') {
           @if (hl) {
-          <a [href]="hl" [target]="hyperlinkTarget">{{value | date:'dd MMM yy'}}</a>
+          <a [href]="hl"
+             [target]="hyperlinkTarget">{{value | date:'dd MMM yy'}}</a>
           }
           @else {
           {{value | date:'dd MMM yy'}}
@@ -361,7 +374,8 @@
           }
           @case ('number') {
           @if (hl) {
-          <a [href]="hl" [target]="hyperlinkTarget">{{value | number:'1.0-2'}}</a>
+          <a [href]="hl"
+             [target]="hyperlinkTarget">{{value | number:'1.0-2'}}</a>
           }
           @else {
           {{value | number:'1.0-2'}}
@@ -369,7 +383,8 @@
           }
           @case ('boolean') {
           @if (hl) {
-          <a [href]="hl" [target]="hyperlinkTarget">{{formatBoolean(value)}}</a>
+          <a [href]="hl"
+             [target]="hyperlinkTarget">{{formatBoolean(value)}}</a>
           }
           @else {
           {{formatBoolean(value)}}
@@ -377,7 +392,8 @@
           }
           @default {
           @if (hl) {
-          <a [href]="hl" [target]="hyperlinkTarget">{{value}}</a>
+          <a [href]="hl"
+             [target]="hyperlinkTarget">{{value}}</a>
           }
           @else {
           {{value}}
@@ -412,7 +428,8 @@
           }
           @case ('date') {
           @if (hl) {
-          <a [href]="hl" [target]="hyperlinkTarget">{{value | date:'dd MMM yy'}}</a>
+          <a [href]="hl"
+             [target]="hyperlinkTarget">{{value | date:'dd MMM yy'}}</a>
           }
           @else {
           {{value | date:'dd MMM yy'}}
@@ -420,7 +437,8 @@
           }
           @case ('number') {
           @if (hl) {
-          <a [href]="hl" [target]="hyperlinkTarget">{{value | number:'1.0-2'}}</a>
+          <a [href]="hl"
+             [target]="hyperlinkTarget">{{value | number:'1.0-2'}}</a>
           }
           @else {
           {{value | number:'1.0-2'}}
@@ -428,7 +446,8 @@
           }
           @case ('boolean') {
           @if (hl) {
-          <a [href]="hl" [target]="hyperlinkTarget">{{formatBoolean(value)}}</a>
+          <a [href]="hl"
+             [target]="hyperlinkTarget">{{formatBoolean(value)}}</a>
           }
           @else {
           {{formatBoolean(value)}}
@@ -436,7 +455,8 @@
           }
           @default {
           @if (hl) {
-          <a [href]="hl" [target]="hyperlinkTarget">{{value}}</a>
+          <a [href]="hl"
+             [target]="hyperlinkTarget">{{value}}</a>
           }
           @else {
           {{value}}
@@ -527,14 +547,14 @@
           <input type="checkbox"
                  [name]="'HideCol_'+colIndex+'_'+'all'"
                  (click)="toggleChildren(heading, null, $event.target.checked)"
-                 title="Toggle visibility for this group for all tabs"/>
+                 title="Toggle visibility for this group for all tabs" />
         </td>
         @for (t of allTabs; track t) {
         <td [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : null">
           <input type="checkbox"
                  [name]="'HideCol_'+colIndex+'_'+t"
                  (click)="toggleChildren(heading, t, $event.target.checked)"
-                 title="Toggle visibility for this group for {{t}} tab"/>
+                 title="Toggle visibility for this group for {{t}} tab" />
         </td>
         }
       </tr>
@@ -549,7 +569,7 @@
                  (click)="toggleRow(child, $event.target.checked)"
                  [name]="'HideCol_'+colIndex+'_'+childIndex+'_'+'all'"
                  [hidden]="typeof child.hide === 'function'"
-                 title="Toggle visibility for all tabs"/>
+                 title="Toggle visibility for all tabs" />
         </td>
         @for (t of allTabs; track t) {
         <td [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : null">
@@ -558,7 +578,7 @@
                  [ngModel]="isHidden(child, t)"
                  [name]="'HideCol_'+colIndex+'_'+childIndex+'_'+t"
                  [disabled]="typeof child.hide === 'function'"
-                 title="Toggle visibility for {{t}} tab"/>
+                 title="Toggle visibility for {{t}} tab" />
         </td>
         }
       </tr>
@@ -575,7 +595,7 @@
                  (click)="toggleRow(heading, $event.target.checked)"
                  [name]="'HideCol_'+colIndex+'_'+'all'"
                  [hidden]="typeof heading.hide === 'function'"
-                 title="Toggle visibility for all tabs"/>
+                 title="Toggle visibility for all tabs" />
         </td>
         @for (t of allTabs; track t) {
         <td [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : null">
@@ -584,7 +604,7 @@
                  [ngModel]="isHidden(heading, t)"
                  [name]="'HideCol_'+colIndex+'_'+t"
                  [disabled]="typeof heading.hide === 'function'"
-                 title="Toggle visibility for {{t}} tab"/>
+                 title="Toggle visibility for {{t}} tab" />
         </td>
         }
       </tr>

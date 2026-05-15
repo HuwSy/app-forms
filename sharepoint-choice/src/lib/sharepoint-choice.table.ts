@@ -18,7 +18,7 @@ interface SharepointChoiceSort {
 
 interface SharepointChoiceFilter {
   [tabName: string]: {
-    [fieldName:string]: {
+    [fieldName: string]: {
       equals?: Array<string> | string | number | boolean | Date | null;
       contains?: string | null;
       greater?: number | Date | null;
@@ -116,7 +116,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this.chRef.markForCheck();
   }
   get allTabs(): string[] {
-     return this._allTabs || Object.keys(this.allData) || [];
+    return this._allTabs || Object.keys(this.allData) || [];
   }
   private _allTabs?: string[];
 
@@ -263,23 +263,23 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     if (!this._sort)
       try {
         this._sort = this.getStorage(`Sort`);
-      } catch {}
+      } catch { }
     if (!this._filter)
       try {
         this._filter = this.getStorage(`Filter`);
-      } catch {}
+      } catch { }
     if (!this._hiddenColumns)
       try {
         this._hiddenColumns = this.getStorage(`Hide`);
-      } catch {}
+      } catch { }
     if (!this._selectedTab)
       try {
         this._selectedTab = this.getStorage(`Tab`);
-      } catch {}
+      } catch { }
     if (!this._pageSize)
       try {
         this._pageSize = this.getStorage(`Size`);
-      } catch {}
+      } catch { }
   }
 
   ngOnDestroy(): void {
@@ -382,7 +382,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       return this.filterChange(col, 'equals', []);
 
     // ensure object type is correct or replace the object
-    let current:string[] = [];
+    let current: string[] = [];
     try {
       if (!this.selectedTab || !col.field)
         return;
@@ -514,7 +514,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     });
   }
 
-  toggleChildren (col: SharepointChoiceColumn, tab: string | null, checked: boolean): void {
+  toggleChildren(col: SharepointChoiceColumn, tab: string | null, checked: boolean): void {
     this.allTabs.filter(t => !tab || t == tab).forEach(t => {
       if (!col.children)
         return;
@@ -646,7 +646,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     if (typeof col.hide == 'function')
       return col.hide(tab);
     if (!col.field || !this.allowHideColumns)
-       return false;
+      return false;
     return this.hiddenColumns[tab]?.includes(col.field);
   }
 
@@ -881,8 +881,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     if (col.filter === 'date') return 'date';
     if (col.filter === 'number') return 'number';
     // slower checks based on value
-    switch (typeof value)
-    {
+    switch (typeof value) {
       case 'number':
         return 'number';
       case 'boolean':

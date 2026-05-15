@@ -336,10 +336,10 @@ export class SharepointChoiceUtils {
       // these dates are always utc when they lack z or +
       d[i].Created += d[i].Created.includes('Z') || d[i].Created.includes('+') ? '' : 'Z';
       d[i].Modified += d[i].Modified.includes('Z') || d[i].Modified.includes('+') ? '' : 'Z';
-      
+
       await this.cleanLoadKeys(d[i]);
       d[i].ChangedFields = [];
-      
+
       for (const k of Object.keys(d[i])) {
         if ((spec && !spec[k]) || excludedFields.includes(k))
           continue;
@@ -785,18 +785,18 @@ export class SharepointChoiceUtils {
             await this.sp.web.getFolderByServerRelativePath(path + '/' + file.FileName).recycle();
           } else if (file.Data) {
             // file to upload
-            await this.sp.web.getFolderByServerRelativePath(path).files.addUsingPath(file.FileName, file.Data, { Overwrite: true });
+            var uploaded = await this.sp.web.getFolderByServerRelativePath(path).files.addUsingPath(file.FileName, file.Data, { EnsureUniqueFileName: true });
             if (this.hasData(file.ListItemAllFields)) {
-              let i = await this.sp.web.getFolderByServerRelativePath(path).files.getByUrl(file.FileName).getItem();
+              let i = await this.sp.web.getFileByServerRelativePath(uploaded.ServerRelativeUrl).getItem();
               await i.update(file.ListItemAllFields);
             }
             // mock the data back in so submit again doesnt fail
             file.TimeCreated = new Date();
-            file.ServerRelativeUrl = path + '/' + file.FileName;
+            file.ServerRelativeUrl = uploaded.ServerRelativeUrl;
             delete file.Data;
           } else if (this.hasData(file.ListItemAllFields)) {
             // get current item and check for changes
-            let i = await this.sp.web.getFolderByServerRelativePath(path + '/' + file.FileName).getItem();
+            let i = await this.sp.web.getFileByServerRelativePath(path + '/' + file.FileName).getItem();
             await i.update(file.ListItemAllFields);
           }
         } catch (e) {
