@@ -28,7 +28,7 @@
             ],
             "styles": [
               "src/styles.scss",
-              "node_modules/sharepoint-choice/src/styles.scss"
+              "node_modules/sharepoint-choice/src/lib/styles.scss"
             ],
             "scripts": []
           },
