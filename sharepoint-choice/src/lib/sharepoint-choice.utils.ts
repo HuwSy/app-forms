@@ -13,7 +13,7 @@ import "@pnp/sp/search";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { PermissionKind } from "@pnp/sp/security";
 import { ISearchQuery, ISort, SearchResults } from "@pnp/sp/search";
-import { App } from './App';
+import { App } from '../App';
 import { SharepointChoicePermission, SharepointChoiceForm, SharepointChoiceList, SharepointChoiceField, SharepointChoiceAttachment } from "./sharepoint-choice.models";
 
 ///<summary>
