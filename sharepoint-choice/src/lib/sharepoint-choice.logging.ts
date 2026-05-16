@@ -1,6 +1,6 @@
 import { ErrorHandler } from '@angular/core';
 import { fromError } from 'stacktrace-js';
-import { App } from './App'
+import { App } from '../App'
 
 export class SharepointChoiceLogging implements ErrorHandler {
   private _grafana: {
