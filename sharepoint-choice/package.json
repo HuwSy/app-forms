@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-choice",
-  "version": "21.2.30",
+  "version": "21.2.31",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
@@ -17,6 +17,8 @@
   ],
   "license": "MIT",
   "peerDependencies": {
+    "@angular/build": "^21.2.11",
+    "@angular/cli": "^21.2.11",
     "@angular/common": "^21.2.13",
     "@angular/core": "^21.2.13",
     "@angular/forms": "^21.2.13",
@@ -32,7 +34,6 @@
     "stacktrace-js": "^2.0.2"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^21.2.11",
     "@angular/build": "^21.2.11",
     "@angular/cli": "^21.2.11",
     "@types/office-js": "^1.0.591",
