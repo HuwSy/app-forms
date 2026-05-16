@@ -1,6 +1,6 @@
 {
   "name": "sample",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -11,10 +11,10 @@
   "private": true,
   "sideEffects": false,
   "dependencies": {
-    "sharepoint-choice": "^21.1.109"
+    "sharepoint-choice": "^21.2.31"
   },
   "devDependencies": {
-    "@angular/build": "^21.1.4",
-    "@angular/cli": "^21.1.4"
+    "@angular/build": "^21.2.11",
+    "@angular/cli": "^21.2.11",
   }
 }
