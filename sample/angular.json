@@ -72,6 +72,11 @@
               "localhost",
               ".sharepoint.com"
             ],
+            "headers": {
+              "Access-Control-Allow-Origin": "*",
+              "Access-Control-Allow-Methods": "*",
+              "Access-Control-Allow-Headers": "*",
+            }
             "sslKey": "./localhost.key",
             "sslCert": "./localhost.crt"
           }
