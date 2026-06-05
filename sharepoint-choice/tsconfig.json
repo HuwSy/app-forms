@@ -2,8 +2,6 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "baseUrl": "./",
-    "outDir": "./dist/out-tsc",
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "noImplicitAny": false,
@@ -14,18 +12,20 @@
     "noFallthroughCasesInSwitch": true,
     "sourceMap": true,
     "declaration": false,
-    "downlevelIteration": true,
     "experimentalDecorators": true,
     "moduleResolution": "bundler",
     "importHelpers": true,
     "paths": {
       "sharepoint-choice": [
-        "dist/sharepoint-choice"
+        "./dist/sharepoint-choice"
       ]
     },
     "target": "ESNext",
     "module": "ESNext",
     "useDefineForClassFields": false,
+    "types": [
+      "office-js"
+    ]
     "lib": [
       "ESNext",
       "dom"
