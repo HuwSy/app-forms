@@ -1,18 +1,20 @@
 import { bootstrapApplication } from '@angular/platform-browser';
-import { ErrorHandler, provideZonelessChangeDetection } from '@angular/core';
 import { SharepointChoiceLogging } from 'sharepoint-choice';
+import { ErrorHandler, provideZonelessChangeDetection } from '@angular/core';
 import { HelloWorldWebPartComponent } from './app/hello-world-web-part/hello-world-web-part.component';
 
 // only bootstrap required components
 var loadComponents = () => {
+  let loading = false;
   [{
     com: HelloWorldWebPartComponent,
     tag: 'app-hello-world-web-part'
-  }].forEach((component) => {
+  }].map((component) => {
     var el = document.querySelector(component.tag);
     // no element or already loaded then skip
     if (!el || el.hasAttribute('loaded'))
       return;
+    loading = true;
     // flag loaded on this page
     el.setAttribute('loaded', 'true');
     // bootstrap the component
@@ -21,6 +23,8 @@ var loadComponents = () => {
       })
       .catch((err) => console.error(err));
   });
+  if (!loading)
+    setTimeout(loadComponents, 500);
 };
 
 // on partial page load trigger bootstrap load
@@ -29,12 +33,12 @@ setTimeout(() => {
   w.pushStateOriginal = w.history.pushState.bind(w.history);
   w.history.pushState = function () {
     w.pushStateOriginal(...Array.prototype.slice.call(arguments, 0));
-    setTimeout(loadComponents, 2000);
+    setTimeout(loadComponents, 500);
   };
   w.addEventListener('popstate', () => {
-    setTimeout(loadComponents, 2000)
+    setTimeout(loadComponents, 500)
   });
-}, 2000);
+}, 500);
 
 // on page load trigger bootstrap load
 loadComponents();
