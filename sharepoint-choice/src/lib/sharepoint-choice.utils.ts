@@ -10,7 +10,7 @@ import "@pnp/sp/files";
 import "@pnp/sp/folders";
 import "@pnp/sp/profiles";
 import "@pnp/sp/search";
-import { PublicClientApplication } from "@azure/msal-browser";
+import { PublicClientApplication, createNestablePublicClientApplication } from "@azure/msal-browser";
 import { PermissionKind } from "@pnp/sp/security";
 import { ISearchQuery, ISort, SearchResults } from "@pnp/sp/search";
 import { App } from '../App';
@@ -402,8 +402,10 @@ export class SharepointChoiceUtils {
 
   // calls an api more generically, or graph api if no parameters passed
   public async callApi(tenancyOnMicrosoft?: string, clientId?: string, permissionScope?: string, apiUrl?: string, httpMethod?: string, jsonPostData?: any, dataType: string = 'json'): Promise<any> {
-    // init client
-    var msal = new PublicClientApplication({
+    let office = (window as any).Office;
+    let nested = !!office?.context?.requirements?.isSetSupported?.('NestedAppAuth', '1.1');
+
+    var msalOpts = {
       auth: {
         clientId: clientId || App.GraphClient,
         authority: `https://login.microsoftonline.com/${tenancyOnMicrosoft || App.Tenancy}.onmicrosoft.com`,
@@ -419,19 +421,26 @@ export class SharepointChoiceUtils {
         popupBridgeTimeout: 180000, // this needs to allow for user interaction in some cases
         redirectNavigationTimeout: 240000 // this needs to allow for user interaction in some cases
       }
-    });
+    };
+
+    // init client
+    var msal = nested
+      ? await createNestablePublicClientApplication(msalOpts)
+      : new PublicClientApplication(msalOpts);
 
     var login;
 
-    await msal.initialize();
-    // Completing any pending redirect flow clears stale temporary auth state.
-    try {
-      await msal.handleRedirectPromise();
-    } catch (e) { }
+    if (!nested) {
+      await msal.initialize();
+      // Completing any pending redirect flow clears stale temporary auth state.
+      try {
+        await msal.handleRedirectPromise();
+      } catch (e) { }
+    }
 
     // permission settings
     var params = {
-      scopes: permissionScope ? [permissionScope] : [],
+      scopes: permissionScope ? [permissionScope] : apiUrl?.includes('/messages/') || apiUrl?.includes('/attachments/') || apiUrl?.includes('/mailfolders/') ? ['Mail.Read', 'Mail.Read.Shared'] : ['User.Read'],
       account: msal.getAllAccounts()[0]
     };
 
@@ -440,9 +449,16 @@ export class SharepointChoiceUtils {
       login = await msal.acquireTokenSilent(params);
     } catch (e) {
       try {
-        await msal.loginPopup(params);
-        params.account = msal.getAllAccounts()[0];
-        login = await msal.acquireTokenSilent(params);
+        if (nested) {
+          login = await msal.acquireTokenPopup({ scopes: params.scopes });
+          params.account = login.account || msal.getAllAccounts()[0];
+          if (!login.accessToken && params.account)
+            login = await msal.acquireTokenSilent(params);
+        } else {
+          await msal.loginPopup(params);
+          params.account = msal.getAllAccounts()[0];
+          login = await msal.acquireTokenSilent(params);
+        }
       } catch (inner) {
         if (this.isMsalInteractionInProgress(inner)) {
           const staleKeys = this.getMsalInteractionKeys();

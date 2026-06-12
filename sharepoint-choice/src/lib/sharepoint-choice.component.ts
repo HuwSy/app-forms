@@ -153,8 +153,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   filesOver?: boolean;
 
   office: {
+    // type of office addin
     type: string | null,
+    // loading state for office ops
     loading: boolean,
+    // errors to show
     alert?: string
   } = { type: null, loading: false };
 
@@ -866,11 +869,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       return;
     // try and determine if we are in an office addin
     try {
-      if (window.top != window.self) {
-        throw "In an iframe";
-      }
-      if ('IsOfficeURLSchemes' in window) {
+      if ('IsOfficeURLSchemes' in window || window.location.search.includes('_host_Info=')) {
         throw "In an addin";
+      }
+      if (window.top != window.self) {
+        throw "In an iframe, likely an addin";
       }
       // unlikely to be an addin
       return;
@@ -887,7 +890,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       // only once office.js loaded
       if ('Office' in window) {
         let office: typeof Office = (window as any).Office;
-        if (!office)
+        if (!office?.onReady)
           return;
         // on ready should be ran soon after office.js is loaded trigger
         office.onReady(info => {
@@ -897,9 +900,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             // disable the window alert and confirm override that outlook.js implements
             window.alert = (message?: any, ...optionalParams: any[]): void => {
               this.office.alert = message?.toString() || '';
+              this.chRef.markForCheck();
+              this.chRef.detectChanges();
             };
             window.confirm = (message?: any, ...optionalParams: any[]): boolean => {
               this.office.alert = 'Auto approving... ' + (message?.toString() || '');
+              this.chRef.markForCheck();
+              this.chRef.detectChanges();
               return true;
             };
             // abuse changed to mark for change detection and ensure running
@@ -912,10 +919,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // import from office addin selection or document panel
   importOutlook() {
-    this.office.loading = true;
     let office: typeof Office = (window as any).Office;
     if (!office)
       return;
+    this.office.loading = true;
 
     // if the adding type is outlook then get the selected email(s)
     var spc = new SharepointChoiceUtils();
@@ -961,6 +968,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       }
 
       if (errors.length > 0) {
+        this.office.loading = false;
         // if there are errors then alert them
         alert(`Errors saving emails:\n\n${errors.join('\n')}`);
         throw errors.join('\n');
@@ -970,10 +978,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // import from office addin selection or document panel
   importOffice() {
-    this.office.loading = true;
     let office: typeof Office = (window as any).Office;
     if (!office)
       return;
+    this.office.loading = true;
 
     // if the adding type is word or excel then get the current document
     let docDataSlices: Office.FileType.Text[] | Office.FileType.Compressed[] = [];
@@ -1048,6 +1056,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         await this.appendFile(`${fileName}`, Uint8Array.from(fileContent.toString(), c => c.charCodeAt(0)).buffer, this.form[this.field].results);
       }
     } catch (e) {
+      this.office.loading = false;
       // if there is an error then alert it
       alert(`Error saving file:\n\n${e}`);
       throw e;
@@ -1088,36 +1097,44 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     results.push(file);
 
     if (this.file?.extract && fileName.toLowerCase().endsWith(".zip"))
-      await this.zips(data, results);
+      await this.zips(fileName, data, results);
     if (this.file?.extract && fileName.toLowerCase().endsWith(".msg"))
-      await this.msgs(data, results);
+      await this.msgs(fileName, data, results);
     if (this.file?.extract && fileName.toLowerCase().endsWith(".eml"))
-      await this.emls(data, results);
+      await this.emls(fileName, data, results);
 
     this.office.loading = false;
     this.changed();
   }
 
   // extract zip files and append to results
-  async zips(data: ArrayBuffer, results: SharepointChoiceAttachment[]) {
+  async zips(fileName:string, data: ArrayBuffer, results: SharepointChoiceAttachment[]) {
     try {
       var zip = await loadAsync(data);
-      var files = Object.keys(zip.files);
-      files.forEach(async (file) => {
+      var files = Object.values(zip.files);
+      var failiures = 0;
+      await Promise.all(files.map(async (file) => {
+        if (file.dir)
+          return;
+
         try {
-          var buffer: ArrayBuffer | undefined = await zip.file(file)?.async('arraybuffer');
+          var buffer: ArrayBuffer | undefined = await file.async('arraybuffer');
           if (buffer) {
-            await this.appendFile(file, buffer, results, `Date: ${zip.files[file].date}`);
+            var flattenedName = file.name.replace(/(\.\.[\\/])+/g, '').replace(/^\.+/, '').replace(/^[\\/]+/, '').replace(/[\\/]+/g, '-');
+            await this.appendFile(fileName + ' - ' + flattenedName, buffer, results, `Date: ${file.date}`);
           }
-        } catch (e) { }
-      });
+        } catch (e) { failiures++; }
+      }));
+      // if there were no failiures then remove the original zip file as all contents extracted successfully, otherwise keep it as a fallback
+      if (failiures == 0)
+        results = results.filter(r => r.FileName != fileName);
     } catch (e) {
       // zip is uploaded so any extracted elements are only nice to have
     }
   }
 
   // extract and append msg email attachments to results
-  async msgs(data: ArrayBuffer, results: SharepointChoiceAttachment[]) {
+  async msgs(fileName:string, data: ArrayBuffer, results: SharepointChoiceAttachment[]) {
     try {
       // new MsgReader(data) doesnt seem to work and .default is not recognised but ['default'] works somehow
       var msgReader = new MsgReader['default'](data) as MsgReader;
@@ -1135,7 +1152,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           return;
         try {
           var file = msgReader.getAttachment(attachment);
-          await this.appendFile(file.fileName, file.content.buffer as ArrayBuffer, results, `Sent: ${received}`);
+          await this.appendFile(fileName + ' - ' + file.fileName, file.content.buffer as ArrayBuffer, results, `Sent: ${received}`);
         } catch (e) { }
       });
     } catch (e) {
@@ -1144,7 +1161,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // extract and append eml email attachments to results
-  async emls(data: ArrayBuffer, results: SharepointChoiceAttachment[]) {
+  async emls(fileName:string, data: ArrayBuffer, results: SharepointChoiceAttachment[]) {
     try {
       // reads the email string data into a json object
       readEml(new TextDecoder().decode(data), (err, ReadEmlJson) => {
@@ -1159,7 +1176,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             var name = attachment.id?.replace(/^</, '').replace(/>$/, '').split('@')[0];
             if (!name || name.indexOf('.') < 0)
               name = attachment.name;
-            await this.appendFile(name, Uint8Array.from(atob(attachment.data64), c => c.charCodeAt(0)).buffer, results, `Sent: ${received}`);
+            await this.appendFile(fileName + ' - ' + name, Uint8Array.from(atob(attachment.data64), c => c.charCodeAt(0)).buffer, results, `Sent: ${received}`);
           } catch (e) { }
         });
       });

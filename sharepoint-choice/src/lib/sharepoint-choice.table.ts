@@ -190,6 +190,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   // allow selection and emit selected items and tab
   @Input() allowSelection: boolean = false;
   @Output() selected = new EventEmitter<{ data: SharepointChoiceRow[], tab: string | undefined }>();
+  @Output() cleared = new EventEmitter<void>();
 
   // outbound events or pseudo callbacks for await support on click, in order of trigger
   // cellClicked triggers ahead of all of these if present
@@ -488,6 +489,15 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this.hiddenColumns = {};
   }
 
+  showClearButton(): boolean {
+    return this.hasActiveValue(this.search) || this.hasActiveValue(this.sort) || this.hasActiveValue(this.filter);
+  }
+
+  clearTable(event?: Event): void {
+    this.resetFilters();
+    this.cleared.emit();
+  }
+
   columnToggle(col: SharepointChoiceColumn, tab: string): void {
     let currentHidden = { ...this.hiddenColumns };
     if (!col.field)
@@ -709,6 +719,18 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     const parts = field.split('.');
     this._fieldMapCache.set(field, parts);
     return parts;
+  }
+
+  private hasActiveValue(value: any): boolean {
+    if (value === null || value === undefined || value === '')
+      return false;
+    if (value instanceof Date)
+      return !isNaN(value.getTime());
+    if (Array.isArray(value))
+      return value.some(v => this.hasActiveValue(v));
+    if (typeof value === 'object')
+      return Object.values(value).some(v => this.hasActiveValue(v));
+    return true;
   }
 
   filterDistinct(field?: string, split: boolean = false): any[] {

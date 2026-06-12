@@ -29,13 +29,25 @@
     ⚙
   </li>
   }
-  @if (export) {
-  <img (click)="export(selectedTab, currentRows)"
-       src="{{excelIcon}}"
-       alt="Export to excel"
-       title="Export to excel"
-       height="32"
-       class="Export">
+  @if (showClearButton() || export) {
+  <div class="Actions">
+    @if (showClearButton()) {
+    <button (click)="clearTable($event)"
+            [disabled]="loading"
+            title="Clear search, sorting and filters"
+            class="Clear">
+      &#9776;&#8693; Clear
+    </button>
+    }
+    @if (export) {
+    <img (click)="export(selectedTab, currentRows)"
+         src="{{excelIcon}}"
+         alt="Export to excel"
+         title="Export to excel"
+         height="32"
+         class="Export">
+    }
+  </div>
   }
 </ul>
 <div class="table-wrapper"

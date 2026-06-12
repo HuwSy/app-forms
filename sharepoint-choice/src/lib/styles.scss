@@ -674,12 +674,39 @@ a.fc-event {
       height: 32px;
     }
 
-    .Export {
+    .Actions {
       position: absolute;
       right: 0;
       top: 0;
       z-index: 99;
-      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+
+      .Clear {
+        height: 32px;
+        margin-top: 1px;
+        padding: 0 10px;
+        border: 1px solid #20476b;
+        border-radius: 4px;
+        background: white;
+        color: #20476b;
+        cursor: pointer;
+      }
+
+      .Clear:hover:not(:disabled) {
+        background-color: #16314a;
+        color: white;
+      }
+
+      .Clear:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .Export {
+        cursor: pointer;
+      }
     }
 
     div {
