@@ -1097,11 +1097,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     results.push(file);
 
     if (this.file?.extract && fileName.toLowerCase().endsWith(".zip"))
-      await this.zips(fileName, data, results);
+      await this.zips(newName, data, results);
     if (this.file?.extract && fileName.toLowerCase().endsWith(".msg"))
-      await this.msgs(fileName, data, results);
+      await this.msgs(newName, data, results);
     if (this.file?.extract && fileName.toLowerCase().endsWith(".eml"))
-      await this.emls(fileName, data, results);
+      await this.emls(newName, data, results);
 
     this.office.loading = false;
     this.changed();
