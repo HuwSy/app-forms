@@ -1,11 +1,11 @@
 {
   "name": "sharepoint-choice",
-  "version": "22.0.4",
+  "version": "22.0.12",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
     "build": "ng build sharepoint-choice",
-    "version": "npx -y shx sed -i \"s/\\\"peerDependencies\\\":/\\\"dependencies\\\":/\" package.json && npx -y npm-check-updates -u && npx -y shx sed -i \"s/\\\"dependencies\\\":/\\\"peerDependencies\\\":/\" package.json && npx -y shx rm -rf node_modules package-lock.json && pause && npm install && npm audit --audit-level=high && npm run build && npm version patch --no-git-tag-version --ignore-scripts && git add . && git commit -m \"Version bump\" && git push"
+    "version": "npx -y shx sed -i \"s/\\\"peerDependencies\\\":/\\\"dependencies\\\":/\" package.json && npx -y npm-check-updates -u && npx -y shx sed -i \"s/\\\"dependencies\\\":/\\\"peerDependencies\\\":/\" package.json && npx -y shx rm -rf node_modules package-lock.json && pause && npm install && npm audit --audit-level=high && pause && npm run build && npm version patch --no-git-tag-version --ignore-scripts && pause && git add . && git commit -m \"Version bump\" && git push"
   },
   "private": false,
   "sideEffects": false,
@@ -17,11 +17,11 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@angular/common": "^22.0.0",
-    "@angular/core": "^22.0.0",
-    "@angular/forms": "^22.0.0",
-    "@angular/platform-browser": "^22.0.0",
-    "@azure/msal-browser": "^5.11.0",
+    "@angular/common": "^22.0.1",
+    "@angular/core": "^22.0.1",
+    "@angular/forms": "^22.0.1",
+    "@angular/platform-browser": "^22.0.1",
+    "@azure/msal-browser": "^5.13.0",
     "@bobbyquantum/ngx-editor": "^21.0.0",
     "@kenjiuno/msgreader": "^1.28.0",
     "@pnp/sp": "^4.20.0",
@@ -32,8 +32,8 @@
     "stacktrace-js": "^2.0.2"
   },
   "devDependencies": {
-    "@angular/build": "^22.0.0",
-    "@angular/cli": "^22.0.0",
+    "@angular/build": "^22.0.1",
+    "@angular/cli": "^22.0.1",
     "@types/office-js": "^1.0.592",
     "ng-packagr": "^22.0.0",
     "typescript": "~6.0.3"
