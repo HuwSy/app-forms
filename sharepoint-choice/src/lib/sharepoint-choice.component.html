@@ -217,14 +217,14 @@
               [required]="req"
               name="SharepointChoice{{prefix}}{{field}}"
               (change)="changed()"
-              [style]="(text.height ? 'height: '+text.height+'px' : '')"
+              [style]="(text.height ? 'height: '+text.height+'px;' : '') + (text.width ? 'min-width: '+text.width+'px;' : '')"
               placeholder="{{title || internal}}..."></textarea>
     }
     @else {
     <textarea [required]="req"
               name="SharepointChoice{{prefix}}{{field}}"
               (change)="changedA($event)"
-              [style]="(text.height ? 'height: '+text.height+'px' : '')"
+              [style]="(text.height ? 'height: '+text.height+'px;' : '') + (text.width ? 'min-width: '+text.width+'px;' : '')"
               placeholder="{{title || internal}}..."></textarea>
     }
     }
@@ -328,7 +328,7 @@
         </th>
         }
         <th>
-          <span style="cursor: pointer;"
+          <span style="cursor: pointer; min-width: 40%;"
                 (click)="changeSort('Title')">
             File Name
           </span>
@@ -343,7 +343,7 @@
         </th>
         }
         @for (k of keys; track $index) {
-        <th>
+        <th style="width: 0; min-width: 75px;">
           <span>
             @let fs = file.spec?.[k];
             {{fs?.Title || friendlyName(fs?.InternalName)}}
@@ -429,7 +429,8 @@
                  (change)="changed()"
                  style="width: calc( 100% - 38px );"
                  name="SharepointChoice{{prefix}}{{field}}_Name_{{i}}"
-                 [title]="f.FileName + ' - ' + f.Length">
+                 [title]="f.FileName + ' - ' + fileSize(f.Length)">
+          {{f.FileName.substring(f.FileName.lastIndexOf('.') + 1).toLowerCase()}}
           }
 
           <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;"
@@ -459,7 +460,8 @@
                       [prefix]="field+'_'+i"
                       [disabled]="disabled || f.Deleted || (file.archive && listItem[(file.archive || 'Archive')]) || fileSizeOver"
                       [text]="{
-                          height: 35
+                          height: 35,
+                          width: 200
                         }"
                       (change)="changed()"
                       [override]="{'Title':''}">
@@ -536,7 +538,7 @@
                  style="width: calc( 100% - 38px );"
                  name="SharepointChoice{{prefix}}{{field}}_Name_{{i}}"
                  (change)="changed()"
-                 [title]="f.FileName + ' - ' + f.Length">
+                 [title]="f.FileName + ' - ' + fileSize(f.Length)">
           }
 
           <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;"
