@@ -110,8 +110,10 @@ export class HelloWorldWebPartComponent implements OnInit {
     this._spUtils.data(id, this.list).then(async d => {
       this.form = d;
       this.uned = JSON.parse(JSON.stringify(this.form));
+      this.loading = false;
+      this.chRef.detectChanges();
         
-      this._spUtils.sp.web.lists.getByTitle(this.list).items.getById(id).versions.top(5000)().then(d => {
+      this._spUtils.version(id, this.list).then(d => {
         this.versions = d;
         this.chRef.detectChanges();
       });
@@ -126,7 +128,6 @@ export class HelloWorldWebPartComponent implements OnInit {
 
   async loadData(restart: boolean) {
     this.data = await this._spUtils.sp.web.lists.getByTitle(this.list).items.filter(``).select("Id", "Created", "Title", "Modified").orderBy("Modified", true).top(5000)();
-
     this.loading = false;
     this.chRef.detectChanges();
   }
