@@ -9,7 +9,7 @@
   </div>
 
   <app-table [allData]="{'Results Sample Table':data}"
-             [allCols]="[{'headerName': 'Id', 'field': 'Id'}]"
+             [allCols]="[{'headerName': 'Id', 'field': 'Id'}, {'field': 'Title'}, {'field': 'Modified'}]"
              [export]="{}"
              [loading]="loading"
              [allowSelection]="true"
