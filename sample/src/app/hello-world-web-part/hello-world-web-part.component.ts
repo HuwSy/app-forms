@@ -37,17 +37,8 @@ export class HelloWorldWebPartComponent implements OnInit {
   private _log: SharepointChoiceLogging;
 
   // Dashboard
-  declare searchText:string;
-  declare currentPage:number;
-  declare itemsPerPage:number;
-  declare orderKey:string;
-  declare orderDir:boolean;
-  declare refresh:number;
   declare loading:boolean;
-  declare status:any[string];
   declare data:any;
-  declare selected:string;
-  private _prefix: string = 'Choice-Filter';
 
   // Form
   declare form:any[string];
@@ -95,28 +86,14 @@ export class HelloWorldWebPartComponent implements OnInit {
       
       this._spUtils.fields(this.list).then(r => {
         this.spec = r;
-        this.status = this.spec['Status']?.Choices;
       
         this.chRef.detectChanges();
       });
       
-      // Dashboard
-      this.selected = '';
-  
-      this.searchText = '';
-      this.currentPage = 1;
-      this.itemsPerPage = 25;
-      this.orderKey = undefined;
-      this.orderDir = false;
-      this.refresh = -1;
-      this.status = [];
-  
       this.loading = true;
       this.data = [];
       if (this.dashboard) {
         this.loadData(false);
-        if (this.refresh > 0)
-          setInterval(this.loadData, this.refresh * 1000);
       }
   
       // Form
@@ -155,16 +132,6 @@ export class HelloWorldWebPartComponent implements OnInit {
   // Dashboard
   // load data
   async loadData(restart: boolean) {
-    var cur = JSON.parse(localStorage.getItem(`${this._prefix}-${this._spUtils.context}`) || '{}');
-    for(var f in cur) {
-      this[f] = cur[f];
-    }
-  
-    if (restart === true) {
-      this.loading = true;
-      this.currentPage = 1;
-    }
-
     this.data = await this._spUtils.sp.web.lists.getByTitle(this.list).items.filter(``).select("Id", "Created", "Title", "Modified").orderBy("Modified", true).top(5000)();
     
     // data adjusts, for display, searches etc
@@ -174,91 +141,6 @@ export class HelloWorldWebPartComponent implements OnInit {
 
     this.loading = false;
     this.chRef.detectChanges();
-  }
-
-  // save specific filter field
-  saveFilter(f, r) {
-    var cur = JSON.parse(localStorage.getItem(`${this._prefix}-${this._spUtils.context}`) || '{}');
-    cur[f] = this[f];
-    localStorage.setItem(`${this._prefix}-${this._spUtils.context}`, JSON.stringify(cur));
-
-    if (r) {
-      this.selected = undefined;
-      this.loadData(true);
-    }
-  }
-
-  // select sub heading
-  select(s) {
-    if (this.selected == s)
-      this.selected = undefined;
-    else
-      this.selected = s;
-  }
-
-  // filter to show rows
-  rows(status: string, display: boolean): any[any] {
-    var ths = this;
-    var ret = this.data.filter(r => {
-      if (status
-        && r.Status != status)
-        return false;
-      if ((ths.searchText || '') != ''
-        && !~r.title.indexOf(ths.searchText.toLowerCase()))
-        return false;
-      return true;
-    });
-    
-    if (!display)
-      return ret;
-
-    if (this.orderKey)
-      ret.sort((a: any, b: any) => {
-        if (a[this.orderKey] < b[this.orderKey]) {
-          return -1 * (this.orderDir ? -1 : 1);
-        } else if (a[this.orderKey] > b[this.orderKey]) {
-          return 1 * (this.orderDir ? -1 : 1);
-        } else {
-          return 0;
-        }
-      });
-
-    if (this.itemsPerPage > 0)
-      return ret.slice((this.currentPage -1) * this.itemsPerPage, this.currentPage * this.itemsPerPage);
-    
-    return ret;
-  }
-
-  // on clicking headings
-  sort (k: string) {
-    if (this.orderKey == k)
-      this.orderDir = !this.orderDir;
-    else {
-      this.orderKey = k;
-      this.orderDir = false;
-    }
-    this.saveFilter('orderKey', false);
-    this.saveFilter('orderDir', false);
-  }
-
-  // last page number
-  maxPage(status: string, trim: boolean): number {
-    var ret = this.rows(status, false).length / this.itemsPerPage;
-    if (!trim)
-      return ret;
-    return Math.floor(ret);
-  }
-
-  // change page
-  changePage(to: number) {
-    this.currentPage = Math.ceil(to);
-  }
-
-  // Form
-  // file types for attachments
-  prefix():string {
-    var fileTypes = ["One", "Two", "Three"];
-    return `{"Prefix":${JSON.stringify(fileTypes)}, "TypeAsString": "Attachments"}`; //"TypeAsString": "Attachments" not required except under ng serve
   }
 
   // additional choice data via api
@@ -335,6 +217,10 @@ export class HelloWorldWebPartComponent implements OnInit {
   enterKey(e):void {
     if (e.srcElement.tagName != 'TEXTAREA')
       e.preventDefault();
+  }
+
+  hyperlink(rowData) {
+    return "?aid="+rowData.Id;
   }
 
   hasPermission():boolean {
