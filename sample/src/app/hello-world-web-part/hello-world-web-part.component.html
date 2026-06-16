@@ -18,6 +18,13 @@
 </div>
 
 <div *ngIf="!dashboard">
+  <ul class="Tasks">
+    <li *ngFor="let s of tabs"
+        [hidden]="!(stage == s.tab)">
+      <div [title]="s.status + (s.owner ? ' ('+s.owner+')' : '')">{{s.display}}</div>
+    </li>
+  </ul>
+  
   <form ngNativeValidate #input (keydown.enter)="enterKey($event)">
     <app-choice [form]="form" [spec]="spec" [field]="'Title'" [disabled]="stage == 'View'"></app-choice>
 
