@@ -20,7 +20,7 @@
 <div *ngIf="!dashboard">
   <ul class="Tasks">
     <li *ngFor="let s of tabs"
-        [hidden]="!(stage == s.tab)">
+        [hidden]="!(stage == s.tab || neededStage(s.tab))">
       <div [title]="s.status + (s.owner ? ' ('+s.owner+')' : '')">{{s.display}}</div>
     </li>
   </ul>
