@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-choice",
-  "version": "22.0.16",
+  "version": "22.0.20",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
@@ -25,7 +25,7 @@
     "@bobbyquantum/ngx-editor": "^21.0.0",
     "@kenjiuno/msgreader": "^1.28.0",
     "@pnp/sp": "^4.20.0",
-    "@rmartin93/exceljs-fork": "^4.4.4",
+    "devextreme-exceljs-fork": "^4.4.11",
     "@turbowarp/jszip": "^3.12.0",
     "buffer": "^6.0.3",
     "eml-parse-js": "^1.2.0-beta.1",
