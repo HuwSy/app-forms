@@ -13,7 +13,7 @@
              [export]="{}"
              [loading]="loading"
              [allowSelection]="true"
-             [hyperlinkRow]="(rowData) => ('?aid='+rowData.Id);">
+             [hyperlinkRow]="hyperlink">
   </app-table>
 </div>
 
@@ -21,7 +21,7 @@
   <form ngNativeValidate #input (keydown.enter)="enterKey($event)">
     <app-choice [form]="form" [spec]="spec" [field]="'Title'" [disabled]="stage == 'View'"></app-choice>
 
-    <app-choice [form]="form" [spec]="spec" [field]="'Attachments'" [disabled]="stage == 'View'" [override]="prefix()"></app-choice>
+    <app-choice [form]="form" [spec]="spec" [field]="'Attachments'" [disabled]="stage == 'View'"></app-choice>
     
     <app-choice [form]="form" [spec]="spec" [field]="'CommentHistory'" [override]='"{\"TypeAsString\":\"Note\",\"RichText\":true,\"AppendOnly\":true}"' [versions]="versions" [disabled]="stage == 'View'" ></app-choice>
 
