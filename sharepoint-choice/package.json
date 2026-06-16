@@ -1,11 +1,11 @@
 {
   "name": "sharepoint-choice",
-  "version": "22.0.20",
+  "version": "22.0.21",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
     "build": "ng build sharepoint-choice",
-    "version": "npx -y shx sed -i \"s/\\\"peerDependencies\\\":/\\\"dependencies\\\":/\" package.json && npx -y npm-check-updates -u && npx -y shx sed -i \"s/\\\"dependencies\\\":/\\\"peerDependencies\\\":/\" package.json && npx -y shx rm -rf node_modules package-lock.json && pause && npm install && npm audit --audit-level=high && pause && npm run build && npm version patch --no-git-tag-version --ignore-scripts && pause && git add . && git commit -m \"Version bump\" && git push"
+    "version": "npx -y shx sed -i \"s/\\\"peerDependencies\\\":/\\\"dependencies\\\":/\" package.json && npx -y npm-check-updates -u && npx -y shx sed -i \"s/\\\"dependencies\\\":/\\\"peerDependencies\\\":/\" package.json && npx -y shx rm -rf node_modules package-lock.json && pause && npm install && npm audit --omit=dev --audit-level=high && pause && npm run build && npm version patch --no-git-tag-version --ignore-scripts && pause && git add . && git commit -m \"Version bump\" && git push"
   },
   "private": false,
   "sideEffects": false,
