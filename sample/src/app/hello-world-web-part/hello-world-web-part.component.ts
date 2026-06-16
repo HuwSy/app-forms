@@ -33,6 +33,7 @@ export class HelloWorldWebPartComponent implements OnInit {
   declare perm:any[string];
   declare list:string;
   declare spec:any[string];
+  
   private _spUtils: SharepointChoiceUtils;
   private _log: SharepointChoiceLogging;
 
@@ -56,7 +57,7 @@ export class HelloWorldWebPartComponent implements OnInit {
     this._log = new SharepointChoiceLogging();
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     try {
       this.tabs = [
         {tab: 'New', display: 'Submission', status: 'Draft', owner: 'Visitors'},
@@ -70,6 +71,11 @@ export class HelloWorldWebPartComponent implements OnInit {
   
       var id = parseInt(this._spUtils.param('aid') || '0');
       this.dashboard = !(id > 0 || id === 0);
+      
+      this.form = {Status: 'Draft'};
+      this.uned = {};
+      this.versions = [];
+      this.stage = (id > 0 ? 'View' : 'New');
   
       this.list = 'List';
       this.spec = {};
@@ -77,67 +83,49 @@ export class HelloWorldWebPartComponent implements OnInit {
       this.userId = 0;
       this.perm = {};
   
-      this._spUtils.permissions().then(r => {
-        this.userId = r.userId; 
-        this.perm = r.perms;
+      let p = await this._spUtils.permissions();
+      this.userId = p.userId; 
+      this.perm = p.perms;
+      this.chRef.detectChanges();
       
-        this.chRef.detectChanges();
-      });
-      
-      this._spUtils.fields(this.list).then(r => {
-        this.spec = r;
-      
-        this.chRef.detectChanges();
-      });
+      let s = await this._spUtils.fields(this.list);
+      this.spec = s;
+      this.chRef.detectChanges();
       
       this.loading = true;
       this.data = [];
-      if (this.dashboard) {
+      if (this.dashboard)
         this.loadData(false);
-      }
-  
-      // Form
-      this.form = {Status: 'Draft'};
-      this.uned = {};
-      this.versions = [];
-      this.stage = this._spUtils.param('stage') || (id > 0 ? 'View' : 'New');
-      
-      if (!this.dashboard) {
-        this.moreData();
-        if (id > 0) {
-          this._spUtils.data(id, this.list).then(async d => {
-            this.form = d;
-            this.uned = JSON.parse(JSON.stringify(this.form));
-        
-            this._spUtils.sp.web.lists.getByTitle(this.list).items.getById(id).versions.top(5000)().then(d => {
-              this.versions = d;
-      
-              this.chRef.detectChanges();
-            });
-  
-            var f = await this.getFolder();
-            if (f != null)
-              for (var o in this.files)
-                this.files[o].results = await this._spUtils.getFiles(f, o);
-  
-            this.chRef.detectChanges();
-          });
-        }
-      }
+      else
+        this.loadForm(id);
     } catch (e) {
       this._log.handleError(e);
     }
   }
 
-  // Dashboard
-  // load data
+  loadForm(id) {
+    this.moreData();
+    if (id <= 0)
+      return;
+    this._spUtils.data(id, this.list).then(async d => {
+      this.form = d;
+      this.uned = JSON.parse(JSON.stringify(this.form));
+        
+      this._spUtils.sp.web.lists.getByTitle(this.list).items.getById(id).versions.top(5000)().then(d => {
+        this.versions = d;
+        this.chRef.detectChanges();
+      });
+  
+      var f = await this.getFolder();
+      if (f != null)
+        for (var o in this.files)
+          this.files[o].results = await this._spUtils.getFiles(f, o);
+        this.chRef.detectChanges();
+    });
+  }
+
   async loadData(restart: boolean) {
     this.data = await this._spUtils.sp.web.lists.getByTitle(this.list).items.filter(``).select("Id", "Created", "Title", "Modified").orderBy("Modified", true).top(5000)();
-    
-    // data adjusts, for display, searches etc
-    this.data.forEach(r => {
-      r.title = (r.Title || '').toLowerCase();
-    });
 
     this.loading = false;
     this.chRef.detectChanges();
@@ -225,13 +213,14 @@ export class HelloWorldWebPartComponent implements OnInit {
 
   hasPermission():boolean {
     try {
+      // some status have no matching tab stages
       switch (this.form.Status) {
         case 'Reject':
         case 'Completed':
           return false;
       }
       // is the owner of the task group
-      return this.perm[this.tabs.filter(tab => tab.status == this.form.Status)[0].owner];
+      return this.perm[this.tabs.filter(tab => tab.tab == this.stage)[0].owner];
     } catch (e) {
       return false;
     }
