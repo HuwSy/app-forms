@@ -48,6 +48,17 @@ div[data-automation-id="CanvasControl"] {
   }
 }
 
+@media (max-width: 400px) {
+  #spSiteHeader,
+  #sp-appBar,
+  div[data-sp-feature-tag="PageTitle web part (Banner)"] {
+    display: none !important;
+  }
+
+  .spAppAndPropertyPanelContainer {
+    padding-bottom: 0;
+  }
+}
 /* End SharePoint overrides */
 
 /* Start Mobile width/hides */
@@ -491,6 +502,10 @@ a.fc-event {
 
       th.pointer {
         cursor: pointer;
+      }
+
+      th.reorderable {
+        cursor: grab;
       }
 
       tr:first-child th[rowSpan="2"] {

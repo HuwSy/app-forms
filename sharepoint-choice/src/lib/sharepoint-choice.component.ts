@@ -887,7 +887,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       return;
     // try and determine if we are in an office addin
     try {
-      if ('IsOfficeURLSchemes' in window || window.location.search.includes('_host_Info=')) {
+      if ('IsOfficeURLSchemes' in window || window.location.search.includes('_host_Info=') || window.location.search.includes('spc_addin=1')) {
         throw "In an addin";
       }
       if (window.top != window.self) {
@@ -912,6 +912,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           return;
         // on ready should be ran soon after office.js is loaded trigger
         office.onReady(info => {
+          // diagnostics for office addin
+          console.log('Office', office);
+          console.log('Office.onReady info', info);
+          console.log('Office.nested', office.context?.requirements?.isSetSupported?.('NestedAppAuth', '1.1'));
           // capture what office type of addin for later use
           if (this.office.type != info.host.toString()) {
             this.office.type = info.host.toString();

@@ -34,13 +34,13 @@
     @if (showClearButton()) {
     <button (click)="clearTable($event)"
             [disabled]="loading"
-            title="Clear search, sorting and filters"
+            title="Clear search, sorting, filters and column order"
             class="Clear">
       &#9776;&#8693; Clear
     </button>
     }
     @if (export) {
-    <img (click)="export(selectedTab, currentRows)"
+    <img (click)="exportTable(currentRows)"
          src="{{excelIcon}}"
          alt="Export to excel"
          title="Export to excel"
@@ -84,8 +84,13 @@
         @let name = niceName(col);
         <th [style.minWidth.px]="col.width"
             [title]="col.headerTooltip || col.headerName || ''"
-            [ngClass]="{'pointer': col.sortable !== false}"
-            (click)="sortChange(col)"
+            [ngClass]="{'pointer': col.sortable !== false, 'reorderable': isReorderable(col)}"
+            [draggable]="isReorderable(col)"
+            (click)="headerClick(col)"
+            (dragstart)="dragStart($event, col)"
+            (dragover)="dragOver($event, col)"
+            (drop)="dragDrop($event, col)"
+            (dragend)="dragEnd()"
             [colSpan]="col.children?.length || 1"
             [rowSpan]="(col.children?.length || 1) == 1 ? 2 : 1">
           {{name}}
@@ -204,8 +209,13 @@
         @let name = niceName(col);
         <th [style.minWidth.px]="col.width"
             [title]="col.headerTooltip || col.headerName || ''"
-            [ngClass]="{'pointer': col.sortable !== false}"
-            (click)="sortChange(col)">
+            [ngClass]="{'pointer': col.sortable !== false, 'reorderable': isReorderable(col)}"
+            [draggable]="isReorderable(col)"
+            (click)="headerClick(col)"
+            (dragstart)="dragStart($event, col, parent)"
+            (dragover)="dragOver($event, col, parent)"
+            (drop)="dragDrop($event, col, parent)"
+            (dragend)="dragEnd()">
           {{name}}
           @if (sortContains(col.field, 'desc')) {
           <i>&uarr;</i>
@@ -527,7 +537,7 @@
       Table Settings
       <input class="Reset"
              type="button"
-             value="Reset all filters and visibility"
+             value="Reset all filters, order and visibility"
              (click)="resetFilters()" />
       <div class="Close"
            (click)="editColumns = false">

@@ -64,6 +64,30 @@ export interface SharepointChoiceRowChild {
   [key: string]: string | number | boolean | Date | null | undefined;
 }
 
+export interface SharepointChoiceExportColumn {
+  header: string;
+  key: string;
+  width?: number;
+}
+
+export interface SharepointChoiceExportContext {
+  tab: string;
+  filteredRows: SharepointChoiceRow[];
+  selectedRows: SharepointChoiceRow[];
+  sourceRows: SharepointChoiceRow[];
+  visibleColumns: SharepointChoiceColumn[];
+}
+
+export interface SharepointChoiceExportOptions {
+  fileName?: string | ((context: SharepointChoiceExportContext) => string);
+  sheetName?: string | ((context: SharepointChoiceExportContext) => string);
+  title?: string | string[] | ((context: SharepointChoiceExportContext) => string | string[] | null | undefined);
+  sourceRows?: 'filtered' | 'selected' | 'selected-or-filtered' | ((context: Omit<SharepointChoiceExportContext, 'sourceRows'>) => SharepointChoiceRow[] | Promise<SharepointChoiceRow[]>);
+  columns?: SharepointChoiceExportColumn[] | ((context: SharepointChoiceExportContext) => SharepointChoiceExportColumn[] | Promise<SharepointChoiceExportColumn[]>);
+  rows?: Array<Record<string, any>> | ((context: SharepointChoiceExportContext) => Array<Record<string, any>> | Promise<Array<Record<string, any>>>);
+  autoWidth?: boolean;
+}
+
 export interface SharepointChoiceColumn {
   headerName?: string; // display name of the column
   field?: string; // datafield name in the data, supports dot notation for nested fields

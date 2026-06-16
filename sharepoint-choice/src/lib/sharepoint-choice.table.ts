@@ -1,9 +1,10 @@
 import { Component, Input, ErrorHandler, EventEmitter, Output, ChangeDetectorRef, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SharepointChoiceColumn, SharepointChoiceTabs, SharepointChoiceRow, SharepointChoiceForm, SharepointChoiceField, SharepointChoiceList, SharepointChoiceRowChild, ExcelIcon } from './sharepoint-choice.models';
+import { SharepointChoiceColumn, SharepointChoiceTabs, SharepointChoiceRow, SharepointChoiceForm, SharepointChoiceField, SharepointChoiceList, SharepointChoiceRowChild, SharepointChoiceExportColumn, SharepointChoiceExportContext, SharepointChoiceExportOptions, ExcelIcon } from './sharepoint-choice.models';
 import { SharepointChoiceComponent } from './sharepoint-choice.component';
 import { SharepointChoiceRender } from './sharepoint-choice.render';
+import { Workbook } from 'devextreme-exceljs-fork';
 
 interface SharepointChoiceHide {
   [tabName: string]: string[];
@@ -25,6 +26,10 @@ interface SharepointChoiceFilter {
       less?: number | Date | null;
     };
   }
+}
+
+interface SharepointChoiceOrder {
+  [tabName: string]: string[];
 }
 
 @Component({
@@ -165,6 +170,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
     this.sort = this.getStorage(`Sort`);
     this.filter = this.getStorage(`Filter`);
+    this.columnOrder = this.getStorage(`Order`);
     this.hiddenColumns = this.getStorage(`Hide`);
     this.selectedTab = this.getStorage(`Tab`);
     this.pageSize = this.getStorage(`Size`);
@@ -198,7 +204,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   @Output() clicked = new EventEmitter<{ row: SharepointChoiceRow, target: HTMLElement | EventTarget | undefined }>(); // (clicked)="onClicked($event)" onClicked(event: { row: SharepointChoiceRow, target: HTMLElement | EventTarget | undefined }) { ... }
   @Input() hyperlinkRow?: Function; // [hyperlinkRow]="hyperlinkRow" hyperlinkRow = (rowData: any) => { return 'https://...'; } to ensure this. is from the app and not from app-table
   @Input() hyperlinkTarget: string = '_self'; // target for hyperlink rows
-  @Input() export?: Function; // [export]="export" export = (selectedTab: string, filteredRows: SharepointChoiceRow[]) => { ... } function triggered when export icon clicked giving current tab and filtered rows
+  @Input() export?: SharepointChoiceExportOptions; // [export]="export" declarative export options handled by app-table
 
   // internal state
   set pageNumber(value: number) {
@@ -235,6 +241,17 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   }
   private _filter?: SharepointChoiceFilter;
 
+  set columnOrder(value: SharepointChoiceOrder) {
+    this._columnOrder = value;
+    this.setStorage(`Order`, this.columnOrder);
+    this._colsCache.clear();
+    this.chRef.markForCheck();
+  }
+  get columnOrder(): SharepointChoiceOrder {
+    return this._columnOrder || {};
+  }
+  private _columnOrder?: SharepointChoiceOrder;
+
   set hiddenColumns(value: SharepointChoiceHide) {
     this._hiddenColumns = value;
     this.setStorage(`Hide`, this.hiddenColumns);
@@ -257,6 +274,9 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   private _fieldMapCache: Map<string, Array<string>> = new Map();
   private _nodeCache: Map<string, any> = new Map();
   private _isObserved: boolean = false;
+  private _dragColumn?: SharepointChoiceColumn;
+  private _dragParent?: SharepointChoiceColumn;
+  private _suppressHeaderClick: boolean = false;
 
   constructor(private chRef: ChangeDetectorRef) { }
 
@@ -268,6 +288,10 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     if (!this._filter)
       try {
         this._filter = this.getStorage(`Filter`);
+      } catch { }
+    if (!this._columnOrder)
+      try {
+        this._columnOrder = this.getStorage(`Order`);
       } catch { }
     if (!this._hiddenColumns)
       try {
@@ -366,6 +390,14 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
     // Reassign to trigger setter
     this.sort = currentSort;
+  }
+
+  headerClick(col: SharepointChoiceColumn): void {
+    if (this._suppressHeaderClick) {
+      this._suppressHeaderClick = false;
+      return;
+    }
+    this.sortChange(col);
   }
 
   // on multi select, not using ctrl key
@@ -483,10 +515,13 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this.chRef.markForCheck();
   }
 
-  resetFilters(): void {
+  resetFilters(resetColumnOrder: boolean = true): void {
     this.sort = {};
     this.filter = {};
-    this.hiddenColumns = {};
+    if (resetColumnOrder) {
+      this.columnOrder = {};
+      this.hiddenColumns = {};
+    }
   }
 
   showClearButton(): boolean {
@@ -494,8 +529,105 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   }
 
   clearTable(event?: Event): void {
-    this.resetFilters();
+    this.resetFilters(false);
     this.cleared.emit();
+  }
+
+  async exportTable(currentRows: SharepointChoiceRow[]): Promise<void> {
+    if (!this.export || !this.selectedTab)
+      return;
+
+    let cols:SharepointChoiceColumn[] = [];
+    this.fields(this.selectedTab).forEach(col => {
+      if (col.field)
+        cols.push(col);
+      col.children?.forEach(child => {
+        if (child.field)
+          cols.push(child);
+      });
+    });
+
+    let baseContext = {
+      tab: this.selectedTab,
+      filteredRows: currentRows,
+      selectedRows: currentRows.filter(row => row._selected),
+      visibleColumns: cols
+    };
+
+    let sourceRows = baseContext.filteredRows;
+    if (typeof this.export.sourceRows === 'function')
+      sourceRows = await this.export.sourceRows(baseContext);
+    else if (this.export.sourceRows === 'selected')
+      sourceRows = baseContext.selectedRows;
+    else if (this.export.sourceRows === 'selected-or-filtered')
+      sourceRows = baseContext.selectedRows.length > 0 ? baseContext.selectedRows : baseContext.filteredRows;
+
+    let context: SharepointChoiceExportContext = {
+      ...baseContext,
+      sourceRows
+    };
+
+    let columns = context.visibleColumns
+      .filter(col => !!col.field)
+      .map(col => ({
+        header: col.headerName ?? col.field!,
+        key: col.field!,
+        width: col.width
+      } as SharepointChoiceExportColumn));
+    if (typeof this.export.columns === 'function')
+      columns = await this.export.columns(context);
+    else if (this.export.columns)
+      columns = this.export.columns;
+
+    let rows = context.sourceRows.map(row => {
+      const exportRow: Record<string, any> = {};
+      columns.forEach(column => {
+        if (!column.key)
+          return;
+        exportRow[column.key] = column.key.split('.').reduce<any>((value, part) => value == null ? null : value[part], row);
+      });
+      return exportRow;
+    });
+    if (typeof this.export.rows === 'function')
+      rows = await this.export.rows(context);
+    else if (this.export.rows)
+      rows = this.export.rows;
+
+    let workbook = new Workbook();
+    let worksheet = workbook.addWorksheet((typeof this.export.sheetName === 'function' ? this.export.sheetName(context) : this.export.sheetName) || 'Sheet');
+    let title = (typeof this.export.title === 'function' ? this.export.title(context) : this.export.title);
+
+    if (title) {
+      let titleValues = Array.isArray(title) ? title : [title];
+      let titleRow = worksheet.addRow(titleValues);
+      titleRow.font = { bold: true };
+    }
+
+    worksheet.columns = columns;
+    rows.forEach(row => worksheet.addRow(row));
+
+    if (this.export.autoWidth !== false)
+      worksheet.columns.forEach(column => {
+        if (!column || typeof column.eachCell !== 'function')
+          return;
+
+        let maxLength = 2;
+        column.eachCell((cell: any) => {
+          if (!cell?.value)
+            return;
+          maxLength = Math.max(maxLength, cell.value.toString().length);
+        });
+        column.width = column.width && maxLength + 2 < column.width ? column.width : maxLength + 2;
+      });
+
+    let data = await workbook.xlsx.writeBuffer();
+    const file = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = (typeof this.export.fileName === 'function' ? this.export.fileName(context) : this.export.fileName) || `${context.tab}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   columnToggle(col: SharepointChoiceColumn, tab: string): void {
@@ -535,6 +667,59 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
           this.columnToggle(child, t);
       });
     });
+  }
+
+  isReorderable(col: SharepointChoiceColumn): boolean {
+    return !!col.field;
+  }
+
+  dragStart(event: DragEvent, col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): void {
+    if (!this.selectedTab || !this.isReorderable(col))
+      return;
+
+    this._dragColumn = col;
+    this._dragParent = parent;
+
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.dropEffect = 'move';
+      event.dataTransfer.setData('text/plain', col.field || '');
+    }
+  }
+
+  dragOver(event: DragEvent, col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): void {
+    if (!this.canDropColumn(col, parent))
+      return;
+
+    event.preventDefault();
+    if (event.dataTransfer)
+      event.dataTransfer.dropEffect = 'move';
+  }
+
+  dragDrop(event: DragEvent, col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): void {
+    if (!this.canDropColumn(col, parent) || !this.selectedTab || !this._dragColumn?.field || !col.field)
+      return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const siblings = (parent?.children || this.fields(this.selectedTab))
+      .filter(sibling => !!sibling.field)
+      .map(sibling => sibling.field as string);
+
+    const nextOrder = this.moveField(this.columnOrder[this.selectedTab] || [], this._dragColumn.field, col.field, siblings);
+    this.columnOrder = {
+      ...this.columnOrder,
+      [this.selectedTab]: nextOrder
+    };
+
+    this._suppressHeaderClick = true;
+    this.dragEnd();
+  }
+
+  dragEnd(): void {
+    this._dragColumn = undefined;
+    this._dragParent = undefined;
   }
 
   // handle column resizing drag
@@ -669,6 +854,12 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
     this._rowsCache.delete(tab);
 
+    const order = new Map<string, number>();
+    (this.columnOrder[tab] || []).forEach((field, index) => {
+      if (!order.has(field))
+        order.set(field, index);
+    });
+
     // hide based on tab function or hide state
     const columns = this.allCols.filter(c => {
       return !this.isHidden(c, tab);
@@ -685,9 +876,11 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       return true;
     });
 
+    const ordered = this.orderColumns(columns, order);
+
     // Cache the result
-    this._colsCache.set(tab, columns);
-    return columns;
+    this._colsCache.set(tab, ordered);
+    return ordered;
   }
 
   // utility functions
@@ -719,6 +912,72 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     const parts = field.split('.');
     this._fieldMapCache.set(field, parts);
     return parts;
+  }
+
+  private canDropColumn(col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): boolean {
+    if (!this.isReorderable(col) || !this._dragColumn?.field || !col.field)
+      return false;
+    if (this._dragColumn.field == col.field)
+      return false;
+    if (!this._dragParent && !parent)
+      return true;
+    return this._dragParent === parent;
+  }
+
+  private moveField(order: string[], draggedField: string, targetField: string, siblings: string[]): string[] {
+    const nextOrder = order.filter((field, index, values) => !!field && values.indexOf(field) == index);
+
+    siblings.forEach(field => {
+      if (!nextOrder.includes(field))
+        nextOrder.push(field);
+    });
+
+    const from = nextOrder.indexOf(draggedField);
+    const to = nextOrder.indexOf(targetField);
+
+    if (from < 0 || to < 0)
+      return nextOrder;
+
+    nextOrder.splice(from, 1);
+    nextOrder.splice(from < to ? to - 1 : to, 0, draggedField);
+    return nextOrder;
+  }
+
+  private orderColumns(columns: SharepointChoiceColumn[], order: Map<string, number>): SharepointChoiceColumn[] {
+    const ordered = this.sortColumns(columns, order);
+
+    return ordered.map(col => {
+      if (!col.children || col.children.length < 2)
+        return col;
+
+      return {
+        ...col,
+        children: this.sortColumns(col.children, order)
+      };
+    });
+  }
+
+  private sortColumns(columns: SharepointChoiceColumn[], order: Map<string, number>): SharepointChoiceColumn[] {
+    if (columns.length < 2 || order.size == 0)
+      return columns;
+
+    const reorderable = columns.map((col, index) => ({ col, index })).filter(item => !!item.col.field);
+    if (reorderable.length < 2)
+      return columns;
+
+    const sorted = [...reorderable]
+      .sort((a, b) => {
+        const aOrder = order.has(a.col.field || '') ? order.get(a.col.field || '')! : Number.MAX_SAFE_INTEGER;
+        const bOrder = order.has(b.col.field || '') ? order.get(b.col.field || '')! : Number.MAX_SAFE_INTEGER;
+
+        if (aOrder == bOrder)
+          return a.index - b.index;
+        return aOrder - bOrder;
+      })
+      .map(item => item.col);
+
+    let position = 0;
+    return columns.map(col => col.field ? sorted[position++] : col);
   }
 
   private hasActiveValue(value: any): boolean {
