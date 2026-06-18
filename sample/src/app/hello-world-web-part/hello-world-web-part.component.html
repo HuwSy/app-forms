@@ -6,15 +6,29 @@
   <div style="float: left; padding-top: 8px; padding-bottom: 8px" *ngIf="perm['Members']">
     &nbsp;
     <a href="?aid=0">&#10012; Add new</a>
+    <a (click)="allEditing = !allEditing">&#10012; Add new</a>
   </div>
 
-  <app-table [allData]="{'Results Sample Table':data}"
-             [allCols]="[{'headerName': 'Id', 'field': 'Id'}, {'field': 'Title'}, {'field': 'Modified'}]"
-             [export]="{}"
-             [loading]="loading"
-             [allowSelection]="true"
-             [hyperlinkRow]="hyperlink">
-  </app-table>
+  <app-table  [allData]="{'Results Sample Table':data}"
+              [allCols]="[{'headerName': 'Id', 'field': 'Id'}, {'field': 'Title'}, {'field': 'Modified'}]"
+              [export]="{}"
+              [loading]="loading"
+              [allowSelection]="true"
+              [hyperlinkRow]="hyperlink"
+              [allTabs]="['Results Sample Table','Some empty data']"
+              [selectedTab]="'Results Sample Table'"
+              [pageSize]="1000"
+              [allowHideColumns]="true"
+              [showEmptyTabs]="true"
+              [hyperlinkTarget]="'_blank'"
+    
+              [search]="search"
+              [allEditing]="allEditing"
+              [rowClicked]="rowClicked"
+              (selected)="onSelected($event)"
+              (cleared)="onCleared()"
+              (clicked)="onClicked($event)">
+    </app-table>
 </div>
 
 <div *ngIf="!dashboard">
