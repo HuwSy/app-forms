@@ -22,7 +22,6 @@
               [allowHideColumns]="true"
               [showEmptyTabs]="true"
               [hyperlinkTarget]="'_blank'"
-    
               [search]="search"
               [allEditing]="allEditing"
               [rowClicked]="rowClicked"
@@ -47,6 +46,20 @@
     
     <app-choice [form]="form" [spec]="spec" [field]="'CommentHistory'" [override]='"{\"TypeAsString\":\"Note\",\"RichText\":true,\"AppendOnly\":true}"' [versions]="versions" [disabled]="stage == 'View'" ></app-choice>
 
+    <app-choice
+      [form]="form"
+      [spec]="spec"
+      [field]="'Title'"
+      [text]="titleSearch"
+    ></app-choice>
+    
+    <app-choice
+      [form]="form"
+      [spec]="spec"
+      [field]="'Files'"
+      [file]="fileOptions"
+    ></app-choice>
+    
     <div *ngFor="let d of form.PlainTextMultiLine;let i = index">
       <input type="date" [(ngModel)]="d.DateIntoJSONObj" name="Date_{{i}}">
       <input type="text" [(ngModel)]="d.TextIntoJSONObj" name="Text_{{i}}">
