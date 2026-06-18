@@ -1,14 +1,14 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { SharepointChoiceLogging } from 'sharepoint-choice';
 import { ErrorHandler, provideZonelessChangeDetection } from '@angular/core';
-import { HelloWorldWebPartComponent } from './app/hello-world-web-part/hello-world-web-part.component';
+import { SampleComponent } from './app/sample/sample';
 
 // only bootstrap required components
 var loadComponents = () => {
   let loading = false;
   [{
-    com: HelloWorldWebPartComponent,
-    tag: 'app-hello-world-web-part'
+    com: SampleComponent,
+    tag: 'app-sample'
   }].map((component) => {
     var el = document.querySelector(component.tag);
     // no element or already loaded then skip
