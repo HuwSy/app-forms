@@ -1,6 +1,9 @@
 # app-forms
 
-A simple Angular SharePoint framework for rapid development. Originally in AngularJS/JavaScript and progressed to currently run with Angular (2+) within an SPFx wrapper. This gives controls which can determin the field data and type from the list data and schema loaded allowing users to manipulate before submitting into the list. This also includes a table component for displaying data with filtering, sorting, reordering etc functionality. 
+A simple Angular SharePoint framework for rapid prototyping and development. Originally in AngularJS/JavaScript and progressed to run within Angular (2+) within an SPFx wrapper. This gives controls that can determin the field data and type from the list data and schema loaded allowing users to manipulate before submitting into the list. 
+
+This also includes a table component for displaying data with filtering, sorting, reordering etc functionality. 
+
 
 Project level installed angular can be used to avoid additional global installs.
 
