@@ -49,7 +49,7 @@ export class HelloWorldWebPartComponent implements OnInit {
   declare uned:any[string];
   declare stage:string;
   declare tabs:any;
-  declare :any;
+  declare files:any;
 
   titleSearch = {
     parent: this,
@@ -306,7 +306,7 @@ export class HelloWorldWebPartComponent implements OnInit {
       
       this.chRef.detectChanges();
   
-      this.versions = await pnp.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).versions.top(5000).get();
+      this.versions = await this._spUtils.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).versions.top(5000).get();
   
       // handle approval of task for next stage
       switch (status) {
