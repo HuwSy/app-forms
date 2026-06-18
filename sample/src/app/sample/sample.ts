@@ -28,28 +28,32 @@ export class SampleComponent implements OnInit {
   @Input() context!: string;
 
   // Common
-  declare dashboard:boolean;
-  declare userId:number;
-  declare perm:any[string];
-  declare list:string;
-  declare spec:any[string];
+  dashboard:boolean = true;
+  userId:number = 0;
+  perm:any[string] = {};
+  list:string = 'List';
+  spec:any[string] = {};
   
   private _spUtils: SharepointChoiceUtils;
   private _log: SharepointChoiceLogging;
 
   // Dashboard
-  declare loading:boolean;
-  declare data:any;
-  search = { };
+  loading:boolean = true;
+  data:any = [];
+  search = {};
   allEditing = false;
 
   // Form
-  declare form:any[string];
-  declare versions:any;
-  declare uned:any[string];
-  declare stage:string;
-  declare tabs:any;
-  declare files:any;
+  form:any[string] = {Status: 'Draft'};
+  versions:any = [];
+  uned:any[string] = {};
+  stage:string = 'View';
+  tabs = [
+    {tab: 'New', display: 'Submission', status: 'Draft', owner: 'Visitors'},
+    {tab: 'Close', display: 'Close', status: 'Closing', owner: 'Members'},
+    {tab: 'Audit', display: 'Completed', status: 'Completed', owner: null}
+  ];
+  files:any = {Submission: {results:[]}};
 
   titleSearch = {
     parent: this,
@@ -107,29 +111,13 @@ export class SampleComponent implements OnInit {
 
   async ngOnInit() {
     try {
-      this.tabs = [
-        {tab: 'New', display: 'Submission', status: 'Draft', owner: 'Visitors'},
-        {tab: 'Close', display: 'Close', status: 'Closing', owner: 'Members'},
-        {tab: 'Audit', display: 'Completed', status: 'Completed', owner: null}
-      ];
-  
-      this.files = {Submission: {results:[]}};
       for (var f in this.tabs)
         this.files[this.tabs[f].tab] = {results:[]};
   
       var id = parseInt(this._spUtils.param('aid') || '0');
       this.dashboard = !(id > 0 || id === 0);
       
-      this.form = {Status: 'Draft'};
-      this.uned = {};
-      this.versions = [];
       this.stage = (id > 0 ? 'View' : 'New');
-  
-      this.list = 'List';
-      this.spec = {};
-  
-      this.userId = 0;
-      this.perm = {};
   
       let p = await this._spUtils.permissions();
       this.userId = p.userId; 
@@ -140,8 +128,6 @@ export class SampleComponent implements OnInit {
       this.spec = s;
       this.chRef.detectChanges();
       
-      this.loading = true;
-      this.data = [];
       if (this.dashboard)
         this.loadData(false);
       else
