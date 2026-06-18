@@ -40,6 +40,8 @@ export class HelloWorldWebPartComponent implements OnInit {
   // Dashboard
   declare loading:boolean;
   declare data:any;
+  search = { };
+  allEditing = false;
 
   // Form
   declare form:any[string];
@@ -210,6 +212,23 @@ export class HelloWorldWebPartComponent implements OnInit {
 
   hyperlink(rowData) {
     return "?aid="+rowData.Id;
+  }
+  
+  rowClicked = async (rowData: any, target: HTMLElement | EventTarget | undefined) => {
+    console.log('rowClicked callback', rowData, target);
+    return true;
+  };
+  
+  onSelected(event: { data: any[]; tab: string | undefined }) {
+    console.log('selected output', event);
+  }
+
+  onCleared() {
+    this.search.Title = undefined;
+  }
+
+  onClicked(event: { row: any; target: HTMLElement | EventTarget | undefined }) {
+    console.log('clicked output', event);
   }
 
   hasPermission():boolean {
