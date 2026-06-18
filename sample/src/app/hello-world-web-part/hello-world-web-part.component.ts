@@ -49,8 +49,54 @@ export class HelloWorldWebPartComponent implements OnInit {
   declare uned:any[string];
   declare stage:string;
   declare tabs:any;
-  declare files:any;
+  declare :any;
 
+  titleSearch = {
+    parent: this,
+    search: async (text: string) => {
+      // return matching rows for inline search
+      return [
+        { Title: 'Alpha' },
+        { Title: 'Beta' },
+        { Title: 'Gamma' }
+      ].filter(x => x.Title.toLowerCase().includes(text.toLowerCase()));
+    },
+    select: async (row: any) => {
+      console.log('selected row', row);
+    }
+  };
+
+  fileOptions = {
+    extract: true,
+    check: true,
+    accept: '.pdf,.docx,.xlsx',
+    download: true,
+    uploadonly: false,
+    archive: 'Archived',
+    view: 0,
+    doctypes: ['Invoice', 'Contract'],
+    doctype: 'DocumentType',
+    notes: 'Notes',
+    spec: {
+      DocumentType: {
+        TypeAsString: 'Choice',
+        InternalName: 'DocumentType',
+        Title: 'Document Type',
+        Choices: ['Invoice', 'Contract', 'Receipt']
+      },
+      Notes: {
+        TypeAsString: 'Text',
+        InternalName: 'Notes',
+        Title: 'Notes'
+      },
+      Archived: {
+        TypeAsString: 'Boolean',
+        InternalName: 'Archived',
+        Title: 'Archived'
+      }
+    }
+  };
+  
   constructor(private elRef: ElementRef, private chRef: ChangeDetectorRef) {
     // read attribute as Component bind doesnt trigger @Input
     this.description = this.description || this.elRef.nativeElement.getAttribute('description');
@@ -260,8 +306,7 @@ export class HelloWorldWebPartComponent implements OnInit {
       
       this.chRef.detectChanges();
   
-      // update versions to abuse its user name processing later
-      //this.versions = await pnp.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).versions.top(5000).get();
+      this.versions = await pnp.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).versions.top(5000).get();
   
       // handle approval of task for next stage
       switch (status) {
