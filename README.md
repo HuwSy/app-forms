@@ -356,3 +356,144 @@ Uses `Workbook` from `devextreme-exceljs-fork`.
  - Hyperlink rows  
 
 It uses aggressive caching and OnPush change detection to remain fast even with thousands of rows.
+
+# SharePointChoice Utils
+
+## Constructor
+- Signature: `constructor(context?: string)`
+- Description: Create a SharepointChoiceUtils instance for a given site context (optional). Establishes the PnP SP client and internal context used by other methods.
+- Parameters:
+  - `context` — optional base URL or site context; if omitted the class attempts to derive it from the current page.
+
+## permissions
+- Signature: `permissions(): Promise<SharepointChoicePermission>`
+- Description: Return a flat permission object describing the current user's effective permissions.
+- Returns: Promise resolving to `SharepointChoicePermission` containing `userId` and a `perms` map (group/security title → boolean).
+
+## hasPermission
+- Signature: `hasPermission(object: any, permissions: PermissionKind[]): Promise<boolean>`
+- Description: Check whether the current user has any of the provided PermissionKind values on the supplied PnP object (web, list, item).
+- Parameters:
+  - `object` — PnP object exposing `getCurrentUserEffectivePermissions()`.
+  - `permissions` — array of `PermissionKind` to check.
+- Returns: Promise resolving to `true` if any permission is present, otherwise `false`.
+
+## search
+- Signature: `search(query: string, limit?: number, page?: number, sort?: ISort[], select?: string[], detail?: string[], filter?: string[]): Promise<SearchResults>`
+- Description: Execute a SharePoint search query via PnP.
+- Parameters:
+  - `query` — query text.
+  - `limit` — optional row limit (default ~1000).
+  - `page` — optional 1-based page number (default 1).
+  - `sort` — optional sort descriptors.
+  - `select` — optional select properties.
+  - `detail` — optional hit/highlighted properties or refiners.
+  - `filter` — optional refinement filters.
+- Returns: Promise resolving to PnP `SearchResults`.
+
+## fields
+- Signature: `fields(listTitle: string): Promise<SharepointChoiceList>`
+- Description: Retrieve and normalize list fields metadata for the named list.
+- Parameters:
+  - `listTitle` — list title.
+- Returns: Promise resolving to a `SharepointChoiceList` mapping keyed by field InternalName (includes parsed SchemaXml and Scope property).
+
+## data
+- Signature: `data(id: number, listTitle: string): Promise<SharepointChoiceForm>`
+- Description: Load a single list item by ID and convert SharePoint values to JS-friendly types for app usage.
+- Parameters:
+  - `id` — item ID.
+  - `listTitle` — list title.
+- Returns: Promise resolving to parsed `SharepointChoiceForm`.
+
+## version
+- Signature: `version(id: number, listTitle: string, spec?: SharepointChoiceList | null): Promise<SharepointChoiceForm[]>`
+- Description: Get version history for a list item and compute changed fields between versions.
+- Parameters:
+  - `id` — item ID.
+  - `listTitle` — list title.
+  - `spec` — optional fields metadata to map internal names to display titles.
+- Returns: Promise resolving to an array of versions (oldest → newest), each including `ChangedFields`.
+
+## msalApi
+- Signature: `msalApi(serverRelativeEndPoint: string, tokenRole: string, httpMethod?: string, jsonPostData?: any, dataType?: string, environment?: string): Promise<any>`
+- Description: High-level helper to call mapped backend APIs using MSAL authentication.
+- Parameters:
+  - `serverRelativeEndPoint` — API endpoint path (server-relative mapping).
+  - `tokenRole` — permission scope name used for token acquisition.
+  - `httpMethod` — HTTP verb (default `'GET'`).
+  - `jsonPostData` — optional JSON body.
+  - `dataType` — expected response type (e.g., `'json'`, `'text'`).
+  - `environment` — optional environment/release tag.
+- Returns: Promise resolving to the API response.
+
+## callApi
+- Signature: `callApi(tenancyOnMicrosoft?: string, clientId?: string, permissionScope?: string, apiUrl?: string, httpMethod?: string, jsonPostData?: any, dataType?: string): Promise<any>`
+- Description: Generic MSAL-authenticated API caller (can perform token acquisition alone if `apiUrl` omitted).
+- Parameters:
+  - `tenancyOnMicrosoft` — tenant short name (for authority URL).
+  - `clientId` — MSAL client ID.
+  - `permissionScope` — scope to request.
+  - `apiUrl` — full API URL to call.
+  - `httpMethod` — HTTP method (e.g., `'GET'`, `'POST'`).
+  - `jsonPostData` — request body for non-GET calls.
+  - `dataType` — expected response format (default `'json'`).
+- Returns: Promise resolving to parsed response or rejects on error.
+
+## param
+- Signature: `param(parameterToReturn: string): string | undefined`
+- Description: Read a query-string parameter from the current page location.
+- Parameters:
+  - `parameterToReturn` — query parameter name.
+- Returns: Decoded string value or `undefined` if not present.
+
+## ensurePath
+- Signature: `ensurePath(path: string, start: number): Promise<void>`
+- Description: Ensure a folder path exists on the site by creating any missing subfolders recursively.
+- Parameters:
+  - `path` — server-relative or absolute folder path.
+  - `start` — start index to control recursion (use 0/2/4 depending on path root).
+- Returns: Promise resolving when path exists.
+
+## getRoot
+- Signature: `getRoot(list: string): Promise<string>`
+- Description: Retrieve the server-relative URL of a list's root folder.
+- Parameters:
+  - `list` — list title.
+- Returns: Promise resolving to the root `ServerRelativeUrl`.
+
+## getFiles
+- Signature: `getFiles(path: string, additional?: string): Promise<SharepointChoiceAttachment[]>`
+- Description: Get files in a folder and return attachments with metadata, including `ListItemAllFields`.
+- Parameters:
+  - `path` — server-relative or absolute folder path.
+  - `additional` — optional subfolder name appended to `path`.
+- Returns: Promise resolving to an array of `SharepointChoiceAttachment`.
+
+## relocateFolder
+- Signature: `relocateFolder(source: string, destination: string): Promise<string | null>`
+- Description: Move a folder from source to destination server-relative paths.
+- Parameters:
+  - `source` — source folder server-relative path.
+  - `destination` — destination folder server-relative path.
+- Returns: Promise resolving to new `ServerRelativeUrl` or `null` if source and destination are equal.
+
+## saveFiles
+- Signature: `saveFiles(path: string, additional?: string, url?: { Url: string, Description: string }, files?: { results: SharepointChoiceAttachment[] }, metadata?: SharepointChoiceForm): Promise<void>`
+- Description: Save or update files and apply folder/item metadata. Handles folder creation and attachment upload/update.
+- Parameters:
+  - `path` — target folder path.
+  - `additional` — optional subfolder.
+  - `url` — optional URL object for metadata.
+  - `files` — object with `results` array of attachments to add/update.
+  - `metadata` — optional metadata to apply to folder/items.
+- Returns: Promise resolving when operation completes.
+
+## save
+- Signature: `save(formDataIncIdToUpdate: SharepointChoiceForm, uneditedDataToBuildPatch: SharepointChoiceForm, listTitle: string): Promise<number>`
+- Description: Create or update a list item and handle attachments (delete then upload). Computes minimal patch when possible.
+- Parameters:
+  - `formDataIncIdToUpdate` — data to save; may include `Id` for update.
+  - `uneditedDataToBuildPatch` — original data used to compute changes/patch.
+  - `listTitle` — list title.
+- Returns: Promise resolving to the saved item Id.
