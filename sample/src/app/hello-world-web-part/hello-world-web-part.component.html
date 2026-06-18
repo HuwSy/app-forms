@@ -8,6 +8,7 @@
     <a href="?aid=0">&#10012; Add new</a>
     <a (click)="allEditing = !allEditing">&#10012; Add new</a>
   </div>
+  <input [(ngModel)]="search.Title" placeholder="Search title">
 
   <app-table  [allData]="{'Results Sample Table':data}"
               [allCols]="[{'headerName': 'Id', 'field': 'Id'}, {'field': 'Title'}, {'field': 'Modified'}]"
