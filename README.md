@@ -25,7 +25,7 @@ office-addin-dev-certs install --days 3650
 ```
 Then copy these certs into the application directory.
 
-# <app-choice>
+# app-choice
 
 The `SharepointChoiceComponent` is a dynamic SharePoint form field renderer supporting text, numbers, dates, users, multi‑choice, file uploads, Outlook/Teams drag‑and‑drop, and more.
 
@@ -168,27 +168,7 @@ Emitted whenever the field value changes.
   - Sorting, filtering, archiving
 - Emits refresh events to other component instances via `SharepointChoiceRefresh`.
 
----
-
-# Example Usage
-
-```html
-<app-choice
-  [form]="form"
-  [spec]="spec"
-  [override]="override"
-  [field]="'ProjectName'"
-  [disabled]="false"
-  [text]="{
-    search: searchProjects,
-    select: onProjectSelected,
-    height: 120
-  }"
-  (change)="onFieldChange($event)"
-></app-choice>
-```
-
-# <app-table>
+# app-table
 
 The `SharepointChoiceTable` component is a standalone Angular table designed for large SharePoint‑style datasets with support for filtering, sorting, paging, column hiding, reordering, tabbed views, row selection, and Excel export.
 
@@ -354,7 +334,7 @@ Controlled by the `export` input.
 
 It uses aggressive caching and OnPush change detection to remain fast even with thousands of rows.
 
-# SharePointChoice Utils
+# Utils
 
 ## Constructor
 - Signature: `constructor(context?: string)`
