@@ -1,8 +1,8 @@
 # app-forms
 
-A simple Angular framework for rapid development originally in AngularJS/JavaScript and progressed to currently run with Angular2+ within an SPFx wrapper giving controls which can use this.spec to determin the field details from the list schema loaded on page load and manipulate this.form for submitting into the list.
+A simple Angular SharePoint framework for rapid development. Originally in AngularJS/JavaScript and progressed to currently run with Angular (2+) within an SPFx wrapper. This gives controls which can determin the field data and type from the list data and schema loaded allowing users to manipulate before submitting into the list. This also includes a table component for displaying data with filtering, sorting, reordering etc functionality. 
 
-Project level installed angular below can be used to avoid additional directories and installs.
+Project level installed angular can be used to avoid additional global installs.
 
 ```
 npm install @angular/cli@22
@@ -25,7 +25,7 @@ office-addin-dev-certs install --days 3650
 ```
 Then copy these certs into the application directory.
 
-# SharepointChoiceComponent — Inputs & Outputs
+# <app-choice>
 
 The `SharepointChoiceComponent` is a dynamic SharePoint form field renderer supporting text, numbers, dates, users, multi‑choice, file uploads, Outlook/Teams drag‑and‑drop, and more.
 
@@ -188,12 +188,9 @@ Emitted whenever the field value changes.
 ></app-choice>
 ```
 
-# SharepointChoiceTable Component Documentation
+# <app-table>
 
-The `SharepointChoiceTable` component is a standalone Angular table designed for large SharePoint‑style datasets with support for filtering, sorting, paging, column hiding, tabbed views, row selection, and Excel export.
-
-## Component Selector
-`<app-table></app-table>`
+The `SharepointChoiceTable` component is a standalone Angular table designed for large SharePoint‑style datasets with support for filtering, sorting, paging, column hiding, reordering, tabbed views, row selection, and Excel export.
 
 ## Inputs
 
@@ -222,7 +219,7 @@ Default: `100`.
 
 ### loading: boolean
 Enables loading state and disables interactions.  
- Clears row cache when changed.
+Clears row cache when changed.
 
 ### search: SharepointChoiceRowChild | undefined
 Search object applied across all tabs.  
@@ -289,7 +286,7 @@ Emits `{ row, target }` when a row is clicked (after `rowClicked` if provided).
  Changing it triggers a debounced refresh.
 
 ### Filtering (filter: SharepointChoiceFilter)
- Stored in local storage under `Filter`.  
+Stored in local storage under `Filter`.  
  Supports:
  - equals  
  - contains  
@@ -301,8 +298,8 @@ Stored in local storage under `Order`.
 Changing it clears column cache.
 
 ### Hidden Columns (hiddenColumns: SharepointChoiceHide)
- Stored in local storage under `Hide`.  
- Changing it clears column cache.
+Stored in local storage under `Hide`.  
+Changing it clears column cache.
 
 ## Caching Layers
 
@@ -342,7 +339,7 @@ Used to support column reordering.
 
 ## Excel Export
 Uses `Workbook` from `devextreme-exceljs-fork`.  
- Controlled by the `export` input.
+Controlled by the `export` input.
 
 ## Summary
 `SharepointChoiceTable` is a high‑performance Angular table component designed for:
