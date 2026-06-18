@@ -12,9 +12,9 @@ import "@pnp/sp/items";
 import "@pnp/sp/site-groups";
 
 @Component({
-  selector: 'app-hello-world-web-part',
-  templateUrl: './hello-world-web-part.component.html',
-  styleUrls: ['./hello-world-web-part.component.scss'],
+  selector: 'app-sample',
+  templateUrl: './sample.html',
+  styleUrls: ['./sample.scss'],
   standalone: true,
   imports: [
     CommonModule,
@@ -23,7 +23,7 @@ import "@pnp/sp/site-groups";
     SharepointChoiceTable
   ]
 })
-export class HelloWorldWebPartComponent implements OnInit {
+export class SampleComponent implements OnInit {
   @Input() description!: string;
   @Input() context!: string;
 
