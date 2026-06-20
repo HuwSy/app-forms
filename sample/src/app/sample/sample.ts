@@ -182,6 +182,19 @@ export class SampleComponent implements OnInit {
     
     this.chRef.detectChanges();
   }
+
+  lookupSearch = {
+    search: async (query: string) => {
+      const r = await this.utils.search(query, 20);
+      return r.PrimarySearchResults.map(x => ({
+        Id: x.Id,
+        Title: x.Title
+      }));
+    },
+    select: (item: any) => {
+      this.form.LookupField = item;
+    }
+  };
   
   // add subtract repeating sections
   add(f):void {
