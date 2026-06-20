@@ -1,79 +1,135 @@
-<h2>
-  {{description}}
-</h2>
+<h2>{{description}}</h2>
 
+<!-- DASHBOARD VIEW -->
 <div *ngIf="dashboard">
-  <div style="float: left; padding-top: 8px; padding-bottom: 8px" *ngIf="perm['Members']">
-    &nbsp;
+
+  <div style="float:left; padding:8px" *ngIf="perm['Members']">
     <a href="?aid=0">&#10012; Add new</a>
-    <a (click)="allEditing = !allEditing">&#10012; Add new</a>
+    <a (click)="allEditing = !allEditing">&#9998; Toggle Edit</a>
   </div>
+
   <input [(ngModel)]="search.Title" placeholder="Search title" name="Title">
 
-  <app-table  [allData]="{'Results Sample Table':data}"
-              [allCols]="[{'headerName': 'Id', 'field': 'Id'}, {'field': 'Title'}, {'field': 'Modified'}]"
-              [export]="{}"
-              [loading]="loading"
-              [allowSelection]="true"
-              [hyperlinkRow]="hyperlink"
-              [allTabs]="['Results Sample Table','Some empty data']"
-              [selectedTab]="'Results Sample Table'"
-              [pageSize]="1000"
-              [allowHideColumns]="true"
-              [showEmptyTabs]="true"
-              [hyperlinkTarget]="'_blank'"
-              [search]="search"
-              [allEditing]="allEditing"
-              [rowClicked]="rowClicked"
-              (selected)="onSelected($event)"
-              (cleared)="onCleared()"
-              (clicked)="onClicked($event)">
-    </app-table>
+  <app-table
+      [allData]="{'Results Sample Table': data}"
+      [allCols]="[
+        {'headerName':'Id','field':'Id'},
+        {'field':'Title'},
+        {'field':'Modified'},
+        {'field':'Category'},
+        {'field':'Owner'},
+        {'field':'UrlField'}
+      ]"
+      [export]="{}"
+      [loading]="loading"
+      [allowSelection]="true"
+      [hyperlinkRow]="hyperlink"
+      [allTabs]="['Results Sample Table','Some empty data']"
+      [selectedTab]="'Results Sample Table'"
+      [pageSize]="1000"
+      [allowHideColumns]="true"
+      [showEmptyTabs]="true"
+      [hyperlinkTarget]="'_blank'"
+      [search]="search"
+      [allEditing]="allEditing"
+      [rowClicked]="rowClicked"
+      (selected)="onSelected($event)"
+      (cleared)="onCleared()"
+      (clicked)="onClicked($event)">
+  </app-table>
+
 </div>
 
+<!-- FORM VIEW -->
 <div *ngIf="!dashboard">
+
   <ul class="Tasks">
-    <li *ngFor="let s of tabs"
-        [hidden]="!(stage == s.tab || neededStage(s.tab))">
+    <li *ngFor="let s of tabs" [hidden]="!(stage == s.tab || neededStage(s.tab))">
       <div [title]="s.status + (s.owner ? ' ('+s.owner+')' : '')">{{s.display}}</div>
     </li>
   </ul>
-  
+
   <form ngNativeValidate #input (keydown.enter)="enterKey($event)">
-    <app-choice [form]="form" [spec]="spec" [field]="'Title'" [disabled]="stage == 'View'"></app-choice>
 
-    <app-choice [form]="form" [spec]="spec" [field]="'Attachments'" [disabled]="stage == 'View'"></app-choice>
-    
-    <app-choice [form]="form" [spec]="spec" [field]="'CommentHistory'" [override]='"{\"TypeAsString\":\"Note\",\"RichText\":true,\"AppendOnly\":true}"' [versions]="versions" [disabled]="stage == 'View'" ></app-choice>
+    <!-- BASIC TEXT FIELD -->
+    <app-choice [form]="form" [spec]="spec" field="Title" [disabled]="stage=='View'"></app-choice>
 
+    <!-- FILE ATTACHMENTS -->
+    <app-choice [form]="form" [spec]="spec" field="Attachments" [disabled]="stage=='View'"></app-choice>
+
+    <!-- RICH TEXT APPEND-ONLY -->
     <app-choice
       [form]="form"
       [spec]="spec"
-      [field]="'Title'"
-      [text]="titleSearch"
-    ></app-choice>
-    
+      field="CommentHistory"
+      [override]='{"TypeAsString":"Note","RichText":true,"AppendOnly":true}'
+      [versions]="versions"
+      [disabled]="stage=='View'">
+    </app-choice>
+
+    <!-- AUTOCOMPLETE TEXT FIELD -->
+    <app-choice
+      [form]="form"
+      [spec]="spec"
+      field="Title"
+      [text]="titleSearch">
+    </app-choice>
+
+    <!-- FILE UPLOAD WITH OPTIONS -->
     <app-choice
       [form]="files"
       [override]="{'TypeAsString':'Attachments'}"
       [field]="stage"
-      [file]="fileOptions"
-    ></app-choice>
-    
-    <div *ngFor="let d of form.PlainTextMultiLine;let i = index">
+      [file]="fileOptions">
+    </app-choice>
+
+    <!-- MULTI-CHOICE FIELD -->
+    <app-choice
+      [form]="form"
+      [spec]="spec"
+      field="Categories"
+      [select]="selectOptions">
+    </app-choice>
+
+    <!-- PEOPLE PICKER -->
+    <app-choice
+      [form]="form"
+      [spec]="spec"
+      field="Owner"
+      [text]="peopleSearch">
+    </app-choice>
+
+    <!-- URL FIELD -->
+    <app-choice
+      [form]="form"
+      [spec]="spec"
+      field="UrlField">
+    </app-choice>
+
+    <!-- LOOKUP FIELD WITH FILTER -->
+    <app-choice
+      [form]="form"
+      [spec]="spec"
+      field="LookupField"
+      [text]="lookupSearch">
+    </app-choice>
+
+    <!-- MULTI-LINE CUSTOM ARRAY -->
+    <div *ngFor="let d of form.PlainTextMultiLine; let i = index">
       <input type="date" [(ngModel)]="d.DateIntoJSONObj" name="Date_{{i}}">
       <input type="text" [(ngModel)]="d.TextIntoJSONObj" name="Text_{{i}}">
     </div>
-    <div (click)="form.PlainTextMultiLine = form.PlainTextMultiLine || [];form.PlainTextMultiLine.push({});">Add</div>
-    
+    <div (click)="addPlainText()">Add</div>
+
+    <!-- ACTIONS -->
     <div class="Actions">
-      <div style="float: left;" *ngIf="stage == 'New'">
+      <div style="float:left" *ngIf="stage=='New'">
         <button [disabled]="!input.checkValidity()" (click)="save('')">Start</button>
       </div>
-
-      <div style="float: right;">
+      <div style="float:right">
         <button (click)="close()">Close</button>
       </div>
     </div>
+
   </form>
 </div>
