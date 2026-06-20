@@ -1,64 +1,88 @@
-# app-forms
+# app‑forms — Angular Components for SharePoint (SPFx)
 
-A simple Angular SharePoint framework for rapid prototyping and development. Originally in AngularJS/JavaScript and progressed to run within Angular (2+) within an SPFx wrapper. This gives controls that can determin the field data and type from the list data and schema loaded allowing users to manipulate before submitting into the list. 
+**app‑forms** is a lightweight Angular framework for building **dynamic SharePoint list forms**, **high‑performance data tables**, and **PnP‑powered utilities**.  
+It works inside **SharePoint Framework (SPFx)** or as a standalone Angular application with some small adaption.
 
-This also includes a table component for displaying data with filtering, sorting, reordering etc functionality. 
+This library includes:
 
+- Dynamic SharePoint form fields (`SharepointChoiceComponent`)
+- A high‑performance Angular data table (`SharepointChoiceTable`)
+- PnP‑powered SharePoint utilities (`SharepointChoiceUtils`)
+- File upload, drag‑and‑drop, metadata extraction, and versioning
+- Autocomplete, user pickers, multi‑choice, and complex field types
 
-Project level installed angular can be used to avoid additional global installs.
+Designed for **rapid prototyping**, **enterprise apps**, and **large SharePoint datasets**.
 
-```
+---
+
+# Installation & Setup
+
+### Install Angular locally
+```bash
 npm install @angular/cli@22
 ```
-Add to package.json
+
+### Add project scaffolding script
+```json
+"scripts": {
+  "new": "del package* && ng new --commit=false --routing=false --style=scss --directory .\\"
+}
 ```
-  "scripts": {
-    "new": "del package* && ng new --commit=false --routing=false --style=scss --directory .\\"
-  },
-```
-Then
-```
+
+### Create a new Angular workspace
+```bash
 npm run new <solution>
 ```
 
-To generate SSL certs for debugging within localhost and SPFx wrapper
-```
+### Generate SSL certificates for SPFx + localhost debugging
+```bash
 npm install -g office-addin-dev-certs
 office-addin-dev-certs install --days 3650
 ```
-Then copy these certs into the application directory.
 
-# app-choice
-
-The `SharepointChoiceComponent` is a dynamic SharePoint form field renderer supporting text, numbers, dates, users, multi‑choice, file uploads, Outlook/Teams drag‑and‑drop, and more.
+Copy the generated certificates into your Angular project.
 
 ---
 
-## Inputs
+# SharepointChoiceComponent — Dynamic SharePoint Field Renderer
 
-### **Form & Metadata**
+A fully dynamic Angular component that renders **any SharePoint list field type** based on schema metadata.
+
+Supports:
+
+- Text, number, date, choice, multi‑choice  
+- People picker (single/multi)  
+- URL fields  
+- File uploads (with extraction, metadata, archiving)  
+- Drag‑and‑drop from Outlook, Teams, and local files  
+- Autocomplete search  
+- Version history awareness  
+
+---
+
+# Inputs
+
+## Form & Metadata
 
 | Input | Type | Description |
-|------|------|-------------|
-| **`form`** | `SharepointChoiceForm` | Backing form object. Component reads/writes values directly. |
-| **`spec`** | `SharepointChoiceList` | Field specification metadata (SharePoint list schema). |
-| **`override`** | `string \| SharepointChoiceField` | Overrides field spec. Strings are JSON‑parsed. |
-| **`versions`** | `SharepointChoiceForm[]` | Historical versions of the form. |
-| **`field`** | `string` | Internal field name (required). |
-| **`prefix`** | `string` | Prefix for HTML name attributes for uniqueness. |
+|-------|------|-------------|
+| `form` | `SharepointChoiceForm` | Backing form object. |
+| `spec` | `SharepointChoiceList` | SharePoint list schema. |
+| `override` | `string \| SharepointChoiceField` | Override field metadata. |
+| `versions` | `SharepointChoiceForm[]` | Version history. |
+| `field` | `string` | Internal field name. |
+| `prefix` | `string` | HTML name prefix. |
 
----
-
-### **State & Behaviour**
+## State & Behaviour
 
 | Input | Type | Description |
-|------|------|-------------|
-| **`disabled`** | `boolean` | Disables the field UI. |
-| **`tooltip`** | `boolean` | Enables/disables tooltip display. |
+|-------|------|-------------|
+| `disabled` | `boolean` | Disable UI. |
+| `tooltip` | `boolean` | Enable/disable tooltips. |
 
 ---
 
-## Text Field Configuration (`text`)
+# Text Field Configuration
 
 ```ts
 @Input() text: {
@@ -73,16 +97,16 @@ The `SharepointChoiceComponent` is a dynamic SharePoint form field renderer supp
 
 | Property | Description |
 |----------|-------------|
-| **`pattern`** | Regex validation pattern. |
-| **`height`** | Textarea height (px). |
-| **`width`** | Minimum width (px). |
-| **`search`** | Async search callback for autocomplete. |
-| **`select`** | Callback fired when an autocomplete result is selected. |
-| **`parent`** | Parent object passed to callbacks. |
+| `pattern` | Regex validation. |
+| `height` | Textarea height. |
+| `width` | Minimum width. |
+| `search` | Autocomplete search callback. |
+| `select` | Autocomplete selection callback. |
+| `parent` | Callback context. |
 
 ---
 
-## Select Field Configuration (`select`)
+# Select Field Configuration
 
 ```ts
 @Input() select: {
@@ -94,13 +118,13 @@ The `SharepointChoiceComponent` is a dynamic SharePoint form field renderer supp
 
 | Property | Description |
 |----------|-------------|
-| **`none`** | Text for “none” option. |
-| **`other`** | Text for “Other” option. |
-| **`filter`** | Function to filter available choices. |
+| `none` | “None” label. |
+| `other` | “Other” label. |
+| `filter` | Filter available choices. |
 
 ---
 
-## File Field Configuration (`file`)
+# File Field Configuration
 
 ```ts
 @Input() file: {
@@ -120,23 +144,23 @@ The `SharepointChoiceComponent` is a dynamic SharePoint form field renderer supp
 
 | Property | Description |
 |----------|-------------|
-| **`extract`** | Extract ZIP/EML contents. |
-| **`check`** | Show checkboxes for each file. |
-| **`accept`** | HTML file input accept filter. |
-| **`download`** | Force download instead of preview. |
-| **`uploadonly`** | Prevents showing existing files. |
-| **`archive`** | Field name used to mark archived files. |
-| **`view`** | 0 = all, 1 = not archived, -1 = archived. |
-| **`doctypes`** | Allowed document types. |
-| **`doctype`** | Field name storing document type. |
-| **`notes`** | Field name for notes. |
-| **`spec`** | Additional field spec for file metadata. |
+| `extract` | Extract ZIP/EML contents. |
+| `check` | Show checkboxes for each file. |
+| `accept` | HTML file input accept filter. |
+| `download` | Force download instead of preview. |
+| `uploadonly` | Prevent showing existing files. |
+| `archive` | Field name used to mark archived files. |
+| `view` | 0 = all, 1 = not archived, -1 = archived. |
+| `doctypes` | Allowed document types. |
+| `doctype` | Field name storing document type. |
+| `notes` | Field name for notes. |
+| `spec` | Additional field spec for file metadata. |
 
 ---
 
 # Output
 
-### **`change`**
+### `change` EventEmitter
 
 ```ts
 @Output() change = new EventEmitter<{
@@ -146,13 +170,11 @@ The `SharepointChoiceComponent` is a dynamic SharePoint form field renderer supp
 }>();
 ```
 
-Emitted whenever the field value changes.
-
 | Property | Description |
 |----------|-------------|
-| **`field`** | Internal field name. |
-| **`value`** | Updated value (primitive or `.results`). |
-| **`target`** | DOM element that triggered the change. |
+| `field` | Internal field name. |
+| `value` | Updated value (primitive or `.results`). |
+| `target` | DOM element that triggered the change. |
 
 ---
 
@@ -171,309 +193,320 @@ Emitted whenever the field value changes.
   - Sorting, filtering, archiving
 - Emits refresh events to other component instances via `SharepointChoiceRefresh`.
 
-# app-table
+---
 
-The `SharepointChoiceTable` component is a standalone Angular table designed for large SharePoint‑style datasets with support for filtering, sorting, paging, column hiding, reordering, tabbed views, row selection, and Excel export.
+# SharepointChoiceTable — High‑Performance Angular Table
 
-## Inputs
+A fast, enterprise‑grade Angular table for **large SharePoint datasets**, with:
 
-### allData: SharepointChoiceTabs
-Full dataset keyed by tab name.  
-Each row is automatically assigned a `_tracking` key for Angular rendering and caching.  
-Filtering by `search` is applied inside this setter.
+- Multi‑tab views  
+- Sorting, filtering, paging  
+- Column hiding & reordering  
+- Row selection  
+- Excel export  
+- Hyperlink rows  
+- OnPush + multi‑layer caching  
 
-### allCols: SharepointChoiceColumn[]
-List of all available columns.  
-Changing this clears the internal column cache.
+---
 
-### allTabs: string[]
-Optional explicit list of tabs.  
-If omitted, tabs are derived from `allData`.
+# Inputs
 
-### selectedTab: string | undefined
-Currently selected tab.  
-Stored in local storage under `Tab`.  
-Changing this resets paging to page 1.
+| Input | Description |
+|-------|-------------|
+| `allData` | Full dataset keyed by tab name. |
+| `allCols` | List of all available columns. |
+| `allTabs` | Optional explicit list of tabs. |
+| `selectedTab` | Currently selected tab. |
+| `pageSize` | Rows per page. |
+| `loading` | Enables loading state. |
+| `search` | Search object applied across all tabs. |
+| `prefix` | Local storage key prefix. |
+| `tableHeight` | CSS height of table container. |
+| `allEditing` | Render all cells in edit mode. |
+| `allowHideColumns` | Enable hide/show UI. |
+| `showEmptyTabs` | Show tabs with zero rows. |
+| `allowSelection` | Enable row selection. |
+| `rowClicked` | Pre‑click callback. |
+| `hyperlinkRow` | Convert row to hyperlink. |
+| `hyperlinkTarget` | Link target. |
+| `export` | Excel export configuration. |
 
-### pageSize: number
-Number of rows per page.  
-Stored in local storage under `Size`.  
-Default: `100`.
+---
 
-### loading: boolean
-Enables loading state and disables interactions.  
-Clears row cache when changed.
+# Outputs
 
-### search: SharepointChoiceRowChild | undefined
-Search object applied across all tabs.  
- Triggers:
- - Reload of all data  
- - Reset of caches  
- - Re‑application of stored sort, filter, order, hidden columns  
+| Output | Description |
+|--------|-------------|
+| `selected` | Emits selected rows + tab. |
+| `cleared` | Emits when selection is cleared. |
+| `clicked` | Emits row + target after click. |
 
-### prefix: string
-Used for local storage keys.  
-Defaults to the current page URL.
+---
 
-### tableHeight: string
-CSS height of the table container.  
-Default: `calc(100vh - 310px)`.
+# Internal Behaviour
 
-### allEditing: boolean
-If true, all cells render in editing mode.
+- **Paging** resets caches and defaults to page 1  
+- **Sorting** stored in local storage (`Sort`)  
+- **Filtering** stored in local storage (`Filter`)  
+- **Column order** stored in local storage (`Order`)  
+- **Hidden columns** stored in local storage (`Hide`)  
 
-### allowHideColumns: boolean
-Enables column hide/show UI.
+### Caching Layers
 
-### showEmptyTabs: boolean
-If true, tabs with zero rows are still shown.
+| Cache | Purpose |
+|-------|---------|
+| `_colsCache` | Computed column lists per tab |
+| `_rowsCache` | Filtered/sorted rows per tab |
+| `_pageCache` | Current page rows |
+| `_fieldMapCache` | Field → values mapping |
+| `_nodeCache` | Rendered node references |
 
-### allowSelection: boolean
-Enables row selection mode.
+---
 
-### rowClicked?: Function
-Callback invoked before all other click events.  
-Signature:  
-`(row, target) => Promise<void> | void`
+# SharepointChoiceUtils — PnP + MSAL Utilities
 
-### hyperlinkRow?: Function
-Optional callback to turn a row into a hyperlink.  
-`(row) => string`
+A utility class wrapping **PnP JS**, **SharePoint REST**, and **MSAL** for:
 
-### hyperlinkTarget: string
-Target attribute for hyperlink rows.  
-Default: `_self`.
+- Permissions  
+- Search  
+- List metadata  
+- Item loading  
+- Version history  
+- File operations  
+- Folder creation  
+- MSAL‑authenticated API calls  
 
-### export?: SharepointChoiceExportOptions
-Declarative export configuration for Excel export.
+Below is a detailed breakdown of every method.
 
-## Outputs
+---
 
-### selected
-Emits `{ data: SharepointChoiceRow[], tab: string | undefined }` when rows are selected.
+# `permissions()`
 
-### cleared
-Emits when selection is cleared.
+### Description  
+Returns a flattened permission object describing the current user’s effective SharePoint permissions.
 
-### clicked
-Emits `{ row, target }` when a row is clicked (after `rowClicked` if provided).
+### Inputs  
+None.
 
-## Internal State & Behaviour
+### Output  
+`Promise<SharepointChoicePermission>` containing:  
+- `userId` — Current user ID  
+- `perms` — Map of permission name → boolean  
 
-### Paging
- - `pageNumber` resets page cache  
- - Defaults to page 1
+---
 
-### Sorting (sort: SharepointChoiceSort)
- Stored in local storage under `Sort`.  
- Changing it triggers a debounced refresh.
+# `hasPermission(object, permissions)`
 
-### Filtering (filter: SharepointChoiceFilter)
-Stored in local storage under `Filter`.  
- Supports:
- - equals  
- - contains  
- - greater  
- - less  
+### Description  
+Checks whether the current user has **any** of the specified `PermissionKind` values.
 
-### Column Order (columnOrder: SharepointChoiceOrder)
-Stored in local storage under `Order`.  
-Changing it clears column cache.
+### Inputs  
+- `object` — PnP object (web, list, or item)  
+- `permissions` — Array of `PermissionKind` values  
 
-### Hidden Columns (hiddenColumns: SharepointChoiceHide)
-Stored in local storage under `Hide`.  
-Changing it clears column cache.
+### Output  
+`Promise<boolean>`
 
-## Caching Layers
+---
 
- | Cache | Purpose |
- |-------|---------|
- | _colsCache | Stores computed column lists per tab |
- | _rowsCache | Stores filtered/sorted rows per tab |
- | _pageCache | Stores current page rows |
- | _fieldMapCache | Stores field → values mapping |
- | _nodeCache | Stores rendered node references |
+# `search(query, limit?, page?, sort?, select?, detail?, filter?)`
 
-All caches are cleared when relevant inputs change.
+### Description  
+Executes a SharePoint search query using PnP.
 
-## Data Processing Pipeline
+### Inputs  
+- `query` — Search text  
+- `limit` — Max rows  
+- `page` — Page number  
+- `sort` — Sort descriptors  
+- `select` — Fields to return  
+- `detail` — Highlighted properties / refiners  
+- `filter` — Refinement filters  
 
-1. Tracking keys added to each row (`_tracking`)
-2. Search filter applied
-3. Tabs filtered (unless `showEmptyTabs`)
-4. Caches cleared
-5. Change detection triggered
+### Output  
+`Promise<SearchResults>`
 
-## Lifecycle
+---
 
-### ngOnInit()
-Sets up observers and internal state.
+# `fields(listTitle)`
 
-### ngOnDestroy()
-Cleans up observers and timers.
+### Description  
+Loads and normalises SharePoint list field metadata.
 
-## Drag & Drop Columns
-Internal fields:
- - `_dragColumn`
- - `_dragParent`
- - `_suppressHeaderClick`
+### Inputs  
+- `listTitle` — List name  
 
-Used to support column reordering.
+### Output  
+`Promise<SharepointChoiceList>`
 
-## Excel Export
-Uses `Workbook` from `devextreme-exceljs-fork`.  
-Controlled by the `export` input.
+---
 
-## Summary
-`SharepointChoiceTable` is a high‑performance Angular table component designed for:
- - Large datasets  
- - Multi‑tab views  
- - Sorting, filtering, paging  
- - Column hiding & reordering  
- - Row selection  
- - Excel export  
- - Custom row click behaviour  
- - Hyperlink rows  
+# `data(id, listTitle)`
 
-It uses aggressive caching and OnPush change detection to remain fast even with thousands of rows.
+### Description  
+Loads a single SharePoint list item and converts values into JS‑friendly structures.
 
-# Utils
+### Inputs  
+- `id` — Item ID  
+- `listTitle` — List name  
 
-## Constructor
-- Signature: `constructor(context?: string)`
-- Description: Create a SharepointChoiceUtils instance for a given site context (optional). Establishes the PnP SP client and internal context used by other methods.
-- Parameters:
-  - `context` — optional base URL or site context; if omitted the class attempts to derive it from the current page.
+### Output  
+`Promise<SharepointChoiceForm>`
 
-## permissions
-- Signature: `permissions(): Promise<SharepointChoicePermission>`
-- Description: Return a flat permission object describing the current user's effective permissions.
-- Returns: Promise resolving to `SharepointChoicePermission` containing `userId` and a `perms` map (group/security title → boolean).
+---
 
-## hasPermission
-- Signature: `hasPermission(object: any, permissions: PermissionKind[]): Promise<boolean>`
-- Description: Check whether the current user has any of the provided PermissionKind values on the supplied PnP object (web, list, item).
-- Parameters:
-  - `object` — PnP object exposing `getCurrentUserEffectivePermissions()`.
-  - `permissions` — array of `PermissionKind` to check.
-- Returns: Promise resolving to `true` if any permission is present, otherwise `false`.
+# `version(id, listTitle, spec?)`
 
-## search
-- Signature: `search(query: string, limit?: number, page?: number, sort?: ISort[], select?: string[], detail?: string[], filter?: string[]): Promise<SearchResults>`
-- Description: Execute a SharePoint search query via PnP.
-- Parameters:
-  - `query` — query text.
-  - `limit` — optional row limit (default ~1000).
-  - `page` — optional 1-based page number (default 1).
-  - `sort` — optional sort descriptors.
-  - `select` — optional select properties.
-  - `detail` — optional hit/highlighted properties or refiners.
-  - `filter` — optional refinement filters.
-- Returns: Promise resolving to PnP `SearchResults`.
+### Description  
+Loads version history and computes changed fields.
 
-## fields
-- Signature: `fields(listTitle: string): Promise<SharepointChoiceList>`
-- Description: Retrieve and normalize list fields metadata for the named list.
-- Parameters:
-  - `listTitle` — list title.
-- Returns: Promise resolving to a `SharepointChoiceList` mapping keyed by field InternalName (includes parsed SchemaXml and Scope property).
+### Inputs  
+- `id` — Item ID  
+- `listTitle` — List name  
+- `spec` — Optional field metadata  
 
-## data
-- Signature: `data(id: number, listTitle: string): Promise<SharepointChoiceForm>`
-- Description: Load a single list item by ID and convert SharePoint values to JS-friendly types for app usage.
-- Parameters:
-  - `id` — item ID.
-  - `listTitle` — list title.
-- Returns: Promise resolving to parsed `SharepointChoiceForm`.
+### Output  
+`Promise<SharepointChoiceForm[]>`
 
-## version
-- Signature: `version(id: number, listTitle: string, spec?: SharepointChoiceList | null): Promise<SharepointChoiceForm[]>`
-- Description: Get version history for a list item and compute changed fields between versions.
-- Parameters:
-  - `id` — item ID.
-  - `listTitle` — list title.
-  - `spec` — optional fields metadata to map internal names to display titles.
-- Returns: Promise resolving to an array of versions (oldest → newest), each including `ChangedFields`.
+---
 
-## msalApi
-- Signature: `msalApi(serverRelativeEndPoint: string, tokenRole: string, httpMethod?: string, jsonPostData?: any, dataType?: string, environment?: string): Promise<any>`
-- Description: High-level helper to call mapped backend APIs using MSAL authentication.
-- Parameters:
-  - `serverRelativeEndPoint` — API endpoint path (server-relative mapping).
-  - `tokenRole` — permission scope name used for token acquisition.
-  - `httpMethod` — HTTP verb (default `'GET'`).
-  - `jsonPostData` — optional JSON body.
-  - `dataType` — expected response type (e.g., `'json'`, `'text'`).
-  - `environment` — optional environment/release tag.
-- Returns: Promise resolving to the API response.
+# `msalApi(endpoint, tokenRole, method?, body?, dataType?, environment?)`
 
-## callApi
-- Signature: `callApi(tenancyOnMicrosoft?: string, clientId?: string, permissionScope?: string, apiUrl?: string, httpMethod?: string, jsonPostData?: any, dataType?: string): Promise<any>`
-- Description: Generic MSAL-authenticated API caller (can perform token acquisition alone if `apiUrl` omitted).
-- Parameters:
-  - `tenancyOnMicrosoft` — tenant short name (for authority URL).
-  - `clientId` — MSAL client ID.
-  - `permissionScope` — scope to request.
-  - `apiUrl` — full API URL to call.
-  - `httpMethod` — HTTP method (e.g., `'GET'`, `'POST'`).
-  - `jsonPostData` — request body for non-GET calls.
-  - `dataType` — expected response format (default `'json'`).
-- Returns: Promise resolving to parsed response or rejects on error.
+### Description  
+Calls a backend API using MSAL authentication.
 
-## param
-- Signature: `param(parameterToReturn: string): string | undefined`
-- Description: Read a query-string parameter from the current page location.
-- Parameters:
-  - `parameterToReturn` — query parameter name.
-- Returns: Decoded string value or `undefined` if not present.
+### Inputs  
+- `endpoint` — Server‑relative API path  
+- `tokenRole` — Permission scope  
+- `method` — HTTP verb  
+- `body` — JSON body  
+- `dataType` — Response type  
+- `environment` — Optional environment tag  
 
-## ensurePath
-- Signature: `ensurePath(path: string, start: number): Promise<void>`
-- Description: Ensure a folder path exists on the site by creating any missing subfolders recursively.
-- Parameters:
-  - `path` — server-relative or absolute folder path.
-  - `start` — start index to control recursion (use 0/2/4 depending on path root).
-- Returns: Promise resolving when path exists.
+### Output  
+`Promise<any>`
 
-## getRoot
-- Signature: `getRoot(list: string): Promise<string>`
-- Description: Retrieve the server-relative URL of a list's root folder.
-- Parameters:
-  - `list` — list title.
-- Returns: Promise resolving to the root `ServerRelativeUrl`.
+---
 
-## getFiles
-- Signature: `getFiles(path: string, additional?: string): Promise<SharepointChoiceAttachment[]>`
-- Description: Get files in a folder and return attachments with metadata, including `ListItemAllFields`.
-- Parameters:
-  - `path` — server-relative or absolute folder path.
-  - `additional` — optional subfolder name appended to `path`.
-- Returns: Promise resolving to an array of `SharepointChoiceAttachment`.
+# `callApi(tenant, clientId, scope, url?, method?, body?, dataType?)`
 
-## relocateFolder
-- Signature: `relocateFolder(source: string, destination: string): Promise<string | null>`
-- Description: Move a folder from source to destination server-relative paths.
-- Parameters:
-  - `source` — source folder server-relative path.
-  - `destination` — destination folder server-relative path.
-- Returns: Promise resolving to new `ServerRelativeUrl` or `null` if source and destination are equal.
+### Description  
+Generic MSAL‑authenticated API caller.
 
-## saveFiles
-- Signature: `saveFiles(path: string, additional?: string, url?: { Url: string, Description: string }, files?: { results: SharepointChoiceAttachment[] }, metadata?: SharepointChoiceForm): Promise<void>`
-- Description: Save or update files and apply folder/item metadata. Handles folder creation and attachment upload/update.
-- Parameters:
-  - `path` — target folder path.
-  - `additional` — optional subfolder.
-  - `url` — optional URL object for metadata.
-  - `files` — object with `results` array of attachments to add/update.
-  - `metadata` — optional metadata to apply to folder/items.
-- Returns: Promise resolving when operation completes.
+### Inputs  
+- `tenant` — Tenant short name  
+- `clientId` — MSAL client ID  
+- `scope` — Permission scope  
+- `url` — Full API URL  
+- `method` — HTTP verb  
+- `body` — JSON body  
+- `dataType` — Response format  
 
-## save
-- Signature: `save(formDataIncIdToUpdate: SharepointChoiceForm, uneditedDataToBuildPatch: SharepointChoiceForm, listTitle: string): Promise<number>`
-- Description: Create or update a list item and handle attachments (delete then upload). Computes minimal patch when possible.
-- Parameters:
-  - `formDataIncIdToUpdate` — data to save; may include `Id` for update.
-  - `uneditedDataToBuildPatch` — original data used to compute changes/patch.
-  - `listTitle` — list title.
-- Returns: Promise resolving to the saved item Id.
+### Output  
+`Promise<any>`
+
+---
+
+# `param(name)`
+
+### Description  
+Reads a query‑string parameter from the current page.
+
+### Inputs  
+- `name` — Parameter key  
+
+### Output  
+`string | undefined`
+
+---
+
+# `ensurePath(path, start)`
+
+### Description  
+Ensures a folder path exists, creating missing subfolders recursively.
+
+### Inputs  
+- `path` — Folder path  
+- `start` — Index to begin recursion  
+
+### Output  
+`Promise<void>`
+
+---
+
+# `getRoot(list)`
+
+### Description  
+Gets the server‑relative root folder URL of a list.
+
+### Inputs  
+- `list` — List title  
+
+### Output  
+`Promise<string>`
+
+---
+
+# `getFiles(path, additional?)`
+
+### Description  
+Loads files from a folder and returns attachment metadata.
+
+### Inputs  
+- `path` — Folder path  
+- `additional` — Optional subfolder  
+
+### Output  
+`Promise<SharepointChoiceAttachment[]>`
+
+---
+
+# `relocateFolder(source, destination)`
+
+### Description  
+Moves a folder to a new location.
+
+### Inputs  
+- `source` — Source folder path  
+- `destination` — Destination folder path  
+
+### Output  
+`Promise<string | null>`
+
+---
+
+# `saveFiles(path, additional?, url?, files?, metadata?)`
+
+### Description  
+Uploads or updates files and applies metadata.
+
+### Inputs  
+- `path` — Target folder  
+- `additional` — Optional subfolder  
+- `url` — URL metadata  
+- `files` — `{ results: [...] }` attachments  
+- `metadata` — Folder/item metadata  
+
+### Output  
+`Promise<void>`
+
+---
+
+# `save(form, original, listTitle)`
+
+### Description  
+Creates or updates a SharePoint list item, including attachments.
+
+### Inputs  
+- `form` — Data to save  
+- `original` — Original data for patching  
+- `listTitle` — List name  
+
+### Output  
+`Promise<number>` — Saved item ID.
+
+---
+
+# License
+
+MIT
