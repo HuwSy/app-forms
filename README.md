@@ -267,6 +267,8 @@ A fast, enterprise‑grade Angular table for **large SharePoint datasets**, with
 
 A utility class wrapping **PnP JS**, **SharePoint REST**, and **MSAL** for:
 
+- Direct PnP access via `utils.sp`
+- Access to the current site context via `utils.context`
 - Permissions  
 - Search  
 - List metadata  
@@ -276,9 +278,36 @@ A utility class wrapping **PnP JS**, **SharePoint REST**, and **MSAL** for:
 - Folder creation  
 - MSAL‑authenticated API calls  
 
-Below is a detailed breakdown of every method.
+Below is a detailed breakdown.
 
 ---
+
+## Constructor
+- Signature: `constructor(context?: string)`
+- Description: Creates a SharepointChoiceUtils instance for a given site context.  
+  The constructor also exposes two useful properties:
+
+### **Exposed Properties**
+
+#### `sp: SPFI`
+PnP JS instance pre‑configured with the provided context.  
+This allows direct access to the full PnP API surface, for example:
+
+```ts
+utils.sp.web.lists.getByTitle('MyList').items.select('Id','Title')();
+```
+
+Useful when you need raw PnP operations beyond the high‑level helpers.
+
+#### `context: string`
+The site context or base URL passed into the constructor.  
+Used internally for:
+
+- Determining folder‑path depth  
+- SP request routing  
+- Ensuring correct URL resolution  
+
+You may also use it in your own logic when constructing server‑relative paths.
 
 # `permissions()`
 
