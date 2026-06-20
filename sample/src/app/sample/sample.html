@@ -9,6 +9,7 @@
   </div>
 
   <input [(ngModel)]="search.Title" placeholder="Search title" name="Title">
+  <br>
 
   <app-table
       [allData]="{'Results Sample Table': data}"
@@ -54,7 +55,7 @@
     <!-- BASIC TEXT FIELD -->
     <app-choice [form]="form" [spec]="spec" field="Title" [disabled]="stage=='View'"></app-choice>
 
-    <!-- FILE ATTACHMENTS -->
+    <!-- FILE ATTACHMENTS TO LIST ITEM -->
     <app-choice [form]="form" [spec]="spec" field="Attachments" [disabled]="stage=='View'"></app-choice>
 
     <!-- RICH TEXT APPEND-ONLY -->
@@ -75,7 +76,7 @@
       [text]="titleSearch">
     </app-choice>
 
-    <!-- FILE UPLOAD WITH OPTIONS -->
+    <!-- FILE UPLOAD WITH OPTIONS TO FOLDERS LINKED TO LIST ITEM -->
     <app-choice
       [form]="files"
       [override]="{'TypeAsString':'Attachments'}"
@@ -83,14 +84,14 @@
       [file]="fileOptions">
     </app-choice>
 
-    <!-- MULTI-CHOICE FIELD -->
+    <!-- MULTI-CHOICE FIELD FROM API BASED DATA -->
     <app-choice
       [form]="form"
       [spec]="spec"
       field="Categories">
     </app-choice>
 
-    <!-- PEOPLE PICKER -->
+    <!-- PEOPLE PICKER FIELD -->
     <app-choice
       [form]="form"
       [spec]="spec"
@@ -112,7 +113,7 @@
       [text]="lookupSearch">
     </app-choice>
 
-    <!-- MULTI-LINE CUSTOM ARRAY -->
+    <!-- MULTI-LINE CUSTOM ARRAY INTO THE LIST ITEM -->
     <div *ngFor="let d of form.PlainTextMultiLine; let i = index">
       <input type="date" [(ngModel)]="d.DateIntoJSONObj" name="Date_{{i}}">
       <input type="text" [(ngModel)]="d.TextIntoJSONObj" name="Text_{{i}}">
