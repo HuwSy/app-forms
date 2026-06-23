@@ -4,6 +4,7 @@
   "scripts": {
     "ng": "ng",
     "spc": "cd ../sharepoint-choice && npm install && npm run build && cd ../sample",
+    "install": "npm install --include=peer --install-links",
     "start": "ng serve",
     "bundle": "ng build --aot --delete-output-path --output-hashing=none",
     "version": "npx -y shx rm -rf node_modules package-lock.json && npm install sharepoint-choice && (npm audit fix || echo npm audit fix reported issues, continuing) && git add . && git commit -m \"Version bump\" && git push"
