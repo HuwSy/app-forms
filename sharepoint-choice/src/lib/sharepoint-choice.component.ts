@@ -12,7 +12,7 @@ import { SharepointChoiceUtils } from './sharepoint-choice.utils';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SharepointChoiceLogging } from './sharepoint-choice.logging';
-import { SharepointChoiceForm, SharepointChoiceList, SharepointChoiceField, SharepointChoiceAttachment } from './sharepoint-choice.models';
+import { SharepointChoiceForm, SharepointChoiceList, SharepointChoiceField, SharepointChoiceAttachment, LCID_TO_BCP47, CURRENCY_BY_REGION } from './sharepoint-choice.models';
 import { SharepointChoiceRefresh } from './sharepoint-choice.refresh';
 
 interface SharepointChoiceUser {
@@ -167,6 +167,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   pos: number = -1;
   sort?: string;
   otherText: string = '';
+  lookupDisplay: string = '';
 
   users: SharepointChoiceUser[] = [];
 
@@ -228,23 +229,25 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     return '';
   }
 
-  // show numbers with only 1 dot and without any trailing zeros
-  niceNumber(): string {
-    // .toLocaleString() will only retain 3 decimal places therefore split and do dp manually
-    // if no dp then no decimal dot either
-    // if dp only get 1st, should never be 2 i.e. 0.1.2
+  // show numbers using locale separators without forcing trailing zeros
+  niceNumber(bcp47: string | undefined = undefined): string {
     if (!this.form[this.field] && this.form[this.field] !== 0)
       return '';
-    var s = this.form[this.field].toLocaleString().split('.');
-    return s[0] + (s.length == 1 ? '' : '.' + s[1].replace(/0*$/, ''));
+
+    return new Intl.NumberFormat(bcp47, {
+      useGrouping: true,
+      maximumFractionDigits: 20
+    }).format(this.form[this.field]);
   }
 
-  numberSet(e: string | undefined): void {
+  numberSet(e: string | undefined, bcp47: string | undefined = undefined): void {
     if (!e) {
       this.form[this.field] = null
       return;
     }
-    let p = parseFloat(e.replace(/[^0-9\.]/g, ''));
+
+    let normalized = this.normalizeLocaleNumber(e, bcp47);
+    let p = parseFloat(normalized);
     if (isNaN(p)) {
       this.form[this.field] = null
       return;
@@ -266,6 +269,71 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.changed();
   }
 
+  lcidToBcp47(lcid: number): string {
+    return LCID_TO_BCP47[lcid] || 'en-US';
+  }
+
+  symbol(bcp47: string): string {
+    let currency = this.currencyCode(bcp47);
+    let formatter = new Intl.NumberFormat(bcp47, {
+      style: "currency",
+      currency,
+      currencyDisplay: 'narrowSymbol'
+    });
+    return formatter.formatToParts(0).find(p => p.type == 'currency')?.value || currency;
+  }
+
+  pattern(bcp47: string | undefined = undefined): string {
+    if ((new Intl.NumberFormat(bcp47).formatToParts(12345.6)).find(p => p.type === "decimal")?.value === ",")
+      return '-{0,1}[0-9\. \']*,{0,1}[0-9\. \']*';
+    return '-{0,1}[0-9, \']*\.{0,1}[0-9, \']*';
+  }
+
+  normalizeLocaleNumber(value: string, bcp47: string | undefined): string {
+    let parts = new Intl.NumberFormat(bcp47).formatToParts(-12345.6);
+    let decimal = parts.find(p => p.type == 'decimal')?.value || '.';
+    let group = parts.find(p => p.type == 'group')?.value || ',';
+    let minus = parts.find(p => p.type == 'minusSign')?.value || '-';
+    let digits = new Map(
+      new Intl.NumberFormat(bcp47, { useGrouping: false })
+        .format(9876543210)
+        .split('')
+        .reverse()
+        .map((digit, index) => [digit, index.toString()])
+    );
+
+    let normalized = value
+      .trim()
+      .replace(/[\s\u00A0\u202F]/g, '')
+      .split('')
+      .map((char) => digits.get(char) || char)
+      .join('');
+
+    normalized = normalized
+      .replace(new RegExp(this.escapeRegex(group), 'g'), '')
+      .replace(new RegExp(this.escapeRegex(decimal), 'g'), '.')
+      .replace(new RegExp(this.escapeRegex(minus), 'g'), '-');
+
+    let negative = normalized.startsWith('-') ? '-' : '';
+    normalized = normalized.replace(/-/g, '');
+
+    let decimalPos = normalized.indexOf('.');
+    if (decimalPos >= 0)
+      normalized = normalized.slice(0, decimalPos + 1) + normalized.slice(decimalPos + 1).replace(/\./g, '');
+
+    return (negative + normalized).replace(/[^0-9.-]/g, '');
+  }
+
+  currencyCode(bcp47: string): string {
+    let region = bcp47.split('-').findLast(part => /^[A-Z]{2}$/.test(part));
+
+    return region ? (CURRENCY_BY_REGION[region] || 'USD') : 'USD';
+  }
+
+  escapeRegex(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   // field required based on spec but required is not needed for hidden/disabled items
   required(): boolean {
     if (this.disabled || this.elRef.nativeElement.hidden || !this.get('Required'))
@@ -285,6 +353,20 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       default:
         return this.form[this.field] ? 'true' : '';
     }
+  }
+
+  hasGeolocationValue(): boolean {
+    let value = this.form[this.field];
+    if (!value)
+      return false;
+
+    return value.Latitude !== undefined && value.Latitude !== null && value.Latitude !== ''
+      && value.Longitude !== undefined && value.Longitude !== null && value.Longitude !== '';
+  }
+
+  geolocationHref(): string {
+    let value = this.form[this.field] || {};
+    return `https://www.bing.com/maps/sharing?cp=${value.Latitude}%7E${value.Longitude}&lvl=17.5&webglerror=a`;
   }
 
   // max length character countdown
@@ -344,6 +426,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             Description: '',
             Url: this.form[this.field] || ''
           }
+        // if its geolocation, ensure the object is the correct type
+      } else if (p == 'Geolocation') {
+        if (!this.form[this.field] || this.form[this.field].Latitude === undefined || this.form[this.field].Longitude === undefined)
+          this.form[this.field] = {
+            Latitude: '',
+            Longitude: ''
+          }
         // if its attachments, ensure the object is the correct type and office fired if needed
       } else if (p == 'Attachments') {
         this.officeAddin();
@@ -351,14 +440,17 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           this.form[this.field] = {
             results: []
           }
-      } else if (p == 'Text') {
-        if (!this.textKey && this.text?.search) {
+      } else if (p == 'Text' || p == 'Lookup') {
+        if (!this.textKey && (p == 'Lookup' || this.text?.search)) {
           this.textKey = new Subject<string>();
           this.textKey.pipe(
             debounceTime(250),
             distinctUntilChanged()
           ).subscribe((key) => this.onUpTextSearch(key));
         }
+
+        if (p == 'Lookup' && !this.lookupDisplay)
+          this.lookupDisplay = this.lookupLabel();
       }
 
       // if the field is empty (not set null) then set the default value only if there is one
@@ -485,30 +577,53 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     } else if (key == "Enter") {
       await this.selectedText(this.results[this.pos]);
     } else {
-      if (!this.form[this.field])
+      let searchValue = this.get('TypeAsString') == 'Lookup'
+        ? this.otherText.trim()
+        : this.form[this.field];
+
+      if (!searchValue)
         this.results = [];
       else
-        this.textKey.next(this.form[this.field]);
+        this.textKey.next(searchValue);
     }
     this.chRef.markForCheck();
   }
 
   async onUpTextSearch(text: string): Promise<void> {
-    if (!this.text?.search)
-      return;
+    if (this.get('TypeAsString') == 'Lookup') {
+      let spc = new SharepointChoiceUtils();
+      let list = this.get('LookupList');
+      let field = this.lookupResultField();
 
-    this.results = await this.text.search(text, this.text.parent);
+      if (!list || !field || !text.trim())
+        this.results = [];
+      else {
+        let escaped = text.replace(/'/g, "''");
+        this.results = await spc.sp.web.lists.getById(list).items.select('Id', field).filter(`${field} ne null and substringof('${escaped}',${field})`).top(10)();
+      }
+    }
+    if (this.get('TypeAsString') == 'Text') {
+      if (!this.text?.search)
+        return;
+      this.results = await this.text.search(text, this.text.parent);
+    }
 
     this.pos = -1;
     this.chRef.markForCheck();
   }
 
   async selectedText(res: SharepointChoiceForm | null): Promise<void> {
-    if (!this.text?.search)
+    let lookup = this.get('TypeAsString') == 'Lookup';
+    if (!lookup && !this.text?.search)
       return;
 
     if (!res) {
-      this.form[this.field] = null;
+      if (lookup)
+        this.setLookupValue(null, '');
+      else
+        this.form[this.field] = null;
+    } else if (lookup) {
+      this.setLookupValue(res['Id'], this.lookupOptionLabel(res));
     } else {
       this.form[this.field] = res[this.field];
       if (this.text.select)
@@ -517,6 +632,53 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     this.results = [];
     this.changed();
+  }
+
+  lookupResultField(): string {
+    return this.get('LookupField') || this.field;
+  }
+
+  lookupOptionLabel(result?: SharepointChoiceForm | null): string {
+    if (!result)
+      return '';
+
+    let field = this.lookupResultField();
+    return result[field]?.toString() || '';
+  }
+
+  lookupLabel(): string {
+    if (this.otherText)
+      return this.otherText;
+
+    let current = this.form[this.field];
+    if (current?.LookupValue)
+      return current.LookupValue.toString();
+    if (typeof current == 'string')
+      return current;
+    if (typeof current == 'number' && this.lookupDisplay)
+      return this.lookupDisplay;
+
+    let currentId = this.form[this.field + 'Id'];
+    if (currentId?.LookupValue)
+      return currentId.LookupValue.toString();
+
+    return this.lookupDisplay;
+  }
+
+  lookupSet(value: string): void {
+    this.otherText = value;
+    if (!value.trim())
+      this.lookupDisplay = '';
+  }
+
+  setLookupValue(id: number | null, label: string): void {
+    this.lookupDisplay = label;
+    this.otherText = label;
+
+    if (this.form[this.field + 'Id'] !== undefined)
+      this.form[this.field + 'Id'] = id;
+
+    this.form[this.field] = id == null ? null : id;
   }
 
   /*

@@ -136,9 +136,24 @@
     @case ('Number') {
     <input [disabled]="disabled"
            type="text"
-           pattern="-{0,1}[0-9,]*\.{0,1}[0-9,]*"
+           [pattern]="pattern()"
            [ngModel]="niceNumber()"
            (ngModelChange)="numberSet($event)"
+           [required]="req"
+           name="SharepointChoice{{prefix}}{{field}}"
+           [min]="get('Min')"
+           [max]="get('Max')"
+           (change)="changed()"
+           placeholder="{{title || internal}}...">
+    }
+    @case ('Currency') {
+    @let bcp47 = lcidToBcp47(get('LCID'));
+    {{symbol(bcp47)}}
+    <input [disabled]="disabled"
+           type="text"
+           [pattern]="pattern(bcp47)"
+           [ngModel]="niceNumber(bcp47)"
+           (ngModelChange)="numberSet($event, bcp47)"
            [required]="req"
            name="SharepointChoice{{prefix}}{{field}}"
            [min]="get('Min')"
@@ -196,6 +211,39 @@
               [hidden]="result['hide']"
               [style]="(pos == i ? 'background-color: rgba(0, 0, 0, 0.04);' : '')">
             {{result[field]}}
+          </li>
+          }
+          <li style="text-align: right;"
+              (click)="selectedText(null)">
+            Cancel
+          </li>
+        </ul>
+      </div>
+    </div>
+    }
+    }
+    @case ('Lookup') {
+    <input [disabled]="disabled"
+           type="text"
+           [pattern]="text.pattern || '.*'"
+           [ngModel]="lookupLabel()"
+           (ngModelChange)="lookupSet($event)"
+           [required]="req"
+           name="SharepointChoice{{prefix}}{{field}}"
+           (change)="changed()"
+           (keyup)="onUpText($event.key)"
+           (click)="onUpText(undefined)"
+           placeholder="{{title || internal}}...">
+
+    @if (!disabled && results.length > 0) {
+    <div style="position: relative; padding: 0;">
+      <div class="AutoComplete">
+        <ul>
+          @for (result of results; track $index; let i = $index) {
+          <li (click)="selectedText(result)"
+              [hidden]="result['hide']"
+              [style]="(pos == i ? 'background-color: rgba(0, 0, 0, 0.04);' : '')">
+            {{lookupOptionLabel(result)}}
           </li>
           }
           <li style="text-align: right;"
@@ -265,6 +313,33 @@
     <div style="max-height: 500px; overflow: auto;"
          [innerHTML]="form[field]"></div>
     }
+    }
+    }
+    @case ('Geolocation') {
+    <input [disabled]="disabled"
+           [(ngModel)]="form[field].Latitude"
+           [required]="req"
+           name="SharepointChoice{{prefix}}{{field}}_Latitude"
+           placeholder="Latitude"
+           pattern="^-?\d+(\.\d+)?$"
+           (change)="changed()"
+           style="width:50%">
+    <input [disabled]="disabled"
+           [(ngModel)]="form[field].Longitude"
+           name="SharepointChoice{{prefix}}{{field}}_Longitude"
+           placeholder="Longitude"
+           pattern="^-?\d+(\.\d+)?$"
+           (change)="changed()"
+           style="width:50%">
+     @if (hasGeolocationValue()) {
+     <a [href]="geolocationHref()"
+       target="_blank"
+       style="display: block; text-align: center;">View on Map</a>
+    }
+    @else if (!disabled) {
+    <a href="https://www.latlong.net/"
+       target="_blank"
+       style="display: block; text-align: center;">Get Lat/Long</a>
     }
     }
     @case ('URL') {

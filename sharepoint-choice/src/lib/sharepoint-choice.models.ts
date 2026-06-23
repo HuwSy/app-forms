@@ -42,6 +42,76 @@ export interface SharepointChoiceField {
   AppendOnly?: boolean;
 }
 
+export const LCID_TO_BCP47: Readonly<Record<number, string>> = {
+  1025: 'ar-SA',
+  1026: 'bg-BG',
+  1027: 'ca-ES',
+  1028: 'zh-TW',
+  1029: 'cs-CZ',
+  1030: 'da-DK',
+  1031: 'de-DE',
+  1032: 'el-GR',
+  1033: 'en-US',
+  1035: 'fi-FI',
+  1036: 'fr-FR',
+  1037: 'he-IL',
+  1038: 'hu-HU',
+  1040: 'it-IT',
+  1041: 'ja-JP',
+  1042: 'ko-KR',
+  1043: 'nl-NL',
+  1044: 'nb-NO',
+  1045: 'pl-PL',
+  1046: 'pt-BR',
+  1048: 'ro-RO',
+  1049: 'ru-RU',
+  1050: 'hr-HR',
+  1051: 'sk-SK',
+  1053: 'sv-SE',
+  1054: 'th-TH',
+  1055: 'tr-TR',
+  1056: 'ur-PK',
+  1057: 'id-ID',
+  1058: 'uk-UA',
+  1060: 'sl-SI',
+  1061: 'et-EE',
+  1062: 'lv-LV',
+  1063: 'lt-LT',
+  1066: 'vi-VN',
+  1069: 'eu-ES',
+  1081: 'hi-IN',
+  1086: 'ms-MY',
+  1087: 'kk-KZ',
+  1106: 'cy-GB',
+  1110: 'gl-ES',
+  1125: 'pa-IN',
+  1130: 'mr-IN',
+  1146: 'gd-GB',
+  2052: 'zh-CN',
+  2055: 'de-CH',
+  2057: 'en-GB',
+  2060: 'fr-BE',
+  2064: 'it-CH',
+  2067: 'nl-BE',
+  2070: 'pt-PT',
+  2074: 'sr-Latn-RS',
+  3076: 'zh-HK',
+  3082: 'es-ES',
+  4100: 'zh-SG',
+  5124: 'zh-MO',
+  7177: 'es-US'
+};
+
+export const CURRENCY_BY_REGION: Readonly<Record<string, string>> = {
+  SA: 'SAR', BG: 'BGN', ES: 'EUR', TW: 'TWD', CZ: 'CZK', DK: 'DKK', DE: 'EUR',
+  GR: 'EUR', US: 'USD', FI: 'EUR', FR: 'EUR', IL: 'ILS', HU: 'HUF', IT: 'EUR',
+  JP: 'JPY', KR: 'KRW', NL: 'EUR', NO: 'NOK', PL: 'PLN', BR: 'BRL', RO: 'RON',
+  RU: 'RUB', HR: 'EUR', SK: 'EUR', SE: 'SEK', TH: 'THB', TR: 'TRY', PK: 'PKR',
+  ID: 'IDR', UA: 'UAH', SI: 'EUR', EE: 'EUR', LV: 'EUR', LT: 'EUR', VN: 'VND',
+  IN: 'INR', MY: 'MYR', KZ: 'KZT', GB: 'GBP', CN: 'CNY', CH: 'CHF', BE: 'EUR',
+  PT: 'EUR', RS: 'RSD', HK: 'HKD', SG: 'SGD', MO: 'MOP'
+};
+
 export interface SharepointChoicePermission {
   userId: number;
   perms: {

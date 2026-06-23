@@ -579,12 +579,34 @@ export class SharepointChoiceUtils {
         continue;
       }
 
-      // if Url with issues
+      // if Url
       if (typeof save[key] == "object" && (save[key].Url !== undefined || save[key].Description !== undefined)) {
         if (!save[key].Description)
           save[key].Description = save[key].Url;
         if (!save[key].Url)
           save[key] = null;
+        continue;
+      }
+
+      // if Geolocation
+      if (typeof save[key] == "object" && (save[key].Latitude !== undefined || save[key].Longitude !== undefined)) {
+        let latitude = save[key].Latitude;
+        let longitude = save[key].Longitude;
+
+        if (latitude === '' || latitude === undefined)
+          latitude = null;
+        else if (typeof latitude == 'string')
+          latitude = parseFloat(latitude);
+
+        if (longitude === '' || longitude === undefined)
+          longitude = null;
+        else if (typeof longitude == 'string')
+          longitude = parseFloat(longitude);
+
+        if (latitude == null || longitude == null || isNaN(latitude) || isNaN(longitude))
+          save[key] = null;
+        else
+          save[key] = { Latitude: latitude, Longitude: longitude };
         continue;
       }
 
