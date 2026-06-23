@@ -1,6 +1,6 @@
 {
   "name": "sample",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "scripts": {
     "ng": "ng",
     "spc": "cd ../sharepoint-choice && npm install && npm run build && cd ../sample",
@@ -9,7 +9,7 @@
     "version": "npx -y shx rm -rf node_modules package-lock.json && npm install sharepoint-choice && (npm audit fix || echo npm audit fix reported issues, continuing) && git add . && git commit -m \"Version bump\" && git push"
   },
   "dependencies": {
-    "sharepoint-choice": "file:../sharepoint-choice"
+    "sharepoint-choice": "file:../sharepoint-choice/dist/sharepoint-choice"
   },
   "devDependencies": {
     "@angular/build": "^22.0.0",
