@@ -612,6 +612,7 @@
                     [(ngModel)]="listItem['Title']"
                     style="width: calc( 100% - 38px ); height: 1.8em; min-height: 1.8em; resize: vertical;"
                     name="SharepointChoice{{prefix}}{{field}}_Name_{{i}}"
+                    (keydown.enter)="enterKey($event)"
                     (change)="changed()"
                     [title]="f.FileName + ' - ' + fileSize(f.Length)">
           </textarea>
