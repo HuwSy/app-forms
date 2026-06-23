@@ -305,7 +305,7 @@ export class SampleComponent implements OnInit {
       
       this.chRef.detectChanges();
   
-      this.versions = await this._spUtils.sp.web.lists.getByTitle(this.list).items.getById(this.form.Id).versions.top(5000).get();
+      this.versions = await this._spUtils.version(this.form.Id, this.list);
   
       // handle approval of task for next stage
       switch (status) {
