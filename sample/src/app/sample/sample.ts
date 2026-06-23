@@ -40,7 +40,7 @@ export class SampleComponent implements OnInit {
   // Dashboard
   loading:boolean = true;
   data:any = [];
-  search = {};
+  search:any = {};
   allEditing = false;
 
   // Form
@@ -185,8 +185,8 @@ export class SampleComponent implements OnInit {
 
   lookupSearch = {
     search: async (query: string) => {
-      const r = await this.utils.search(query, 20);
-      return r.PrimarySearchResults.map(x => ({
+      const r = await this._spUtils.search(query, 20);
+      return r.PrimarySearchResults.map((x:any) => ({
         Id: x.Id,
         Title: x.Title
       }));
@@ -285,7 +285,7 @@ export class SampleComponent implements OnInit {
           return false;
       }
       // is the owner of the task group
-      return this.perm[this.tabs.filter(tab => tab.tab == this.stage)[0].owner];
+      return this.perm[this.tabs.filter(tab => tab.tab == this.stage)[0]?.owner ?? ''];
     } catch (e) {
       return false;
     }
