@@ -769,6 +769,10 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       });
   }
 
+  enterKey(e):void {
+    e.preventDefault();
+  }
+
   friendlyName(name?: string): string {
     if (!name)
       return '';
