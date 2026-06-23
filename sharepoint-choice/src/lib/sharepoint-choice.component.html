@@ -607,13 +607,14 @@
           <a [hidden]="f.ServerRelativeUrl">{{f.FileName}}</a>
           }
           @else if (listItem) {
-          <input [disabled]="disabled"
-                 [hidden]="f.ServerRelativeUrl"
-                 [(ngModel)]="listItem['Title']"
-                 style="width: calc( 100% - 38px );"
-                 name="SharepointChoice{{prefix}}{{field}}_Name_{{i}}"
-                 (change)="changed()"
-                 [title]="f.FileName + ' - ' + fileSize(f.Length)">
+          <textarea [disabled]="disabled"
+                    [hidden]="f.ServerRelativeUrl"
+                    [(ngModel)]="listItem['Title']"
+                    style="width: calc( 100% - 38px ); height: 1.8em; min-height: 1.8em; resize: vertical;"
+                    name="SharepointChoice{{prefix}}{{field}}_Name_{{i}}"
+                    (change)="changed()"
+                    [title]="f.FileName + ' - ' + fileSize(f.Length)">
+          </textarea>
           }
 
           <a style="color: red; padding-left: 8px;cursor: pointer;position: absolute;"
