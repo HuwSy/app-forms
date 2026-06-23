@@ -1255,18 +1255,19 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // only save files that have an extension
     if (fileName.indexOf('.') < 0)
       return;
-    // cleanup the name, more agressive as it may not be from a windows file system or have trailing chars from email systems
-    var n = fileName.trim().replace(/[\\/:*?"%'#<>|=]/g, '-').replace(/[^a-zA-Z0-9]*$/g, '');
+    // cleanup the name
+    var n = fileName.trim().replace(/[\\/:*?"%'#<>|=]/g, '-').replace(/-+$/, '');
     // get the extension
     var e = n.substring(n.lastIndexOf('.') + 1);
     // get the first part of the name
     var f = n.substring(0, n.lastIndexOf('.'));
-    // get the title
-    var t = f.length > 255 ? f.substring(0, 255) : f;
-    // get shortened file name
+    // shorten the file name
     var s = f.length > 100 ? f.substring(0, 100) : f;
-
-    // find the next available name by appending a number
+    // get the title
+    var t = fileName.trim();
+    // shorten the title
+    var u = t.length > 255 ? t.substring(0, 255) : t;
+    // find the next available file name by appending a number
     var i = 1, newName = `${s}.${e}`;
     while (results.filter(f => f.FileName == newName).length > 0) {
       newName = `${s} (${i++}).${e}`;
@@ -1276,7 +1277,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       FileName: newName,
       Data: data,
       Length: data.byteLength,
-      ListItemAllFields: { Title: t }
+      ListItemAllFields: { Title: u }
     };
 
     if (desc && this.file?.notes && file.ListItemAllFields)
