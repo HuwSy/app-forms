@@ -1,6 +1,6 @@
 # app-forms
 
-Angular components and utilities for SharePoint forms, tables, and file-driven workflows.
+A set of simple reusable Angular controls to use within SharePoint for rapid prototyping and development. Originally in AngularJS/JavaScript and progressed to run within Angular (2+) within an included SPFx wrapper. This gives table controls, dynamic form fields driven off list data and type from schema and some helper utils. 
 
 This repository contains three related pieces:
 
