@@ -1265,6 +1265,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     f = f.substring(0, 100);
     // get the title
     var t = fileName.trim();
+    // remove extension
+    t = t.substring(0, t.lastIndexOf('.'));
     // shorten the title
     t = t.substring(0, 255);
     // find the next available file name by appending a number
