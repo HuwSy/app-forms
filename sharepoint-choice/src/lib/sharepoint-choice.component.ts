@@ -1254,8 +1254,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   async appendFile(fileName: string, data: ArrayBuffer, results: SharepointChoiceAttachment[], desc?: string) {
     // cleanup the name
     var n = fileName.trim().replace(/[+\\/:*?"%'#<>|={}~;@]/g, '-').replace(/-+/g, '-').replace(/\.+/g, '.').replace(/[. -]+$/g, '').replace(/^[. -]+/g, '').replace(/[\u200B-\u200F\uFEFF]/g, '');
-    // only save files that have an extension
-    if (n.indexOf('.') < 0)
+    // only save files that have a name and extension
+    if (n.indexOf('.') < 0 || n.length < 3)
       return;
     // get the extension
     var e = n.substring(n.lastIndexOf('.') + 1);
@@ -1299,29 +1299,28 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // extract zip files and append to results
   async zips(data: ArrayBuffer, results: SharepointChoiceAttachment[]) {
+    var failiures = 0;
     try {
       var zip = await loadAsync(data);
       var files = Object.values(zip.files);
-      var failiures = 0;
       await Promise.all(files.map(async (file) => {
         if (file.dir)
           return;
 
         try {
           var buffer: ArrayBuffer | undefined = await file.async('arraybuffer');
-          if (buffer) {
-            var flattenedName = file.name.replace(/(\.\.[\\/])+/g, '').replace(/^\.+/, '').replace(/^[\\/]+/, '').replace(/[\\/]+/g, '/');
+          var flattenedName = file.name.replace(/(\.\.[\\/])+/g, '').replace(/^\.+/, '').replace(/^[\\/]+/, '').replace(/[\\/]+/g, '/');
+          if (buffer)
             await this.appendFile(flattenedName, buffer, results, `Date: ${file.date}`);
-          }
+          else
+            failiures++;
         } catch (e) { failiures++; }
       }));
-      // if there were no failiures then remove the original zip file as all contents extracted successfully, otherwise keep it as a fallback
-      if (failiures == 0)
-        return true;
     } catch (e) {
       // zip is uploaded so any extracted elements are only nice to have
+      failiures++;
     }
-    return false;
+    return failiures == 0;
   }
 
   // extract and append msg email attachments to results
