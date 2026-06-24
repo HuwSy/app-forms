@@ -1,6 +1,6 @@
 {
   "name": "angular-wrapper",
-  "version": "1.15.11",
+  "version": "1.15.12",
   "private": false,
   "engines": {
     "node": ">=22.14.0"
