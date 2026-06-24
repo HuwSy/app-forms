@@ -1,9 +1,9 @@
 {
   "name": "angular-wrapper",
-  "version": "1.15.10",
+  "version": "1.15.11",
   "private": false,
   "engines": {
-    "node": ">=22.14.0 < 23.0.0"
+    "node": ">=22.14.0"
   },
   "scripts": {
     "build": "heft test --clean --production && heft package-solution --production",
@@ -12,31 +12,31 @@
     "eject-webpack": "heft eject-webpack"
   },
   "dependencies": {
-    "tslib": "2.3.1",
-    "@microsoft/sp-core-library": "1.22.2",
-    "@microsoft/sp-component-base": "1.22.2",
-    "@microsoft/sp-property-pane": "1.22.2",
-    "@microsoft/sp-webpart-base": "1.22.2",
-    "@microsoft/sp-lodash-subset": "1.22.2",
-    "@microsoft/sp-office-ui-fabric-core": "1.22.2"
+    "tslib": "^2.8.1",
+    "@microsoft/sp-core-library": "^1.23.0",
+    "@microsoft/sp-component-base": "^1.23.0",
+    "@microsoft/sp-property-pane": "^1.23.0",
+    "@microsoft/sp-webpart-base": "^1.23.0",
+    "@microsoft/sp-lodash-subset": "^1.23.0",
+    "@microsoft/sp-office-ui-fabric-core": "^1.23.0"
   },
   "devDependencies": {
-    "@rushstack/eslint-config": "4.5.2",
-    "@microsoft/eslint-plugin-spfx": "1.22.2",
-    "@microsoft/eslint-config-spfx": "1.22.2",
-    "@microsoft/spfx-web-build-rig": "1.22.2",
-    "@microsoft/spfx-heft-plugins": "1.22.2",
-    "@rushstack/heft": "1.1.2",
-    "@types/heft-jest": "1.0.2",
-    "@types/webpack-env": "~1.15.2",
-    "@typescript-eslint/parser": "8.46.2",
-    "css-loader": "~7.1.2",
-    "eslint": "8.57.1",
-    "typescript": "~5.8.0",
-    "@microsoft/sp-module-interfaces": "1.22.2",
-    "@fluentui/react": "^8.106.4"
+    "@rushstack/eslint-config": "^4.6.4",
+    "@microsoft/eslint-plugin-spfx": "^1.23.0",
+    "@microsoft/eslint-config-spfx": "^1.23.0",
+    "@microsoft/spfx-web-build-rig": "^1.23.0",
+    "@microsoft/spfx-heft-plugins": "^1.23.0",
+    "@rushstack/heft": "^1.2.19",
+    "@types/heft-jest": "^1.0.6",
+    "@types/webpack-env": "^1.18.8",
+    "@typescript-eslint/parser": "^8.62.0",
+    "css-loader": "^7.1.4",
+    "eslint": "^8.57.1",
+    "typescript": "^5.9.2",
+    "@microsoft/sp-module-interfaces": "^1.23.0",
+    "@fluentui/react": "^8.125.6"
   },
   "overrides": {
-    "@rushstack/heft": "1.1.2"
+    "@rushstack/heft": "^1.2.19"
   }
 }
