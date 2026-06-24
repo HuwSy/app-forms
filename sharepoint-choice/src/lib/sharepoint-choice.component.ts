@@ -1303,7 +1303,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     try {
       var zip = await loadAsync(data);
       var files = Object.values(zip.files);
-      await Promise.all(files.map(async (file) => {
+      await Promise.all(files.map(async (file:any) => {
         if (file.dir)
           return;
 
