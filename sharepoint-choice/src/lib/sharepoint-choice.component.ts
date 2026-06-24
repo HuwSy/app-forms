@@ -1252,21 +1252,21 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   async appendFile(fileName: string, data: ArrayBuffer, results: SharepointChoiceAttachment[], desc?: string) {
-    // only save files that have an extension
-    if (fileName.indexOf('.') < 0)
-      return;
     // cleanup the name
-    var n = fileName.trim().replace(/[\\/:*?"%'#<>|=]/g, '-').replace(/-+$/, '');
+    var n = fileName.trim().replace(/[+\\/:*?"%'#<>|={}~;@]/g, '-').replace(/-+/g, '-').replace(/\.+/g, '.').replace(/[. -]+$/g, '').replace(/^[. -]+/g, '').replace(/[\u200B-\u200F\uFEFF]/g, '');
+    // only save files that have an extension
+    if (n.indexOf('.') < 0)
+      return;
     // get the extension
     var e = n.substring(n.lastIndexOf('.') + 1);
     // get the first part of the name
     var f = n.substring(0, n.lastIndexOf('.'));
     // shorten the file name
-    f = f.length > 100 ? f.substring(0, 100) : f;
+    f = f.substring(0, 100);
     // get the title
     var t = fileName.trim();
     // shorten the title
-    t = t.length > 255 ? t.substring(0, 255) : t;
+    t = t.substring(0, 255);
     // find the next available file name by appending a number
     var i = 0, newName = `${f}.${e}`;
     while (results.filter(r => r.FileName == newName).length > 0) {
@@ -1285,23 +1285,20 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     results.push(file);
 
-    // shorten to keep reference group but allow for folders etc
-    f = f.substring(0, 8);
-    var prefix = !i ? f : `${f} (${i})`;
     if (this.file?.extract && e.toLowerCase() == "zip")
-      if (await this.zips(!i ? f : `${f} (${i})`, data, results))
+      if (await this.zips(data, results))
         this.delete(results.filter(r => r.FileName == newName)[0])
     if (this.file?.extract && e.toLowerCase() == "msg")
-      await this.msgs(!i ? f : `${f} (${i})`, data, results);
+      await this.msgs(data, results);
     if (this.file?.extract && e.toLowerCase() == "eml")
-      await this.emls(!i ? f : `${f} (${i})`, data, results);
+      await this.emls(data, results);
 
     this.office.loading = false;
     this.changed();
   }
 
   // extract zip files and append to results
-  async zips(prefix: string, data: ArrayBuffer, results: SharepointChoiceAttachment[]) {
+  async zips(data: ArrayBuffer, results: SharepointChoiceAttachment[]) {
     try {
       var zip = await loadAsync(data);
       var files = Object.values(zip.files);
@@ -1314,7 +1311,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           var buffer: ArrayBuffer | undefined = await file.async('arraybuffer');
           if (buffer) {
             var flattenedName = file.name.replace(/(\.\.[\\/])+/g, '').replace(/^\.+/, '').replace(/^[\\/]+/, '').replace(/[\\/]+/g, '/');
-            await this.appendFile(prefix + flattenedName, buffer, results, `Date: ${file.date}`);
+            await this.appendFile(flattenedName, buffer, results, `Date: ${file.date}`);
           }
         } catch (e) { failiures++; }
       }));
@@ -1328,7 +1325,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // extract and append msg email attachments to results
-  async msgs(prefix: string, data: ArrayBuffer, results: SharepointChoiceAttachment[]) {
+  async msgs(data: ArrayBuffer, results: SharepointChoiceAttachment[]) {
     try {
       // new MsgReader(data) doesnt seem to work and .default is not recognised but ['default'] works somehow
       var msgReader = new MsgReader['default'](data) as MsgReader;
@@ -1346,7 +1343,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           return;
         try {
           var file = msgReader.getAttachment(attachment);
-          await this.appendFile(prefix + file.fileName, file.content.buffer as ArrayBuffer, results, `Sent: ${received}`);
+          await this.appendFile(file.fileName, file.content.buffer as ArrayBuffer, results, `Sent: ${received}`);
         } catch (e) { }
       });
     } catch (e) {
@@ -1355,7 +1352,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // extract and append eml email attachments to results
-  async emls(prefix: string, data: ArrayBuffer, results: SharepointChoiceAttachment[]) {
+  async emls(data: ArrayBuffer, results: SharepointChoiceAttachment[]) {
     try {
       // reads the email string data into a json object
       readEml(new TextDecoder().decode(data), (err, ReadEmlJson) => {
@@ -1370,7 +1367,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             var name = attachment.id?.replace(/^</, '').replace(/>$/, '').split('@')[0];
             if (!name || name.indexOf('.') < 0)
               name = attachment.name;
-            await this.appendFile(prefix + name, Uint8Array.from(atob(attachment.data64), c => c.charCodeAt(0)).buffer, results, `Sent: ${received}`);
+            await this.appendFile(name, Uint8Array.from(atob(attachment.data64), c => c.charCodeAt(0)).buffer, results, `Sent: ${received}`);
           } catch (e) { }
         });
       });
