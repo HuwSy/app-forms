@@ -1306,8 +1306,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       var zip = await loadAsync(data);
       var files = Object.values(zip.files);
       // get common root folder to suppress some depth
-      let parts = files.filter((f:any) => !f.dir).map((f:any) => f.name.replace(/\//g, '/').split('/').slice(0, -1));
-      let common = parts.length ? parts.reduce((a:string[]), b:string[]) => a.filter((v,i) => v == b[i])) : [];
+      let parts = files.filter((f:any) => !f.dir).map((f:any) => f.name.replace(/(\.\.[\\/])+/g, '').replace(/^\.+/, '').replace(/^[\\/]+/, '').replace(/[\\/]+/g, '/').split('/').slice(0, -1));
+      let common = parts.length ? parts.reduce((a:string[], b:string[]) => a.filter((v,i) => v == b[i])) : [];
       var root = (common.length > 0 ? common.join('/') + '/' : '').length;
       // loop files
       await Promise.all(files.map(async (file:any) => {
