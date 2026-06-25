@@ -1305,8 +1305,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     try {
       var zip = await loadAsync(data);
       var files = Object.values(zip.files);
+      var normalise = (name: string) => name.replace(/(\.\.[\\/])+/g, '').replace(/^\.+/, '').replace(/^[\\/]+/, '').replace(/[\\/]+/g, '/');
       // get common root folder to suppress some depth
-      let parts = files.filter((f:any) => !f.dir).map((f:any) => f.name.replace(/(\.\.[\\/])+/g, '').replace(/^\.+/, '').replace(/^[\\/]+/, '').replace(/[\\/]+/g, '/').split('/').slice(0, -1));
+      let parts = files.filter((f:any) => !f.dir).map((f:any) => normalise(f.name).split('/').slice(0, -1));
       let common = parts.length ? parts.reduce((a:string[], b:string[]) => a.filter((v,i) => v == b[i])) : [];
       var root = (common.length > 0 ? common.join('/') + '/' : '').length;
       // loop files
@@ -1316,7 +1317,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
         try {
           var buffer: ArrayBuffer | undefined = await file.async('arraybuffer');
-          var flattenedName = file.name.replace(/(\.\.[\\/])+/g, '').replace(/^\.+/, '').replace(/^[\\/]+/, '').replace(/[\\/]+/g, '/').substring(root);
+          var flattenedName = normalise(file.name).substring(root);
           if (buffer)
             await this.appendFile(flattenedName, buffer, results, `Date: ${file.date}`);
           else
