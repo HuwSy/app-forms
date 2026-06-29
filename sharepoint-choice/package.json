@@ -17,25 +17,25 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@angular/common": "^22.0.0",
-    "@angular/core": "^22.0.0",
-    "@angular/forms": "^22.0.0",
-    "@angular/platform-browser": "^22.0.0",
-    "@azure/msal-browser": "^5.0.2",
+    "@angular/common": "^22.0.4",
+    "@angular/core": "^22.0.4",
+    "@angular/forms": "^22.0.4",
+    "@angular/platform-browser": "^22.0.4",
+    "@azure/msal-browser": "^5.15.0",
     "@bobbyquantum/ngx-editor": "^22.0.0",
-    "@kenjiuno/msgreader": "^1.1.3",
-    "@pnp/sp": "^4.0.0",
-    "devextreme-exceljs-fork": "^4.4.1",
-    "@turbowarp/jszip": "^3.11.0",
-    "buffer": "^6.0.0",
-    "eml-parse-js": "^1.1.11",
-    "stacktrace-js": "^2.0.0"
+    "@kenjiuno/msgreader": "^1.28.0",
+    "@pnp/sp": "^4.20.0",
+    "devextreme-exceljs-fork": "^4.4.11",
+    "@turbowarp/jszip": "^3.12.0",
+    "buffer": "^6.0.3",
+    "eml-parse-js": "^1.2.0-beta.1",
+    "stacktrace-js": "^2.0.2"
   },
   "devDependencies": {
-    "@angular/build": "^22.0.0",
-    "@angular/cli": "^22.0.0",
+    "@angular/build": "^22.0.4",
+    "@angular/cli": "^22.0.4",
     "@types/office-js": "^1.0.593",
     "ng-packagr": "^22.0.0",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.3"
   }
 }
