@@ -34,7 +34,7 @@
   "devDependencies": {
     "@angular/build": "^22.0.0",
     "@angular/cli": "^22.0.0",
-    "@types/office-js": "^1.1.67",
+    "@types/office-js": "^1.0.167",
     "ng-packagr": "^22.0.0",
     "typescript": "^6.0.2"
   }
