@@ -727,8 +727,11 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     event.preventDefault();
     event.stopPropagation();
     const startX = event.pageX;
-    const startWidth = col.width || 100;
     var target = event.target as HTMLElement;
+    const startWidth = target.parentNode ? (target.parentNode as HTMLElement).offsetWidth : col.width || 100;
+    const min = parseInt(target.getAttribute('start-width') || '0');
+    if (!min)
+      target.setAttribute('start-width', startWidth.toString());
     target.style.border = '1px solid #000';
 
     const onMouseMove = (e: MouseEvent) => {
@@ -738,7 +741,9 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       target.style.border = 'none';
-      const newWidth = startWidth + (e.pageX - startX);
+      let newWidth = startWidth + (e.pageX - startX);
+      if (newWidth < min)
+        newWidth = min;
       col.width = newWidth;
       target.style.right = '0px';
       this.chRef.markForCheck();
