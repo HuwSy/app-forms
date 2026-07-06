@@ -669,12 +669,13 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     });
   }
 
-  isReorderable(col: SharepointChoiceColumn): boolean {
-    return !!col.field;
+  isReorderable(col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): boolean {
+    return !!this.getColumnDragKey(col, parent);
   }
 
   dragStart(event: DragEvent, col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): void {
-    if (!this.selectedTab || !this.isReorderable(col))
+    const dragKey = this.getColumnDragKey(col, parent);
+    if (!this.selectedTab || !dragKey)
       return;
 
     this._dragColumn = col;
@@ -683,7 +684,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.dropEffect = 'move';
-      event.dataTransfer.setData('text/plain', col.field || '');
+      event.dataTransfer.setData('text/plain', dragKey);
     }
   }
 
@@ -697,17 +698,28 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   }
 
   dragDrop(event: DragEvent, col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): void {
-    if (!this.canDropColumn(col, parent) || !this.selectedTab || !this._dragColumn?.field || !col.field)
+    if (!this.canDropColumn(col, parent) || !this.selectedTab || !this._dragColumn)
       return;
 
     event.preventDefault();
     event.stopPropagation();
 
-    const siblings = (parent?.children || this.fields(this.selectedTab))
-      .filter(sibling => !!sibling.field)
-      .map(sibling => sibling.field as string);
+    const nextOrder = parent
+      ? this.moveField(
+        this.columnOrder[this.selectedTab] || [],
+        this._dragColumn.field || '',
+        col.field || '',
+        (parent.children || [])
+          .filter(sibling => !!sibling.field)
+          .map(sibling => sibling.field as string)
+      )
+      : this.moveColumnGroup(
+        this.columnOrder[this.selectedTab] || [],
+        this._dragColumn,
+        col,
+        this.fields(this.selectedTab)
+      );
 
-    const nextOrder = this.moveField(this.columnOrder[this.selectedTab] || [], this._dragColumn.field, col.field, siblings);
     this.columnOrder = {
       ...this.columnOrder,
       [this.selectedTab]: nextOrder
@@ -920,13 +932,65 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   }
 
   private canDropColumn(col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): boolean {
-    if (!this.isReorderable(col) || !this._dragColumn?.field || !col.field)
+    if (!this.isReorderable(col, parent) || !this._dragColumn)
       return false;
-    if (this._dragColumn.field == col.field)
+    const draggedKey = this.getColumnDragKey(this._dragColumn, this._dragParent);
+    const targetKey = this.getColumnDragKey(col, parent);
+    if (!draggedKey || !targetKey)
+      return false;
+    if (draggedKey == targetKey)
       return false;
     if (!this._dragParent && !parent)
       return true;
     return this._dragParent === parent;
+  }
+
+  private getColumnDragKey(col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): string | undefined {
+    if (col.field)
+      return col.field;
+    if (parent || !col.children?.length)
+      return undefined;
+
+    const explicitName = col.headerName?.trim();
+    if (explicitName)
+      return `__group__:${explicitName}`;
+
+    const childKey = col.children
+      .map(child => child.field || child.headerName || '')
+      .filter(value => !!value)
+      .join('|');
+    return childKey ? `__group__:${childKey}` : undefined;
+  }
+
+  private getColumnFields(col: SharepointChoiceColumn): string[] {
+    if (col.field)
+      return [col.field];
+    return col.children
+      ?.map(child => child.field)
+      .filter((field): field is string => !!field) || [];
+  }
+
+  private moveColumnGroup(order: string[], draggedColumn: SharepointChoiceColumn, targetColumn: SharepointChoiceColumn, siblings: SharepointChoiceColumn[]): string[] {
+    const nextOrder = order.filter((field, index, values) => !!field && values.indexOf(field) == index);
+    const siblingFields = siblings.flatMap(col => this.getColumnFields(col));
+    siblingFields.forEach(field => {
+      if (!nextOrder.includes(field))
+        nextOrder.push(field);
+    });
+
+    const draggedFields = this.getColumnFields(draggedColumn);
+    const targetFields = this.getColumnFields(targetColumn);
+    if (draggedFields.length == 0 || targetFields.length == 0)
+      return nextOrder;
+
+    const remaining = nextOrder.filter(field => !draggedFields.includes(field));
+    const targetField = targetFields.find(field => remaining.includes(field));
+    if (!targetField)
+      return nextOrder;
+
+    const targetIndex = remaining.indexOf(targetField);
+    remaining.splice(targetIndex, 0, ...draggedFields.filter(field => siblingFields.includes(field)));
+    return remaining;
   }
 
   private moveField(order: string[], draggedField: string, targetField: string, siblings: string[]): string[] {
@@ -957,32 +1021,41 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
       return {
         ...col,
-        children: this.sortColumns(col.children, order)
+        children: this.sortColumns(col.children, order, col)
       };
     });
   }
 
-  private sortColumns(columns: SharepointChoiceColumn[], order: Map<string, number>): SharepointChoiceColumn[] {
+  private sortColumns(columns: SharepointChoiceColumn[], order: Map<string, number>, parent?: SharepointChoiceColumn): SharepointChoiceColumn[] {
     if (columns.length < 2 || order.size == 0)
       return columns;
 
-    const reorderable = columns.map((col, index) => ({ col, index })).filter(item => !!item.col.field);
+    const reorderable = columns
+      .map((col, index) => ({ col, index, sortIndex: this.getColumnSortIndex(col, order, parent) }))
+      .filter(item => item.sortIndex < Number.MAX_SAFE_INTEGER);
     if (reorderable.length < 2)
       return columns;
 
     const sorted = [...reorderable]
       .sort((a, b) => {
-        const aOrder = order.has(a.col.field || '') ? order.get(a.col.field || '')! : Number.MAX_SAFE_INTEGER;
-        const bOrder = order.has(b.col.field || '') ? order.get(b.col.field || '')! : Number.MAX_SAFE_INTEGER;
-
-        if (aOrder == bOrder)
+        if (a.sortIndex == b.sortIndex)
           return a.index - b.index;
-        return aOrder - bOrder;
+        return a.sortIndex - b.sortIndex;
       })
       .map(item => item.col);
 
     let position = 0;
-    return columns.map(col => col.field ? sorted[position++] : col);
+    return columns.map(col => this.getColumnSortIndex(col, order, parent) < Number.MAX_SAFE_INTEGER ? sorted[position++] : col);
+  }
+
+  private getColumnSortIndex(col: SharepointChoiceColumn, order: Map<string, number>, parent?: SharepointChoiceColumn): number {
+    if (parent)
+      return col.field && order.has(col.field) ? order.get(col.field)! : Number.MAX_SAFE_INTEGER;
+
+    const indices = this.getColumnFields(col)
+      .filter(field => order.has(field))
+      .map(field => order.get(field)!);
+    return indices.length > 0 ? Math.min(...indices) : Number.MAX_SAFE_INTEGER;
   }
 
   private hasActiveValue(value: any): boolean {
