@@ -452,6 +452,7 @@ a.fc-event {
         user-select: none;
         transition: width 1s ease-in-out;
         cursor: default;
+        box-sizing: border-box;
 
         i {
           position: absolute;
