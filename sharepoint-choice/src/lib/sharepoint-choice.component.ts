@@ -549,6 +549,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       setTimeout((function () { target.parentElement ? target.parentElement.focus() : null; }), 10);
     }
 
+    // rebuild the results to ensure data triggered and display updates
+    this.form[this.field].results = [...new Set(this.form[this.field].results)];
+
     // push the change to any emitters
     this.changed();
   }
