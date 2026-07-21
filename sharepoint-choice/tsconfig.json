@@ -5,6 +5,7 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "noImplicitAny": false,
+    "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
@@ -16,20 +17,13 @@
     "moduleResolution": "bundler",
     "importHelpers": true,
     "paths": {
-      "sharepoint-choice": [
-        "./dist/sharepoint-choice"
-      ]
+      "sharepoint-choice": ["./dist/sharepoint-choice"]
     },
     "target": "ESNext",
     "module": "ESNext",
     "useDefineForClassFields": false,
-    "types": [
-      "office-js"
-    ],
-    "lib": [
-      "ESNext",
-      "dom"
-    ]
+    "types": ["office-js"],
+    "lib": ["ESNext", "dom"]
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
