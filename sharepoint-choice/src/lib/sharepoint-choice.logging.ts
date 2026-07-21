@@ -1,11 +1,11 @@
-import { ErrorHandler } from '@angular/core';
-import { fromError } from 'stacktrace-js';
-import { App } from '../App'
+import { ErrorHandler } from "@angular/core";
+import { fromError } from "stacktrace-js";
+import { App } from "../App";
 
 export class SharepointChoiceLogging implements ErrorHandler {
   private _grafana: {
-    "stream": { [key: string]: string },
-    "values": Array<Array<string>>
+    stream: { [key: string]: string };
+    values: Array<[string, string]>;
   };
 
   constructor() {
@@ -13,15 +13,15 @@ export class SharepointChoiceLogging implements ErrorHandler {
 
     // base object for this page, only 1 logger per page should be present to avoid time conflicts
     this._grafana = w[`GrafanaLogging`] || {
-      "stream": App.Grafana || {
-        "Environment": App.Release,
-        "System": 'SharePoint-Choice',
-        "Hostname": window.location.origin,
-        "Username": undefined,
-        "UserAgent": navigator?.userAgent,
-        "Language": navigator?.language,
+      stream: App.Grafana || {
+        Environment: App.Release,
+        System: "SharePoint-Choice",
+        Hostname: window.location.origin,
+        Username: undefined,
+        UserAgent: navigator?.userAgent,
+        Language: navigator?.language,
       },
-      "values": []
+      values: [],
     };
   }
 
@@ -29,13 +29,11 @@ export class SharepointChoiceLogging implements ErrorHandler {
     let w: any = window;
 
     // get the stack trace and reduce for grafana posting
-    let stackTrace = '';
+    let stackTrace = "";
     try {
       stackTrace = JSON.stringify(await fromError(error?.error ?? error, { offline: true }));
-      if (!stackTrace || stackTrace == 'null')
-        stackTrace = '';
-      else if (stackTrace.length >= 2048)
-        stackTrace = stackTrace.substring(0, 2045) + '...';
+      if (!stackTrace || stackTrace == "null") stackTrace = "";
+      else if (stackTrace.length >= 2048) stackTrace = stackTrace.substring(0, 2045) + "...";
     } catch (e) {
       // fail stack trace silently and log the remainder of the error as is
     }
@@ -43,38 +41,38 @@ export class SharepointChoiceLogging implements ErrorHandler {
     // attempt fixup of user name, site title etc on logging, as spo doesnt have user in context immediately
     if (w._spPageContextInfo) {
       for (let t in this._grafana.stream) {
-        if (t.includes('Username') && w._spPageContextInfo.userLoginName)
+        if (t.includes("Username") && w._spPageContextInfo.userLoginName)
           this._grafana.stream[t] = w._spPageContextInfo.userLoginName;
-        if (t.includes('System') && w._spPageContextInfo.webTitle)
+        if (t.includes("System") && w._spPageContextInfo.webTitle)
           this._grafana.stream[t] = w._spPageContextInfo.webTitle;
-        if (t.includes('Hostname') && w._spPageContextInfo.webAbsoluteUrl)
+        if (t.includes("Hostname") && w._spPageContextInfo.webAbsoluteUrl)
           this._grafana.stream[t] = w._spPageContextInfo.webAbsoluteUrl;
       }
     }
 
     // define current page path params
-    var split = window.location.pathname.split('/');
+    var split = window.location.pathname.split("/");
     var path = window.location.pathname.match(/\/[^\/]*\/[^\/]*\/([^?]*)/);
     let Params = {
-      prefix: split[1] ?? '',
-      site: split[2] ?? '',
-      path: path && path[1] ? path[1] : '',
+      prefix: split[1] ?? "",
+      site: split[2] ?? "",
+      path: path && path[1] ? path[1] : "",
       search: window.location.search,
-      hash: window.location.hash
+      hash: window.location.hash,
     };
 
     // console here to keep click into source working
     switch ((error?.error ?? error)?.level?.substring(0, 1).toUpperCase()) {
-      case 'E':
+      case "E":
         console.error(error);
         break;
-      case 'W':
+      case "W":
         console.warn(error);
         break;
-      case 'I':
+      case "I":
         console.info(error);
         break;
-      case 'D':
+      case "D":
         console.log(error);
         break;
       default:
@@ -82,10 +80,20 @@ export class SharepointChoiceLogging implements ErrorHandler {
         break;
     }
 
-    let body = [((new Date()).getTime() * 1_000_000).toString(), JSON.stringify({ Params, Level: (error?.error ?? error)?.level ?? 'Unknown', Message: error?.message ?? error, StackTrace: stackTrace })];
+    let body: [string, string] = [
+      (new Date().getTime() * 1_000_000).toString(),
+      JSON.stringify({
+        Params,
+        Level: (error?.error ?? error)?.level ?? "Unknown",
+        Message: error?.message ?? error,
+        StackTrace: stackTrace,
+      }),
+    ];
 
     // prevent flooding from multiple loggers on screen as timestamps must be sequential or grafana will not accept
-    if (this._grafana.values.filter(x => x[1] == body[1] && parseInt(x[0]) + 1_000_000 < parseInt(body[0])).length == 0) {
+    if (
+      this._grafana.values.filter((x) => x[1] == body[1] && parseInt(x[0]) + 1_000_000 < parseInt(body[0])).length == 0
+    ) {
       this._grafana.values.push(body);
       this.sendErrors();
     }
@@ -104,41 +112,38 @@ export class SharepointChoiceLogging implements ErrorHandler {
     var saving = this._grafana.values.length;
 
     // no logs then end
-    if (saving == 0)
-      return;
+    if (saving == 0) return;
 
     // build post message sending
     let body = JSON.stringify({
-      "streams": [
-        this._grafana
-      ]
+      streams: [this._grafana],
     });
 
     // console log what will send
-    for (var e = 0; e < saving; e++)
-      console.error(this._grafana.values[e][1]);
+    for (var e = 0; e < saving; e++) console.error(this._grafana.values[e]?.[1]);
 
     // truncate whats being logged so new additions are going in here during posting
     this._grafana.values = this._grafana.values.splice(saving);
 
     // dont log under localhost or if no grafana api map
-    if (window.location.host.includes('localhost') || !App.ApiServers?.['grafana']?.[App.Release])
-      return;
+    if (window.location.host.includes("localhost") || !App.ApiServers?.["grafana"]?.[App.Release]) return;
 
     // start posting
     w._grafana = true;
-    fetch(App.ApiServers['grafana'][App.Release], {
-      method: 'POST',
+    fetch(App.ApiServers["grafana"][App.Release], {
+      method: "POST",
       body: body,
       headers: {
-        'Content-Type': 'application/json'
-      }
-    }).then(b => {
-      w._grafana = false;
-      console.log(`Submitted ${saving} to grafana ${b}.`);
-    }).catch(e => {
-      w._grafana = false;
-      console.error(`Error logging ${saving} to grafana ${e}.`);
+        "Content-Type": "application/json",
+      },
     })
+      .then((b) => {
+        w._grafana = false;
+        console.log(`Submitted ${saving} to grafana ${b}.`);
+      })
+      .catch((e) => {
+        w._grafana = false;
+        console.error(`Error logging ${saving} to grafana ${e}.`);
+      });
   }
 }

@@ -1,502 +1,517 @@
-@let columns = !selectedTab ? [] : fields(selectedTab);
-@let currentRows = !selectedTab ? [] : rows(selectedTab);
-@let currentPage = currentPageRows(currentRows);
-@let maxpage = ceil(currentRows.length / pageSize);
+@let columns = !selectedTab ? [] : fields(selectedTab); @let currentRows = !selectedTab ? [] : rows(selectedTab); @let
+currentPage = currentPageRows(currentRows); @let maxpage = ceil(currentRows.length / pageSize);
 
 <ul class="Tabs">
-  @for (s of allTabs; track s) {
-  @let count = (allData[s]?.length || 0);
-  <li (click)="tabChange(s)"
-      [ngClass]="{Active: s == selectedTab}"
-      [style.maxWidth]="'calc(100% / '+(allTabs.length + 1)+')'"
-      [title]="s + ' (' + count + ' items)'"
-      [hidden]="!showEmptyTabs && count == 0">
-    {{s}}
-    @if (count > 0) {
+  @for (s of allTabs; track s) { @let count = (allData[s]?.length || 0);
+  <li
+    (click)="tabChange(s)"
+    [ngClass]="{Active: s == selectedTab}"
+    [style.maxWidth]="'calc(100% / '+(allTabs.length + 1)+')'"
+    [title]="s + ' (' + count + ' items)'"
+    [hidden]="!showEmptyTabs && count == 0"
+  >
+    {{s}} @if (count > 0) {
     <span class="count">({{count}})</span>
     }
   </li>
-  }
-  @if (!showEmptyTabs && allTabs.filter(t => (allData[t]?.length || 0) > 0).length == 0) {
-  <li class="Active">
-    No Results
-  </li>
-  }
-  @if (allowHideColumns) {
-  <li class="Edit"
-      (click)="editColumns = true"
-      title="Settings">
+  } @if (!showEmptyTabs && allTabs.filter(t => (allData[t]?.length || 0) > 0).length == 0) {
+  <li class="Active">No Results</li>
+  } @if (allowHideColumns) {
+  <li
+    class="Edit"
+    (click)="editColumns = true"
+    title="Settings"
+  >
     ⚙
   </li>
-  }
-  @if (showClearButton() || export) {
+  } @if (showClearButton() || export) {
   <div class="Actions">
     @if (showClearButton()) {
-    <button (click)="clearTable($event)"
-            [disabled]="loading"
-            title="Clear search, sorting, filters and column order"
-            class="Clear">
+    <button
+      (click)="clearTable($event)"
+      [disabled]="loading"
+      title="Clear search, sorting, filters and column order"
+      class="Clear"
+    >
       &#9776;&#8693; Clear
     </button>
-    }
-    @if (export) {
-    <img (click)="exportTable(currentRows)"
-         src="{{excelIcon}}"
-         alt="Export to excel"
-         title="Export to excel"
-         height="32"
-         class="Export">
+    } @if (export) {
+    <img
+      (click)="exportTable(currentRows)"
+      src="{{excelIcon}}"
+      alt="Export to excel"
+      title="Export to excel"
+      height="32"
+      class="Export"
+    />
     }
   </div>
   }
 </ul>
-<div class="table-wrapper"
-     [style.maxHeight]="tableHeight">
+<div
+  class="table-wrapper"
+  [style.maxHeight]="tableHeight"
+>
   <table class="table">
     <thead>
       <tr>
         @if (allowSelection) {
-        <th style="width: 30px;"
-            rowspan="2">
-          #
-          @let col = {_filtervisible: false, field: '_selected'};
-          @let filter = filterContains(col.field);
-          <i (click)="filterToggle(col, $event)"
-             [ngClass]="{'inuse': filter.equals || filter.greater || filter.less || filter.contains}">&#9776;</i>
+        <th
+          style="width: 30px"
+          rowspan="2"
+        >
+          # @let col = {_filtervisible: false, field: '_selected'}; @let filter = filterContains(col.field);
+          <i
+            (click)="filterToggle(col, $event)"
+            [ngClass]="{'inuse': filter.equals || filter.greater || filter.less || filter.contains}"
+            >&#9776;</i
+          >
           @if (col._filtervisible) {
           <div class="options">
-            <select (click)="$event.stopPropagation()"
-                    [name]="'ColFlt_Selection'"
-                    (ngModelChange)="filterChange(col, 'equals', $event)"
-                    [ngModel]="filter.equals"
-                    title="Filter by selection">
+            <select
+              (click)="$event.stopPropagation()"
+              [name]="'ColFlt_Selection'"
+              (ngModelChange)="filterChange(col, 'equals', $event)"
+              [ngModel]="filter.equals"
+              title="Filter by selection"
+            >
               <option value="">-- All --</option>
               <option [value]="true">True</option>
               <option [value]="false">False</option>
             </select>
-            <div><button (click)="filterToggle(col, $event)">Close</button></div>
+            <div>
+              <button (click)="filterToggle(col, $event)">Close</button>
+            </div>
           </div>
           }
         </th>
-        }
-        @for (col of columns; track col.field || col.headerName || $index; let colIndex = $index) {
-        @let filter = filterContains(col.field);
-        @let name = niceName(col);
-        <th [style.minWidth.px]="col.width"
-            [title]="col.headerTooltip || col.headerName || ''"
-            [ngClass]="{'pointer': col.sortable !== false, 'reorderable': isReorderable(col)}"
-            [draggable]="isReorderable(col)"
-            (click)="headerClick(col)"
-            (dragstart)="dragStart($event, col)"
-            (dragover)="dragOver($event, col)"
-            (drop)="dragDrop($event, col)"
-            (dragend)="dragEnd()"
-            [colSpan]="col.children?.length || 1"
-            [rowSpan]="(col.children?.length || 1) == 1 ? 2 : 1">
-          {{name}}
-          @if (sortContains(col.field, 'desc')) {
+        } @for (col of columns; track col.field || col.headerName || $index; let colIndex = $index) { @let filter =
+        filterContains(col.field); @let name = niceName(col);
+        <th
+          [style.minWidth.px]="col.width"
+          [title]="col.headerTooltip || col.headerName || ''"
+          [ngClass]="{'pointer': col.sortable !== false, 'reorderable': isReorderable(col)}"
+          [draggable]="isReorderable(col)"
+          (click)="headerClick(col)"
+          (dragstart)="dragStart($event, col)"
+          (dragover)="dragOver($event, col)"
+          (drop)="dragDrop($event, col)"
+          (dragend)="dragEnd()"
+          [colSpan]="col.children?.length || 1"
+          [rowSpan]="(col.children?.length || 1) == 1 ? 2 : 1"
+        >
+          {{name}} @if (sortContains(col.field, 'desc')) {
           <i>&uarr;</i>
-          }
-          @if (sortContains(col.field, 'asc')) {
+          } @if (sortContains(col.field, 'asc')) {
           <i>&darr;</i>
-          }
-          @if (col.filter) {
-          <i (click)="filterToggle(col, $event)"
-             [ngClass]="{'inuse': filter.equals || filter.greater || filter.less || filter.contains}">&#9776;</i>
+          } @if (col.filter) {
+          <i
+            (click)="filterToggle(col, $event)"
+            [ngClass]="{'inuse': filter.equals || filter.greater || filter.less || filter.contains}"
+            >&#9776;</i
+          >
           @if (col._filtervisible) {
           <div class="options">
-            @switch (col.filter) {
-            @case ('select') {
-            <select (mousedown)="false"
-                    (click)="changed(col, $event)"
-                    [name]="'ColFlt_'+colIndex"
-                    [ngModel]="filter.equals"
-                    multiple="multiple"
-                    title="Filter by {{name}}"
-                    class="multilarge">
-              <option disabled
-                      selected
-                      hidden
-                      [value]="null">Filter by {{name}}</option>
+            @switch (col.filter) { @case ('select') {
+            <select
+              (mousedown)="false"
+              (click)="changed(col, $event)"
+              [name]="'ColFlt_'+colIndex"
+              [ngModel]="filter.equals"
+              multiple="multiple"
+              title="Filter by {{name}}"
+              class="multilarge"
+            >
+              <option
+                disabled
+                selected
+                hidden
+                [value]="null"
+              >
+                Filter by {{name}}
+              </option>
               <option>-- All --</option>
               @for (option of filterDistinct(col.field); track option) {
               <option [value]="option.toString()">{{option}}</option>
               }
             </select>
-            }
-            @case ('split') {
-            <select (click)="$event.stopPropagation()"
-                    (ngModelChange)="filterChange(col, 'contains', $event)"
-                    [name]="'ColFlt_'+colIndex"
-                    [ngModel]="filter.contains"
-                    title="Filter by {{name}}">
-              <option disabled
-                      selected
-                      hidden
-                      [value]="null">Filter by {{name}}</option>
+            } @case ('split') {
+            <select
+              (click)="$event.stopPropagation()"
+              (ngModelChange)="filterChange(col, 'contains', $event)"
+              [name]="'ColFlt_'+colIndex"
+              [ngModel]="filter.contains"
+              title="Filter by {{name}}"
+            >
+              <option
+                disabled
+                selected
+                hidden
+                [value]="null"
+              >
+                Filter by {{name}}
+              </option>
               <option>-- All --</option>
               @for (option of filterDistinct(col.field, true); track option) {
               <option [value]="option.toString()">{{option}}</option>
               }
             </select>
-            }
-            @case ('number') {
-            Equals:<br>
-            <input type="number"
-                   (click)="$event.stopPropagation()"
-                   [name]="'ColFlt_'+colIndex"
-                   (ngModelChange)="filterChange(col, 'equals', $event)"
-                   [ngModel]="filter.equals"
-                   placeholder="Filter by {{name}} equals" />
-            <br>
-            From:<br>
-            <input type="number"
-                   (click)="$event.stopPropagation()"
-                   [name]="'ColFlt_S'+colIndex"
-                   (ngModelChange)="filterChange(col, 'greater', $event)"
-                   [ngModel]="filter.greater"
-                   placeholder="Filter by {{name}} from" />
-            <br>
-            To:<br>
-            <input type="number"
-                   (click)="$event.stopPropagation()"
-                   [name]="'ColFlt_E'+colIndex"
-                   (ngModelChange)="filterChange(col, 'less', $event)"
-                   [ngModel]="filter.less"
-                   placeholder="Filter by {{name}} to" />
-            }
-            @case ('date') {
-            From:<br>
-            <input type="date"
-                   (click)="$event.stopPropagation()"
-                   [name]="'ColFlt_S'+colIndex"
-                   (ngModelChange)="filterChange(col, 'greater', $event)"
-                   [ngModel]="filter.greater | date:'yyyy-MM-dd'"
-                   placeholder="Filter by {{name}} from" />
-            <br>
-            To:<br>
-            <input type="date"
-                   (click)="$event.stopPropagation()"
-                   [name]="'ColFlt_E'+colIndex"
-                   (ngModelChange)="filterChange(col, 'less', $event)"
-                   [ngModel]="filter.less | date:'yyyy-MM-dd'"
-                   placeholder="Filter by {{name}} to" />
-            }
-            @default {
-            <input type="text"
-                   (click)="$event.stopPropagation()"
-                   [name]="'ColFlt_'+colIndex"
-                   (ngModelChange)="filterChange(col, 'contains', $event)"
-                   [ngModel]="filter.contains"
-                   placeholder="Filter by {{name}} contains" />
-            }
-            }
-            <div><button (click)="filterToggle(col, $event)">Close</button></div>
+            } @case ('number') { Equals:<br />
+            <input
+              type="number"
+              (click)="$event.stopPropagation()"
+              [name]="'ColFlt_'+colIndex"
+              (ngModelChange)="filterChange(col, 'equals', $event)"
+              [ngModel]="filter.equals"
+              placeholder="Filter by {{name}} equals"
+            />
+            <br />
+            From:<br />
+            <input
+              type="number"
+              (click)="$event.stopPropagation()"
+              [name]="'ColFlt_S'+colIndex"
+              (ngModelChange)="filterChange(col, 'greater', $event)"
+              [ngModel]="filter.greater"
+              placeholder="Filter by {{name}} from"
+            />
+            <br />
+            To:<br />
+            <input
+              type="number"
+              (click)="$event.stopPropagation()"
+              [name]="'ColFlt_E'+colIndex"
+              (ngModelChange)="filterChange(col, 'less', $event)"
+              [ngModel]="filter.less"
+              placeholder="Filter by {{name}} to"
+            />
+            } @case ('date') { From:<br />
+            <input
+              type="date"
+              (click)="$event.stopPropagation()"
+              [name]="'ColFlt_S'+colIndex"
+              (ngModelChange)="filterChange(col, 'greater', $event)"
+              [ngModel]="filter.greater | date:'yyyy-MM-dd'"
+              placeholder="Filter by {{name}} from"
+            />
+            <br />
+            To:<br />
+            <input
+              type="date"
+              (click)="$event.stopPropagation()"
+              [name]="'ColFlt_E'+colIndex"
+              (ngModelChange)="filterChange(col, 'less', $event)"
+              [ngModel]="filter.less | date:'yyyy-MM-dd'"
+              placeholder="Filter by {{name}} to"
+            />
+            } @default {
+            <input
+              type="text"
+              (click)="$event.stopPropagation()"
+              [name]="'ColFlt_'+colIndex"
+              (ngModelChange)="filterChange(col, 'contains', $event)"
+              [ngModel]="filter.contains"
+              placeholder="Filter by {{name}} contains"
+            />
+            } }
+            <div>
+              <button (click)="filterToggle(col, $event)">Close</button>
+            </div>
           </div>
-          }
-          }
-          <span class="resize"
-                (mousedown)="startResize($event, col)"
-                (click)="$event.stopPropagation()"></span>
+          } }
+          <span
+            class="resize"
+            (mousedown)="startResize($event, col)"
+            (click)="$event.stopPropagation()"
+          ></span>
         </th>
         }
       </tr>
       <tr>
-        @for (parent of columns; track parent.field || parent.headerName || $index) {
-        @if (parent.children?.length || 1 > 1) {
-        @for (col of parent.children; track col.field || col.headerName || $index; let colIndex = $index) {
-        @let filter = filterContains(col.field);
-        @let name = niceName(col);
-        <th [style.minWidth.px]="col.width"
-            [title]="col.headerTooltip || col.headerName || ''"
-            [ngClass]="{'pointer': col.sortable !== false, 'reorderable': isReorderable(col)}"
-            [draggable]="isReorderable(col)"
-            (click)="headerClick(col)"
-            (dragstart)="dragStart($event, col, parent)"
-            (dragover)="dragOver($event, col, parent)"
-            (drop)="dragDrop($event, col, parent)"
-            (dragend)="dragEnd()">
-          {{name}}
-          @if (sortContains(col.field, 'desc')) {
+        @for (parent of columns; track parent.field || parent.headerName || $index) { @if (parent.children?.length || 1
+        > 1) { @for (col of parent.children; track col.field || col.headerName || $index; let colIndex = $index) { @let
+        filter = filterContains(col.field); @let name = niceName(col);
+        <th
+          [style.minWidth.px]="col.width"
+          [title]="col.headerTooltip || col.headerName || ''"
+          [ngClass]="{'pointer': col.sortable !== false, 'reorderable': isReorderable(col)}"
+          [draggable]="isReorderable(col)"
+          (click)="headerClick(col)"
+          (dragstart)="dragStart($event, col, parent)"
+          (dragover)="dragOver($event, col, parent)"
+          (drop)="dragDrop($event, col, parent)"
+          (dragend)="dragEnd()"
+        >
+          {{name}} @if (sortContains(col.field, 'desc')) {
           <i>&uarr;</i>
-          }
-          @if (sortContains(col.field, 'asc')) {
+          } @if (sortContains(col.field, 'asc')) {
           <i>&darr;</i>
-          }
-          @if (col.filter) {
-          <i (click)="filterToggle(col, $event)"
-             [ngClass]="{'inuse': filter.equals || filter.greater || filter.less || filter.contains}">&#9776;</i>
+          } @if (col.filter) {
+          <i
+            (click)="filterToggle(col, $event)"
+            [ngClass]="{'inuse': filter.equals || filter.greater || filter.less || filter.contains}"
+            >&#9776;</i
+          >
           @if (col._filtervisible) {
           <div class="options">
-            @switch (col.filter) {
-            @case ('select') {
-            <select (mousedown)="false"
-                    (click)="changed(col, $event)"
-                    [name]="'ColFlt_'+colIndex"
-                    [ngModel]="filter.equals"
-                    multiple="multiple"
-                    title="Filter by {{name}}"
-                    class="multilarge">
-              <option disabled
-                      selected
-                      hidden
-                      [value]="null">Filter by {{name}}</option>
+            @switch (col.filter) { @case ('select') {
+            <select
+              (mousedown)="false"
+              (click)="changed(col, $event)"
+              [name]="'ColFlt_'+colIndex"
+              [ngModel]="filter.equals"
+              multiple="multiple"
+              title="Filter by {{name}}"
+              class="multilarge"
+            >
+              <option
+                disabled
+                selected
+                hidden
+                [value]="null"
+              >
+                Filter by {{name}}
+              </option>
               <option>-- All --</option>
               @for (option of filterDistinct(col.field); track option) {
               <option [value]="option.toString()">{{option}}</option>
               }
             </select>
-            }
-            @case ('split') {
-            <select (click)="$event.stopPropagation()"
-                    (ngModelChange)="filterChange(col, 'contains', $event)"
-                    [name]="'ColFlt_'+colIndex"
-                    [ngModel]="filter.contains"
-                    title="Filter by {{name}}">
-              <option disabled
-                      selected
-                      hidden
-                      [value]="null">Filter by {{name}}</option>
+            } @case ('split') {
+            <select
+              (click)="$event.stopPropagation()"
+              (ngModelChange)="filterChange(col, 'contains', $event)"
+              [name]="'ColFlt_'+colIndex"
+              [ngModel]="filter.contains"
+              title="Filter by {{name}}"
+            >
+              <option
+                disabled
+                selected
+                hidden
+                [value]="null"
+              >
+                Filter by {{name}}
+              </option>
               <option>-- All --</option>
               @for (option of filterDistinct(col.field, true); track option) {
               <option [value]="option.toString()">{{option}}</option>
               }
             </select>
-            }
-            @case ('number') {
-            Equals:<br>
-            <input type="number"
-                   (click)="$event.stopPropagation()"
-                   [name]="'ColFlt_'+colIndex"
-                   (ngModelChange)="filterChange(col, 'equals', $event)"
-                   [ngModel]="filter.equals"
-                   placeholder="Filter by {{name}} equals" />
-            <br>
-            From:<br>
-            <input type="number"
-                   (click)="$event.stopPropagation()"
-                   [name]="'ColFlt_S'+colIndex"
-                   (ngModelChange)="filterChange(col, 'greater', $event)"
-                   [ngModel]="filter.greater"
-                   placeholder="Filter by {{name}} from" />
-            <br>
-            To:<br>
-            <input type="number"
-                   (click)="$event.stopPropagation()"
-                   [name]="'ColFlt_E'+colIndex"
-                   (ngModelChange)="filterChange(col, 'less', $event)"
-                   [ngModel]="filter.less"
-                   placeholder="Filter by {{name}} to" />
-            }
-            @case ('date') {
-            From:<br>
-            <input type="date"
-                   (click)="$event.stopPropagation()"
-                   [name]="'ColFlt_S'+colIndex"
-                   (ngModelChange)="filterChange(col, 'greater', $event)"
-                   [ngModel]="filter.greater | date:'yyyy-MM-dd'"
-                   placeholder="Filter by {{name}} from" />
-            <br>
-            To:<br>
-            <input type="date"
-                   (click)="$event.stopPropagation()"
-                   [name]="'ColFlt_E'+colIndex"
-                   (ngModelChange)="filterChange(col, 'less', $event)"
-                   [ngModel]="filter.less | date:'yyyy-MM-dd'"
-                   placeholder="Filter by {{name}} to" />
-            }
-            @default {
-            <input type="text"
-                   (click)="$event.stopPropagation()"
-                   [name]="'ColFlt_'+colIndex"
-                   (ngModelChange)="filterChange(col, 'contains', $event)"
-                   [ngModel]="filter.contains"
-                   placeholder="Filter by {{name}} contains" />
-            }
-            }
-            <div><button (click)="filterToggle(col, $event)">Close</button></div>
+            } @case ('number') { Equals:<br />
+            <input
+              type="number"
+              (click)="$event.stopPropagation()"
+              [name]="'ColFlt_'+colIndex"
+              (ngModelChange)="filterChange(col, 'equals', $event)"
+              [ngModel]="filter.equals"
+              placeholder="Filter by {{name}} equals"
+            />
+            <br />
+            From:<br />
+            <input
+              type="number"
+              (click)="$event.stopPropagation()"
+              [name]="'ColFlt_S'+colIndex"
+              (ngModelChange)="filterChange(col, 'greater', $event)"
+              [ngModel]="filter.greater"
+              placeholder="Filter by {{name}} from"
+            />
+            <br />
+            To:<br />
+            <input
+              type="number"
+              (click)="$event.stopPropagation()"
+              [name]="'ColFlt_E'+colIndex"
+              (ngModelChange)="filterChange(col, 'less', $event)"
+              [ngModel]="filter.less"
+              placeholder="Filter by {{name}} to"
+            />
+            } @case ('date') { From:<br />
+            <input
+              type="date"
+              (click)="$event.stopPropagation()"
+              [name]="'ColFlt_S'+colIndex"
+              (ngModelChange)="filterChange(col, 'greater', $event)"
+              [ngModel]="filter.greater | date:'yyyy-MM-dd'"
+              placeholder="Filter by {{name}} from"
+            />
+            <br />
+            To:<br />
+            <input
+              type="date"
+              (click)="$event.stopPropagation()"
+              [name]="'ColFlt_E'+colIndex"
+              (ngModelChange)="filterChange(col, 'less', $event)"
+              [ngModel]="filter.less | date:'yyyy-MM-dd'"
+              placeholder="Filter by {{name}} to"
+            />
+            } @default {
+            <input
+              type="text"
+              (click)="$event.stopPropagation()"
+              [name]="'ColFlt_'+colIndex"
+              (ngModelChange)="filterChange(col, 'contains', $event)"
+              [ngModel]="filter.contains"
+              placeholder="Filter by {{name}} contains"
+            />
+            } }
+            <div>
+              <button (click)="filterToggle(col, $event)">Close</button>
+            </div>
           </div>
-          }
-          }
-          <span class="resize"
-                (mousedown)="startResize($event, col)"
-                (click)="$event.stopPropagation()"></span>
+          } }
+          <span
+            class="resize"
+            (mousedown)="startResize($event, col)"
+            (click)="$event.stopPropagation()"
+          ></span>
         </th>
-        }
-        }
-        }
+        } } }
       </tr>
     </thead>
     <tbody>
       @if (currentPage.length == 0 && !loading) {
       <tr>
-        <td colspan="999"
-            style="min-height: 100px;">
+        <td
+          colspan="999"
+          style="min-height: 100px"
+        >
           No data to display for page {{pageNumber}} of {{maxpage}}
         </td>
       </tr>
-      }
-      @else if (currentRows.length == 0 && loading) {
+      } @else if (currentRows.length == 0 && loading) {
       <tr>
-        <td colspan="999"
-            style="min-height: 100px;">
+        <td
+          colspan="999"
+          style="min-height: 100px"
+        >
           Loading...
         </td>
       </tr>
-      }
-      @else {
-      @for (row of currentPage; track $index; let rowIndex = $index) {
-      @let hlRow = hyperlink(row);
-      <tr [ngClass]="{'selected': row._selected, 'loading': loading }"
-          role="row"
-          [attr.aria-rowindex]="rowIndex + 1"
-          [attr.aria-label]="'Row ' + (rowIndex + 1) + ' ' + row['_tracking'] + ' ' + (row['Title'] ?? '')">
-        @if (allowSelection) {
-        @if (row._selected) {
-        <td class="pointer"
-            (click)="selectionChanged(row)">✔</td>
-        }
-        @else {
-        <td class="pointer fs20"
-            (click)="selectionChanged(row)">☐</td>
-        }
-        }
-        @for (col of columns; track col.field || col.headerName || $index; let colIndex = $index) {
-        @if (col.children?.length || 1 > 1) {
-        @for (child of col.children; track child.field || child.headerName || $index; let childIndex = $index) {
-        @let value = fieldValue(row, child.field);
-        @let pointer = beingObserved(child);
-        @let hl = pointer ? undefined : hlRow;
-        @let type = getCellType(child, value);
-        <td [title]="value || ''"
-            [ngClass]="{'pointer': pointer, 'nowrap': child.nowrap, 'editable': child.spec && child.field, 'center': child.center || (type == 'date' && child.center !== false) || (type == 'number' && child.center !== false) || (type == 'boolean' && child.center !== false)}"
-            (click)="handleCellClick(child, row, $event)"
-            role="cell">
+      } @else { @for (row of currentPage; track $index; let rowIndex = $index) { @let hlRow = hyperlink(row);
+      <tr
+        [ngClass]="{'selected': row._selected, 'loading': loading }"
+        role="row"
+        [attr.aria-rowindex]="rowIndex + 1"
+        [attr.aria-label]="'Row ' + (rowIndex + 1) + ' ' + row['_tracking'] + ' ' + (row['Title'] ?? '')"
+      >
+        @if (allowSelection) { @if (row._selected) {
+        <td
+          class="pointer"
+          (click)="selectionChanged(row)"
+        >
+          ✔
+        </td>
+        } @else {
+        <td
+          class="pointer fs20"
+          (click)="selectionChanged(row)"
+        >
+          ☐
+        </td>
+        } } @for (col of columns; track col.field || col.headerName || $index; let colIndex = $index) { @if
+        (col.children?.length || 1 > 1) { @for (child of col.children; track child.field || child.headerName || $index;
+        let childIndex = $index) { @let value = fieldValue(row, child.field); @let pointer = beingObserved(child); @let
+        hl = pointer ? undefined : hlRow; @let type = getCellType(child, value);
+        <td
+          [title]="value || ''"
+          [ngClass]="{'pointer': pointer, 'nowrap': child.nowrap, 'editable': child.spec && child.field, 'center': child.center || (type == 'date' && child.center !== false) || (type == 'number' && child.center !== false) || (type == 'boolean' && child.center !== false)}"
+          (click)="handleCellClick(child, row, $event)"
+          role="cell"
+        >
           @if (child.spec && child.field && (allEditing || row._editing == child.field)) {
-          <app-choice [field]="sharepointChoiceField(child.field)"
-                      [form]="sharepointChoiceForm(row, child.field)"
-                      [spec]="sharepointChoiceSpec(child.spec, child.field)"
-                      (change)="handleCellClick(child, row, $event)"
-                      (click)="$event.stopPropagation()">
+          <app-choice
+            [field]="sharepointChoiceField(child.field)"
+            [form]="sharepointChoiceForm(row, child.field)"
+            [spec]="sharepointChoiceSpec(child.spec, child.field)"
+            (change)="handleCellClick(child, row, $event)"
+            (click)="$event.stopPropagation()"
+          >
           </app-choice>
-          }
-          @else {
-          @switch (type) {
-          @case ('renderer') {
+          } @else { @switch (type) { @case ('renderer') {
           <div [spcRenderNode]="renderNode(child, value, row, rowIndex, colIndex, childIndex)"></div>
-          }
-          @case ('date') {
-          @if (hl) {
-          <a [href]="hl"
-             [target]="hyperlinkTarget">{{value | date:'dd MMM yy'}}</a>
-          }
-          @else {
-          {{value | date:'dd MMM yy'}}
-          }
-          }
-          @case ('number') {
-          @if (hl) {
-          <a [href]="hl"
-             [target]="hyperlinkTarget">{{value | number:'1.0-2'}}</a>
-          }
-          @else {
-          {{value | number:'1.0-2'}}
-          }
-          }
-          @case ('boolean') {
-          @if (hl) {
-          <a [href]="hl"
-             [target]="hyperlinkTarget">{{formatBoolean(value)}}</a>
-          }
-          @else {
-          {{formatBoolean(value)}}
-          }
-          }
-          @default {
-          @if (hl) {
-          <a [href]="hl"
-             [target]="hyperlinkTarget">{{value}}</a>
-          }
-          @else {
-          {{value}}
-          }
-          }
-          }
-          }
+          } @case ('date') { @if (hl) {
+          <a
+            [href]="hl"
+            [target]="hyperlinkTarget"
+            >{{value | date:'dd MMM yy'}}</a
+          >
+          } @else { {{value | date:'dd MMM yy'}} } } @case ('number') { @if (hl) {
+          <a
+            [href]="hl"
+            [target]="hyperlinkTarget"
+            >{{value | number:'1.0-2'}}</a
+          >
+          } @else { {{value | number:'1.0-2'}} } } @case ('boolean') { @if (hl) {
+          <a
+            [href]="hl"
+            [target]="hyperlinkTarget"
+            >{{formatBoolean(value)}}</a
+          >
+          } @else { {{formatBoolean(value)}} } } @default { @if (hl) {
+          <a
+            [href]="hl"
+            [target]="hyperlinkTarget"
+            >{{value}}</a
+          >
+          } @else { {{value}} } } } }
         </td>
-        }
-        }
-        @else {
-        @let value = fieldValue(row, col.field);
-        @let pointer = beingObserved(col);
-        @let hl = pointer ? undefined : hlRow;
-        @let type = getCellType(col, value);
-        <td [title]="value || ''"
-            [ngClass]="{'pointer': pointer, 'nowrap': col.nowrap, 'editable': col.spec && col.field, 'center': col.center || (type == 'date' && col.center !== false) || (type == 'number' && col.center !== false) || (type == 'boolean' && col.center !== false)}"
-            (click)="handleCellClick(col, row, $event)"
-            role="cell">
+        } } @else { @let value = fieldValue(row, col.field); @let pointer = beingObserved(col); @let hl = pointer ?
+        undefined : hlRow; @let type = getCellType(col, value);
+        <td
+          [title]="value || ''"
+          [ngClass]="{'pointer': pointer, 'nowrap': col.nowrap, 'editable': col.spec && col.field, 'center': col.center || (type == 'date' && col.center !== false) || (type == 'number' && col.center !== false) || (type == 'boolean' && col.center !== false)}"
+          (click)="handleCellClick(col, row, $event)"
+          role="cell"
+        >
           @if (col.spec && col.field && (allEditing || row._editing == col.field)) {
-          <app-choice [field]="sharepointChoiceField(col.field)"
-                      [form]="sharepointChoiceForm(row, col.field)"
-                      [spec]="sharepointChoiceSpec(col.spec, col.field)"
-                      (change)="handleCellClick(col, row, $event)"
-                      (click)="$event.stopPropagation()">
+          <app-choice
+            [field]="sharepointChoiceField(col.field)"
+            [form]="sharepointChoiceForm(row, col.field)"
+            [spec]="sharepointChoiceSpec(col.spec, col.field)"
+            (change)="handleCellClick(col, row, $event)"
+            (click)="$event.stopPropagation()"
+          >
           </app-choice>
-          }
-          @else {
-          @switch (type) {
-          @case ('renderer') {
+          } @else { @switch (type) { @case ('renderer') {
           <div [spcRenderNode]="renderNode(col, value, row, rowIndex, colIndex)"></div>
-          }
-          @case ('date') {
-          @if (hl) {
-          <a [href]="hl"
-             [target]="hyperlinkTarget">{{value | date:'dd MMM yy'}}</a>
-          }
-          @else {
-          {{value | date:'dd MMM yy'}}
-          }
-          }
-          @case ('number') {
-          @if (hl) {
-          <a [href]="hl"
-             [target]="hyperlinkTarget">{{value | number:'1.0-2'}}</a>
-          }
-          @else {
-          {{value | number:'1.0-2'}}
-          }
-          }
-          @case ('boolean') {
-          @if (hl) {
-          <a [href]="hl"
-             [target]="hyperlinkTarget">{{formatBoolean(value)}}</a>
-          }
-          @else {
-          {{formatBoolean(value)}}
-          }
-          }
-          @default {
-          @if (hl) {
-          <a [href]="hl"
-             [target]="hyperlinkTarget">{{value}}</a>
-          }
-          @else {
-          {{value}}
-          }
-          }
-          }
-          }
+          } @case ('date') { @if (hl) {
+          <a
+            [href]="hl"
+            [target]="hyperlinkTarget"
+            >{{value | date:'dd MMM yy'}}</a
+          >
+          } @else { {{value | date:'dd MMM yy'}} } } @case ('number') { @if (hl) {
+          <a
+            [href]="hl"
+            [target]="hyperlinkTarget"
+            >{{value | number:'1.0-2'}}</a
+          >
+          } @else { {{value | number:'1.0-2'}} } } @case ('boolean') { @if (hl) {
+          <a
+            [href]="hl"
+            [target]="hyperlinkTarget"
+            >{{formatBoolean(value)}}</a
+          >
+          } @else { {{formatBoolean(value)}} } } @default { @if (hl) {
+          <a
+            [href]="hl"
+            [target]="hyperlinkTarget"
+            >{{value}}</a
+          >
+          } @else { {{value}} } } } }
         </td>
-        }
-        }
+        } }
       </tr>
-      }
-      }
+      } }
     </tbody>
     <tfoot>
       <tr>
-        <td colspan="999"
-            [style.height.px]="currentPage.length >= 5 ? 26 : currentPage.length == 4 ? 62 : currentPage.length == 3 ? 98 : currentPage.length == 2 ? 164 : 200">
+        <td
+          colspan="999"
+          [style.height.px]="currentPage.length >= 5 ? 26 : currentPage.length == 4 ? 62 : currentPage.length == 3 ? 98 : currentPage.length == 2 ? 164 : 200"
+        >
           <!-- Spacer row to prevent scrollbar cutting off last row -->
         </td>
       </tr>
@@ -504,22 +519,40 @@
   </table>
 </div>
 <div>
-  <div style="float: right;">
-    <button (click)="pageNumber = 1"
-            [disabled]="pageNumber <= 2">&lt;&lt;</button>
-    <button (click)="pageNumber = pageNumber - 1"
-            [disabled]="pageNumber <= 1">&lt;</button>
+  <div style="float: right">
+    <button
+      (click)="pageNumber = 1"
+      [disabled]="pageNumber <= 2"
+    >
+      &lt;&lt;
+    </button>
+    <button
+      (click)="pageNumber = pageNumber - 1"
+      [disabled]="pageNumber <= 1"
+    >
+      &lt;
+    </button>
     Page {{pageNumber}} of {{maxpage}}
-    <button (click)="pageNumber = pageNumber + 1"
-            [disabled]="pageNumber >= maxpage">&gt;</button>
-    <button (click)="pageNumber = maxpage"
-            [disabled]="pageNumber >= maxpage - 1">&gt;&gt;</button>
+    <button
+      (click)="pageNumber = pageNumber + 1"
+      [disabled]="pageNumber >= maxpage"
+    >
+      &gt;
+    </button>
+    <button
+      (click)="pageNumber = maxpage"
+      [disabled]="pageNumber >= maxpage - 1"
+    >
+      &gt;&gt;
+    </button>
   </div>
-  <select [(ngModel)]="pageSize"
-          style="float: right;"
-          name="PageSize"
-          (change)="this.pageNumber = 1"
-          title="Select number of rows to display per page">
+  <select
+    [(ngModel)]="pageSize"
+    style="float: right"
+    name="PageSize"
+    (change)="this.pageNumber = 1"
+    title="Select number of rows to display per page"
+  >
     <option [value]="10">10</option>
     <option [value]="25">25</option>
     <option [value]="50">50</option>
@@ -535,103 +568,103 @@
   <div class="Modal">
     <h3>
       Table Settings
-      <input class="Reset"
-             type="button"
-             value="Reset all filters, order and visibility"
-             (click)="resetFilters()" />
-      <div class="Close"
-           (click)="editColumns = false">
+      <input
+        class="Reset"
+        type="button"
+        value="Reset all filters, order and visibility"
+        (click)="resetFilters()"
+      />
+      <div
+        class="Close"
+        (click)="editColumns = false"
+      >
         X
       </div>
     </h3>
     <h4>Configure which columns are visible in each tab</h4>
     <table class="table">
       <tr>
-        <th>
-          Column
-        </th>
-        <th [style.backgroundColor]="'#d5d5d5'">
-          All Tabs
-        </th>
+        <th>Column</th>
+        <th [style.backgroundColor]="'#d5d5d5'">All Tabs</th>
         @for (t of allTabs; track t) {
-        <th [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : '#f7f7f7'">
-          {{t}}
-        </th>
+        <th [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : '#f7f7f7'">{{t}}</th>
         }
       </tr>
-      @for (heading of allCols; track heading.field || heading.headerName || $index; let colIndex = $index) {
-      @if (heading.children) {
+      @for (heading of allCols; track heading.field || heading.headerName || $index; let colIndex = $index) { @if
+      (heading.children) {
       <tr>
+        <td>{{niceName(heading)}}</td>
         <td>
-          {{niceName(heading)}}
-        </td>
-        <td>
-          <input type="checkbox"
-                 [name]="'HideCol_'+colIndex+'_'+'all'"
-                 (click)="toggleChildren(heading, null, $event.target.checked)"
-                 title="Toggle visibility for this group for all tabs" />
+          <input
+            type="checkbox"
+            [name]="'HideCol_'+colIndex+'_'+'all'"
+            (click)="toggleChildren(heading, null, $event.target.checked)"
+            title="Toggle visibility for this group for all tabs"
+          />
         </td>
         @for (t of allTabs; track t) {
         <td [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : null">
-          <input type="checkbox"
-                 [name]="'HideCol_'+colIndex+'_'+t"
-                 (click)="toggleChildren(heading, t, $event.target.checked)"
-                 title="Toggle visibility for this group for {{t}} tab" />
+          <input
+            type="checkbox"
+            [name]="'HideCol_'+colIndex+'_'+t"
+            (click)="toggleChildren(heading, t, $event.target.checked)"
+            title="Toggle visibility for this group for {{t}} tab"
+          />
         </td>
         }
       </tr>
-      @for (child of heading.children; track child.field || child.headerName || $index; let childIndex = $index) {
-      @if (child.field) {
+      @for (child of heading.children; track child.field || child.headerName || $index; let childIndex = $index) { @if
+      (child.field) {
       <tr>
-        <td style="text-align: right;">
-          {{niceName(child)}}
-        </td>
+        <td style="text-align: right">{{niceName(child)}}</td>
         <td>
-          <input type="checkbox"
-                 (click)="toggleRow(child, $event.target.checked)"
-                 [name]="'HideCol_'+colIndex+'_'+childIndex+'_'+'all'"
-                 [hidden]="typeof child.hide === 'function'"
-                 title="Toggle visibility for all tabs" />
+          <input
+            type="checkbox"
+            (click)="toggleRow(child, $event.target.checked)"
+            [name]="'HideCol_'+colIndex+'_'+childIndex+'_'+'all'"
+            [hidden]="typeof child.hide === 'function'"
+            title="Toggle visibility for all tabs"
+          />
         </td>
         @for (t of allTabs; track t) {
         <td [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : null">
-          <input type="checkbox"
-                 (click)="columnToggle(child, t)"
-                 [ngModel]="isHidden(child, t)"
-                 [name]="'HideCol_'+colIndex+'_'+childIndex+'_'+t"
-                 [disabled]="typeof child.hide === 'function'"
-                 title="Toggle visibility for {{t}} tab" />
+          <input
+            type="checkbox"
+            (click)="columnToggle(child, t)"
+            [ngModel]="isHidden(child, t)"
+            [name]="'HideCol_'+colIndex+'_'+childIndex+'_'+t"
+            [disabled]="typeof child.hide === 'function'"
+            title="Toggle visibility for {{t}} tab"
+          />
         </td>
         }
       </tr>
-      }
-      }
-      }
-      @else if (heading.field) {
+      } } } @else if (heading.field) {
       <tr>
+        <td>{{niceName(heading)}}</td>
         <td>
-          {{niceName(heading)}}
-        </td>
-        <td>
-          <input type="checkbox"
-                 (click)="toggleRow(heading, $event.target.checked)"
-                 [name]="'HideCol_'+colIndex+'_'+'all'"
-                 [hidden]="typeof heading.hide === 'function'"
-                 title="Toggle visibility for all tabs" />
+          <input
+            type="checkbox"
+            (click)="toggleRow(heading, $event.target.checked)"
+            [name]="'HideCol_'+colIndex+'_'+'all'"
+            [hidden]="typeof heading.hide === 'function'"
+            title="Toggle visibility for all tabs"
+          />
         </td>
         @for (t of allTabs; track t) {
         <td [style.backgroundColor]="t == selectedTab ? '#e6e6e6' : null">
-          <input type="checkbox"
-                 (click)="columnToggle(heading, t)"
-                 [ngModel]="isHidden(heading, t)"
-                 [name]="'HideCol_'+colIndex+'_'+t"
-                 [disabled]="typeof heading.hide === 'function'"
-                 title="Toggle visibility for {{t}} tab" />
+          <input
+            type="checkbox"
+            (click)="columnToggle(heading, t)"
+            [ngModel]="isHidden(heading, t)"
+            [name]="'HideCol_'+colIndex+'_'+t"
+            [disabled]="typeof heading.hide === 'function'"
+            title="Toggle visibility for {{t}} tab"
+          />
         </td>
         }
       </tr>
-      }
-      }
+      } }
       <tr></tr>
     </table>
   </div>

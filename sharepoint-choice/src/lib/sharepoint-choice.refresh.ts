@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
-import { Subject } from 'rxjs';
-import { SharepointChoiceForm, SharepointChoiceList } from './sharepoint-choice.models';
+import { Injectable } from "@angular/core";
+import { Subject } from "rxjs";
+import { SharepointChoiceForm, SharepointChoiceList } from "./sharepoint-choice.models";
 
 export interface SharepointChoiceEvent {
   sourceId: number;
@@ -9,7 +9,7 @@ export interface SharepointChoiceEvent {
   field?: string;
 }
 
-@Injectable({ providedIn: 'root' })
+@Injectable({ providedIn: "root" })
 export class SharepointChoiceRefresh {
   private readonly subject = new Subject<SharepointChoiceEvent>();
 

@@ -43,7 +43,7 @@ div[data-automation-id="CanvasControl"] {
   #sideNavBox,
   #s4-titlerow,
   #s4-ribbonrow,
-  #suiteBarDelta #suiteBarTop>*>* {
+  #suiteBarDelta #suiteBarTop > * > * {
     display: none !important;
   }
 }
@@ -98,7 +98,7 @@ a.fc-event {
   white-space: nowrap;
 }
 
-[ng-version]>* {
+[ng-version] > * {
   position: relative;
 }
 
@@ -215,11 +215,12 @@ a.fc-event {
       label.radio {
         display: inline-block;
       }
-      label[hidden], label.radio[hidden] {
+      label[hidden],
+      label.radio[hidden] {
         display: none;
       }
 
-      .choice>span {
+      .choice > span {
         border: 0 !important;
         padding: 0 !important;
       }
@@ -230,12 +231,12 @@ a.fc-event {
       float: left;
     }
 
-    .people>span {
+    .people > span {
       display: inline-block;
       padding: 4px;
       border: 1px solid #eee;
     }
-    .people>span[hidden] {
+    .people > span[hidden] {
       display: none;
     }
 
@@ -296,7 +297,7 @@ a.fc-event {
   }
 
   .AutoComplete {
-    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.20);
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.2);
     width: 350px;
     top: 0;
     border-radius: 0 0 4px 4px;
@@ -312,7 +313,7 @@ a.fc-event {
       }
 
       li:hover {
-        background-color: rgba(0, 0, 0, .04);
+        background-color: rgba(0, 0, 0, 0.04);
       }
     }
   }
@@ -323,12 +324,11 @@ a.fc-event {
   }
 
   .FilesOver {
-    animation: shake 0.82s cubic-bezier(.36, .07, .19, .97) both;
+    animation: shake 0.82s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
     animation-iteration-count: infinite;
     box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px;
 
     @keyframes shake {
-
       10%,
       90% {
         transform: translate3d(-1px, 0, 0);
@@ -355,11 +355,11 @@ a.fc-event {
   .noTitle {
     margin: 0;
 
-    >span {
+    > span {
       display: none;
     }
 
-    >div {
+    > div {
       padding-top: 0;
     }
   }
@@ -536,7 +536,7 @@ a.fc-event {
       }
 
       tr.selected {
-        background-color: rgba(1,1,1,0.1);
+        background-color: rgba(1, 1, 1, 0.1);
       }
 
       tr.loading {
@@ -626,11 +626,11 @@ a.fc-event {
     }
   }
 
-  .files>div {
-    padding: 8px
+  .files > div {
+    padding: 8px;
   }
 
-  .files>div:nth-child(even) {
+  .files > div:nth-child(even) {
     background: #e6e6e6;
   }
 
@@ -681,9 +681,9 @@ a.fc-event {
     li.Active,
     li:hover {
       background-color: #16314a;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, .24);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
       color: white;
-      border-bottom: 1px solid white
+      border-bottom: 1px solid white;
     }
 
     .Edit {
@@ -726,7 +726,7 @@ a.fc-event {
     }
 
     div {
-      transition: opacity .15s linear;
+      transition: opacity 0.15s linear;
     }
   }
 
@@ -752,7 +752,7 @@ a.fc-event {
     li.Active,
     li:hover {
       background-color: #16314a;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, .24);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
       color: white;
       border: 1px solid #20476b;
     }
@@ -914,7 +914,7 @@ a.fc-event {
     animation: 1.5s linear infinite spinner;
     animation-play-state: inherit;
     border: solid 5px #cfd0d1;
-    border-bottom-color: #ED8727;
+    border-bottom-color: #ed8727;
     border-radius: 50%;
     content: "";
     height: 40px;
@@ -943,7 +943,7 @@ a.fc-event {
     font-size: 14px;
     border-radius: 4px;
     margin: 0 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, .24);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
     cursor: pointer;
   }
 
@@ -993,7 +993,6 @@ a.fc-event {
       position: relative;
       padding: 30px;
       box-shadow: 8px 8px #555;
-
     }
 
     .Saving {
@@ -1038,7 +1037,7 @@ a.fc-event {
           margin: 16px 4px;
           padding: 8px;
           border: 1px solid #ddd;
-          border-radius: 4px
+          border-radius: 4px;
         }
         *[hidden] {
           display: none;
@@ -1048,17 +1047,17 @@ a.fc-event {
   }
 
   .Accent1 {
-    background-color: #ED8727;
+    background-color: #ed8727;
     color: black;
   }
 
   .Accent2 {
-    background-color: #20476B;
+    background-color: #20476b;
     color: white;
   }
 
   .Accent3 {
-    background-color: #089CB0;
+    background-color: #089cb0;
     color: white;
   }
 
@@ -1068,32 +1067,32 @@ a.fc-event {
   }
 
   .Accent5 {
-    background-color: #FDB914;
+    background-color: #fdb914;
     color: black;
   }
 
   .Accent6 {
-    background-color: #9CC1E6;
+    background-color: #9cc1e6;
     color: black;
   }
 
   .Accent7 {
-    background-color: #20476B;
+    background-color: #20476b;
     color: white;
   }
 
   .Accent8 {
-    background-color: #4795CB;
+    background-color: #4795cb;
     color: white;
   }
 
   .Accent9 {
-    background-color: #E99923;
+    background-color: #e99923;
     color: black;
   }
 
   .Accent0 {
-    background-color: #556B82;
+    background-color: #556b82;
     color: white;
   }
 }

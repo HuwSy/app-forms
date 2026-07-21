@@ -1,10 +1,32 @@
-import { Component, Input, ErrorHandler, EventEmitter, Output, ChangeDetectorRef, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { SharepointChoiceColumn, SharepointChoiceTabs, SharepointChoiceRow, SharepointChoiceForm, SharepointChoiceField, SharepointChoiceList, SharepointChoiceRowChild, SharepointChoiceExportColumn, SharepointChoiceExportContext, SharepointChoiceExportOptions, ExcelIcon } from './sharepoint-choice.models';
-import { SharepointChoiceComponent } from './sharepoint-choice.component';
-import { SharepointChoiceRender } from './sharepoint-choice.render';
-import { Workbook } from 'devextreme-exceljs-fork';
+import {
+  Component,
+  Input,
+  ErrorHandler,
+  EventEmitter,
+  Output,
+  ChangeDetectorRef,
+  ChangeDetectionStrategy,
+  OnInit,
+  OnDestroy,
+} from "@angular/core";
+import { CommonModule } from "@angular/common";
+import { FormsModule } from "@angular/forms";
+import {
+  SharepointChoiceColumn,
+  SharepointChoiceTabs,
+  SharepointChoiceRow,
+  SharepointChoiceForm,
+  SharepointChoiceField,
+  SharepointChoiceList,
+  SharepointChoiceRowChild,
+  SharepointChoiceExportColumn,
+  SharepointChoiceExportContext,
+  SharepointChoiceExportOptions,
+  ExcelIcon,
+} from "./sharepoint-choice.models";
+import { SharepointChoiceComponent } from "./sharepoint-choice.component";
+import { SharepointChoiceRender, SharepointChoiceRenderContent } from "./sharepoint-choice.render";
+import { Workbook } from "devextreme-exceljs-fork";
 
 interface SharepointChoiceHide {
   [tabName: string]: string[];
@@ -12,7 +34,7 @@ interface SharepointChoiceHide {
 
 interface SharepointChoiceSort {
   [tabName: string]: {
-    direction: 'asc' | 'desc';
+    direction: "asc" | "desc";
     field: string;
   }[];
 }
@@ -25,7 +47,7 @@ interface SharepointChoiceFilter {
       greater?: number | Date | null;
       less?: number | Date | null;
     };
-  }
+  };
 }
 
 interface SharepointChoiceOrder {
@@ -33,20 +55,17 @@ interface SharepointChoiceOrder {
 }
 
 @Component({
-  selector: 'app-table',
-  templateUrl: './sharepoint-choice.table.html',
-  styleUrls: ['./styles.scss'],
+  selector: "app-table",
+  templateUrl: "./sharepoint-choice.table.html",
+  styleUrls: ["./styles.scss"],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    CommonModule,
-    FormsModule,
-    SharepointChoiceComponent,
-    SharepointChoiceRender
+  imports: [CommonModule, FormsModule, SharepointChoiceComponent, SharepointChoiceRender],
+  providers: [
+    {
+      provide: ErrorHandler,
+    },
   ],
-  providers: [{
-    provide: ErrorHandler
-  }]
 })
 export class SharepointChoiceTable implements OnInit, OnDestroy {
   // all data passed in keyed by tab name (not via signals which reduce performance on large data sets)
@@ -60,36 +79,33 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       if (this._allDataIn[tab]) {
         // add _tracking to each row for ngFor tracking and node cache
         this._allDataIn[tab].forEach((row, index) => {
-          if (row['_tracking'])
-            return;
+          if (row["_tracking"]) return;
 
-          if (row['Id']) // likely SPId so retain through changes
-            row['_tracking'] = `id-${row['Id']}`;
-          else if (row['reference']) // likely policy reference so retain through changes
-            row['_tracking'] = `ref-${row['reference']}`;
-          else // generate unique tracking key each time data changes too
-            row['_tracking'] = `${tab}-${this._dataLoadCycles}-${index}`;
+          if (row["Id"])
+            // likely SPId so retain through changes
+            row["_tracking"] = `id-${row["Id"]}`;
+          else if (row["reference"])
+            // likely policy reference so retain through changes
+            row["_tracking"] = `ref-${row["reference"]}`; // generate unique tracking key each time data changes too
+          else row["_tracking"] = `${tab}-${this._dataLoadCycles}-${index}`;
         });
         // cleanup all data to only external filtered
-        let filtered = !this.search ? this._allDataIn[tab] : this._allDataIn[tab].filter(row => {
-          for (let t in this.search) {
-            if (this.search[t] === null || this.search[t] === undefined)
-              continue;
-            if (this.search[t] === '(blanks)') {
-              if (row[t] !== null && row[t] !== undefined && row[t] !== '')
-                return false;
-              continue;
-            }
-            if (row[t] === null || row[t] === undefined || row[t] === '')
-              return false;
-            if (!(row[t].toString().toLowerCase().includes(this.search[t]!.toString().toLowerCase())))
-              return false;
-          }
-          return true;
-        });
+        let filtered = !this.search
+          ? this._allDataIn[tab]
+          : this._allDataIn[tab].filter((row) => {
+              for (let t in this.search) {
+                if (this.search[t] === null || this.search[t] === undefined) continue;
+                if (this.search[t] === "(blanks)") {
+                  if (row[t] !== null && row[t] !== undefined && row[t] !== "") return false;
+                  continue;
+                }
+                if (row[t] === null || row[t] === undefined || row[t] === "") return false;
+                if (!row[t].toString().toLowerCase().includes(this.search[t]!.toString().toLowerCase())) return false;
+              }
+              return true;
+            });
         // only have tabs for ones with data
-        if (this.showEmptyTabs || filtered.length > 0)
-          this._allData[tab] = filtered;
+        if (this.showEmptyTabs || filtered.length > 0) this._allData[tab] = filtered;
       }
     }
 
@@ -134,10 +150,8 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this.chRef.markForCheck();
   }
   get selectedTab(): string | undefined {
-    if (this._selectedTab && this.allTabs.includes(this._selectedTab))
-      return this._selectedTab;
-    else if (this.allTabs.length > 0)
-      return this.allTabs[0];
+    if (this._selectedTab && this.allTabs.includes(this._selectedTab)) return this._selectedTab;
+    else if (this.allTabs.length > 0) return this.allTabs[0];
     return undefined;
   }
   private _selectedTab?: string;
@@ -187,23 +201,29 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   private _search?: SharepointChoiceRowChild;
 
   // simple inputs that dont need getter/setter
-  @Input() prefix: string = document.location.href.toLowerCase().split('?')[0].split('#')[0];
-  @Input() tableHeight: string = 'calc(100vh - 310px)';
+  @Input() prefix: string = document.location.href.toLowerCase().split("?")[0]!.split("#")[0]!;
+  @Input() tableHeight: string = "calc(100vh - 310px)";
   @Input() allEditing: boolean = false; // all with spec render as app-choice else edit per cell on click
   @Input() allowHideColumns: boolean = true;
   @Input() showEmptyTabs: boolean = false;
 
   // allow selection and emit selected items and tab
   @Input() allowSelection: boolean = false;
-  @Output() selected = new EventEmitter<{ data: SharepointChoiceRow[], tab: string | undefined }>();
+  @Output() selected = new EventEmitter<{
+    data: SharepointChoiceRow[];
+    tab: string | undefined;
+  }>();
   @Output() cleared = new EventEmitter<void>();
 
   // outbound events or pseudo callbacks for await support on click, in order of trigger
   // cellClicked triggers ahead of all of these if present
   @Input() rowClicked?: Function; // [rowClicked]="rowClicked" rowClicked = async (rowData: any, target: HTMLElement | EventTarget | undefined) => { ... } to ensure this. is from the app and not from app-table
-  @Output() clicked = new EventEmitter<{ row: SharepointChoiceRow, target: HTMLElement | EventTarget | undefined }>(); // (clicked)="onClicked($event)" onClicked(event: { row: SharepointChoiceRow, target: HTMLElement | EventTarget | undefined }) { ... }
+  @Output() clicked = new EventEmitter<{
+    row: SharepointChoiceRow;
+    target: HTMLElement | EventTarget | undefined;
+  }>(); // (clicked)="onClicked($event)" onClicked(event: { row: SharepointChoiceRow, target: HTMLElement | EventTarget | undefined }) { ... }
   @Input() hyperlinkRow?: Function; // [hyperlinkRow]="hyperlinkRow" hyperlinkRow = (rowData: any) => { return 'https://...'; } to ensure this. is from the app and not from app-table
-  @Input() hyperlinkTarget: string = '_self'; // target for hyperlink rows
+  @Input() hyperlinkTarget: string = "_self"; // target for hyperlink rows
   @Input() export?: SharepointChoiceExportOptions; // [export]="export" declarative export options handled by app-table
 
   // internal state
@@ -278,33 +298,33 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   private _dragParent?: SharepointChoiceColumn;
   private _suppressHeaderClick: boolean = false;
 
-  constructor(private chRef: ChangeDetectorRef) { }
+  constructor(private chRef: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     if (!this._sort)
       try {
         this._sort = this.getStorage(`Sort`);
-      } catch { }
+      } catch {}
     if (!this._filter)
       try {
         this._filter = this.getStorage(`Filter`);
-      } catch { }
+      } catch {}
     if (!this._columnOrder)
       try {
         this._columnOrder = this.getStorage(`Order`);
-      } catch { }
+      } catch {}
     if (!this._hiddenColumns)
       try {
         this._hiddenColumns = this.getStorage(`Hide`);
-      } catch { }
+      } catch {}
     if (!this._selectedTab)
       try {
         this._selectedTab = this.getStorage(`Tab`);
-      } catch { }
+      } catch {}
     if (!this._pageSize)
       try {
         this._pageSize = this.getStorage(`Size`);
-      } catch { }
+      } catch {}
   }
 
   ngOnDestroy(): void {
@@ -315,8 +335,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     // use debounce to avoid multiple rapid changes clearing cache too often across multiple columns and filter/sort types etc so simpler than rxjs
     clearTimeout(this._debounceFilterSort);
     this._debounceFilterSort = setTimeout(() => {
-      if (!this.selectedTab)
-        return;
+      if (!this.selectedTab) return;
       // drop cache to recalc rows
       this._rowsCache.delete(this.selectedTab);
       // emit the new filtered/sorted selection
@@ -324,14 +343,36 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     }, 500);
   }
 
+  private storageKey(): string {
+    return `SharepointTable-${this.prefix}`;
+  }
+
+  private storageObject(): Record<string, any> {
+    const key = this.storageKey();
+
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return {};
+
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+    } catch {}
+
+    try {
+      localStorage.setItem(key, "{}");
+    } catch {}
+
+    return {};
+  }
+
   getStorage(key: string): any {
-    return JSON.parse(localStorage.getItem(`SharepointTable-${this.prefix}`) || '{}')[key];
+    return this.storageObject()[key];
   }
 
   setStorage(key: string, value: any) {
-    var s = JSON.parse(localStorage.getItem(`SharepointTable-${this.prefix}`) || '{}');
+    var s = this.storageObject();
     s[key] = value;
-    localStorage.setItem(`SharepointTable-${this.prefix}`, JSON.stringify(s));
+    localStorage.setItem(this.storageKey(), JSON.stringify(s));
   }
 
   // tab change resets page number and emits empty selection
@@ -344,17 +385,14 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   selectionChanged(row: SharepointChoiceRow): void {
     row._selected = !row._selected;
     // if there is filtering on selected, debounce so users can click and unclick multiple without multiple emits or the item vanishing immediately
-    if (this.selectedTab && !!(this.filter[this.selectedTab]?.['_selected']))
-      this.debounceAndMark();
-    else
-      this.emitSelection();
+    if (this.selectedTab && !!this.filter[this.selectedTab]?.["_selected"]) this.debounceAndMark();
+    else this.emitSelection();
   }
 
   emitSelection(): void {
-    if (!this.selectedTab)
-      this.selected.emit({ data: [], tab: undefined });
+    if (!this.selectedTab) this.selected.emit({ data: [], tab: undefined });
     else {
-      let selectedRows = this.rows(this.selectedTab).filter(r => r._selected);
+      let selectedRows = this.rows(this.selectedTab).filter((r) => r._selected);
       this.selected.emit({ data: selectedRows, tab: this.selectedTab });
     }
     queueMicrotask(() => {
@@ -368,24 +406,25 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   // sorts, filters, column visibility changes
   sortChange(col: SharepointChoiceColumn): void {
-    if (!col.field || col.sortable === false || !this.selectedTab)
-      return;
+    if (!col.field || col.sortable === false || !this.selectedTab) return;
 
     // Get current sort state
     let currentSort = { ...this.sort };
-    if (!currentSort[this.selectedTab])
-      currentSort[this.selectedTab] = [];
+    if (!currentSort[this.selectedTab]) currentSort[this.selectedTab] = [];
 
-    var asc = currentSort[this.selectedTab].findIndex(s => s.field == col.field && s.direction == 'asc');
-    var desc = currentSort[this.selectedTab].findIndex(s => s.field == col.field && s.direction == 'desc');
+    var asc = currentSort[this.selectedTab]!.findIndex((s) => s.field == col.field && s.direction == "asc");
+    var desc = currentSort[this.selectedTab]!.findIndex((s) => s.field == col.field && s.direction == "desc");
 
     if (asc == -1 && desc == -1) {
-      currentSort[this.selectedTab] = [...currentSort[this.selectedTab], { field: col.field, direction: 'asc' }];
+      currentSort[this.selectedTab] = [...currentSort[this.selectedTab]!, { field: col.field, direction: "asc" }];
     } else if (asc >= 0) {
-      currentSort[this.selectedTab] = [...currentSort[this.selectedTab]];
-      currentSort[this.selectedTab][asc] = { field: col.field, direction: 'desc' };
+      currentSort[this.selectedTab] = [...currentSort[this.selectedTab]!];
+      currentSort[this.selectedTab]![asc] = {
+        field: col.field,
+        direction: "desc",
+      };
     } else {
-      currentSort[this.selectedTab] = currentSort[this.selectedTab].filter(s => !(s.field == col.field));
+      currentSort[this.selectedTab] = currentSort[this.selectedTab]!.filter((s) => !(s.field == col.field));
     }
 
     // Reassign to trigger setter
@@ -403,112 +442,115 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   // on multi select, not using ctrl key
   changed(col: SharepointChoiceColumn, e: Event): void {
     e.stopPropagation();
-    var target = (e.target as HTMLOptionElement);
+    var target = e.target as HTMLOptionElement;
 
     let scrollTop = 0;
-    if (target.parentElement)
-      scrollTop = target.parentElement.scrollTop;
+    if (target.parentElement) scrollTop = target.parentElement.scrollTop;
 
     // use inner text as value gets adjusted by angular
     let v = target.innerText;
-    if (v === '-- All --')
-      return this.filterChange(col, 'equals', []);
+    if (v === "-- All --") return this.filterChange(col, "equals", []);
 
     // ensure object type is correct or replace the object
     let current: string[] = [];
     try {
-      if (!this.selectedTab || !col.field)
-        return;
-      current = this.filter[this.selectedTab][col.field]['equals'] as string[] ?? [];
+      if (!this.selectedTab || !col.field) return;
+      current = (this.filter[this.selectedTab]?.[col.field]?.["equals"] as string[]) ?? [];
     } catch (e) {
       // lazy drop out
     }
 
     // if there are selected results set the field to add/remove the most recent click
     let i = current.indexOf(v);
-    if (i >= 0)
-      current.splice(i, 1);
-    else
-      current.push(v);
+    if (i >= 0) current.splice(i, 1);
+    else current.push(v);
 
     if (target.parentElement) {
       // manually toggle html select state as mousedown false prevents the toggle as well as prevent the unselect all
       target.selected = !target.selected;
-      setTimeout((function () { target.parentElement ? target.parentElement.scrollTop = scrollTop : null; }), 10);
-      setTimeout((function () { target.parentElement ? target.parentElement.focus() : null; }), 10);
+      setTimeout(function () {
+        target.parentElement ? (target.parentElement.scrollTop = scrollTop) : null;
+      }, 10);
+      setTimeout(function () {
+        target.parentElement ? target.parentElement.focus() : null;
+      }, 10);
     }
 
     // push the change to trigger getter
-    this.filterChange(col, 'equals', current);
+    this.filterChange(col, "equals", current);
   }
 
   filterChange(col: SharepointChoiceColumn, op: string, value: Array<string> | Date | string | number | null): void {
-    if (!col.field || col.filter == 'none' || !this.selectedTab)
-      return;
-    if (value === '-- All --')
-      value = null;
+    if (!col.field || col.filter == "none" || !this.selectedTab) return;
+    if (value === "-- All --") value = null;
 
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       value = value.trim();
       // ensure any strings are correctly converted
-      if (col.filter == 'date' && value) {
+      if (col.filter == "date" && value) {
         value = new Date(value);
       }
-      if (col.filter == 'number' && value) {
+      if (col.filter == "number" && value) {
         value = Number(value);
       }
     }
 
     // Get current filter state
     let currentFilter = { ...this.filter };
-    if (!currentFilter[this.selectedTab])
-      currentFilter[this.selectedTab] = {};
+    if (!currentFilter[this.selectedTab]) currentFilter[this.selectedTab] = {};
 
-    if (value === undefined || value === null || value === '' || (typeof value === 'object' && 'length' in value && value.length == 0)) {
-      if (currentFilter[this.selectedTab][col.field]) {
-        delete currentFilter[this.selectedTab][col.field][op];
-        if (Object.keys(currentFilter[this.selectedTab][col.field]).length == 0)
-          delete currentFilter[this.selectedTab][col.field];
+    if (
+      value === undefined ||
+      value === null ||
+      value === "" ||
+      (typeof value === "object" && "length" in value && value.length == 0)
+    ) {
+      if (currentFilter[this.selectedTab]![col.field]) {
+        delete currentFilter[this.selectedTab]![col.field]![op];
+        if (Object.keys(currentFilter[this.selectedTab]![col.field]!).length == 0)
+          delete currentFilter[this.selectedTab]![col.field];
       }
     } else {
-      if (!currentFilter[this.selectedTab][col.field])
-        currentFilter[this.selectedTab][col.field] = { [op]: value };
+      if (!currentFilter[this.selectedTab]![col.field]) currentFilter[this.selectedTab]![col.field] = { [op]: value };
       else
-        currentFilter[this.selectedTab][col.field] = { ...currentFilter[this.selectedTab][col.field], [op]: value };
+        currentFilter[this.selectedTab]![col.field] = {
+          ...currentFilter[this.selectedTab]![col.field],
+          [op]: value,
+        };
     }
 
     // Reassign to trigger setter
     this.filter = currentFilter;
   }
 
-  sortContains(field: string | undefined, direction: 'asc' | 'desc'): boolean {
-    if (!field || !this.selectedTab || !this.sort[this.selectedTab])
-      return false;
-    return this.sort[this.selectedTab].some(s => s.field == field && (direction ? s.direction == direction : true));
+  sortContains(field: string | undefined, direction: "asc" | "desc"): boolean {
+    if (!field || !this.selectedTab || !this.sort[this.selectedTab]) return false;
+    return this.sort[this.selectedTab]!.some((s) => s.field == field && (direction ? s.direction == direction : true));
   }
 
   filterContains(field?: string) {
+    const tabFilter = this.selectedTab ? this.filter[this.selectedTab] : undefined;
+
     // if filter exists on selected then all others disabled
-    if (this.selectedTab && this.filter[this.selectedTab]?.['_selected'] && field != '_selected')
+    if (this.selectedTab && tabFilter?.["_selected"] && field != "_selected")
       return {
         equals: null,
         contains: null,
         greater: null,
-        less: null
+        less: null,
       };
 
     return {
-      equals: !field || !this.selectedTab || !this.filter[this.selectedTab] ? null : this.filter[this.selectedTab][field]?.equals ?? null,
-      contains: !field || !this.selectedTab || !this.filter[this.selectedTab] ? null : this.filter[this.selectedTab][field]?.contains ?? null,
-      greater: !field || !this.selectedTab || !this.filter[this.selectedTab] ? null : this.filter[this.selectedTab][field]?.greater ?? null,
-      less: !field || !this.selectedTab || !this.filter[this.selectedTab] ? null : this.filter[this.selectedTab][field]?.less ?? null
+      equals: !field || !tabFilter ? null : (tabFilter[field]?.equals ?? null),
+      contains: !field || !tabFilter ? null : (tabFilter[field]?.contains ?? null),
+      greater: !field || !tabFilter ? null : (tabFilter[field]?.greater ?? null),
+      less: !field || !tabFilter ? null : (tabFilter[field]?.less ?? null),
     };
   }
 
   filterToggle(col: SharepointChoiceColumn, event: Event): void {
-    this.allCols.forEach(c => {
-      if (c.field != col.field)
-        c._filtervisible = false;
+    this.allCols.forEach((c) => {
+      if (c.field != col.field) c._filtervisible = false;
     });
     col._filtervisible = !col._filtervisible;
     event.stopPropagation();
@@ -534,68 +576,65 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   }
 
   async exportTable(currentRows: SharepointChoiceRow[]): Promise<void> {
-    if (!this.export || !this.selectedTab)
-      return;
+    if (!this.export || !this.selectedTab) return;
 
-    let cols:SharepointChoiceColumn[] = [];
-    this.fields(this.selectedTab).forEach(col => {
-      if (col.field)
-        cols.push(col);
-      col.children?.forEach(child => {
-        if (child.field)
-          cols.push(child);
+    let cols: SharepointChoiceColumn[] = [];
+    this.fields(this.selectedTab).forEach((col) => {
+      if (col.field) cols.push(col);
+      col.children?.forEach((child) => {
+        if (child.field) cols.push(child);
       });
     });
 
     let baseContext = {
       tab: this.selectedTab,
       filteredRows: currentRows,
-      selectedRows: currentRows.filter(row => row._selected),
-      visibleColumns: cols
+      selectedRows: currentRows.filter((row) => row._selected),
+      visibleColumns: cols,
     };
 
     let sourceRows = baseContext.filteredRows;
-    if (typeof this.export.sourceRows === 'function')
-      sourceRows = await this.export.sourceRows(baseContext);
-    else if (this.export.sourceRows === 'selected')
-      sourceRows = baseContext.selectedRows;
-    else if (this.export.sourceRows === 'selected-or-filtered')
+    if (typeof this.export.sourceRows === "function") sourceRows = await this.export.sourceRows(baseContext);
+    else if (this.export.sourceRows === "selected") sourceRows = baseContext.selectedRows;
+    else if (this.export.sourceRows === "selected-or-filtered")
       sourceRows = baseContext.selectedRows.length > 0 ? baseContext.selectedRows : baseContext.filteredRows;
 
     let context: SharepointChoiceExportContext = {
       ...baseContext,
-      sourceRows
+      sourceRows,
     };
 
     let columns = context.visibleColumns
-      .filter(col => !!col.field)
-      .map(col => ({
-        header: col.headerName ?? col.field!,
-        key: col.field!,
-        width: col.width
-      } as SharepointChoiceExportColumn));
-    if (typeof this.export.columns === 'function')
-      columns = await this.export.columns(context);
-    else if (this.export.columns)
-      columns = this.export.columns;
+      .filter((col) => !!col.field)
+      .map(
+        (col) =>
+          ({
+            header: col.headerName ?? col.field!,
+            key: col.field!,
+            width: col.width,
+          }) as SharepointChoiceExportColumn,
+      );
+    if (typeof this.export.columns === "function") columns = await this.export.columns(context);
+    else if (this.export.columns) columns = this.export.columns;
 
-    let rows = context.sourceRows.map(row => {
+    let rows = context.sourceRows.map((row) => {
       const exportRow: Record<string, any> = {};
-      columns.forEach(column => {
-        if (!column.key)
-          return;
-        exportRow[column.key] = column.key.split('.').reduce<any>((value, part) => value == null ? null : value[part], row);
+      columns.forEach((column) => {
+        if (!column.key) return;
+        exportRow[column.key] = column.key
+          .split(".")
+          .reduce<any>((value, part) => (value == null ? null : value[part]), row);
       });
       return exportRow;
     });
-    if (typeof this.export.rows === 'function')
-      rows = await this.export.rows(context);
-    else if (this.export.rows)
-      rows = this.export.rows;
+    if (typeof this.export.rows === "function") rows = await this.export.rows(context);
+    else if (this.export.rows) rows = this.export.rows;
 
     let workbook = new Workbook();
-    let worksheet = workbook.addWorksheet((typeof this.export.sheetName === 'function' ? this.export.sheetName(context) : this.export.sheetName) || 'Sheet');
-    let title = (typeof this.export.title === 'function' ? this.export.title(context) : this.export.title);
+    let worksheet = workbook.addWorksheet(
+      (typeof this.export.sheetName === "function" ? this.export.sheetName(context) : this.export.sheetName) || "Sheet",
+    );
+    let title = typeof this.export.title === "function" ? this.export.title(context) : this.export.title;
 
     if (title) {
       let titleValues = Array.isArray(title) ? title : [title];
@@ -604,69 +643,64 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     }
 
     worksheet.columns = columns;
-    rows.forEach(row => worksheet.addRow(row));
+    rows.forEach((row) => worksheet.addRow(row));
 
     if (this.export.autoWidth !== false)
-      worksheet.columns.forEach(column => {
-        if (!column || typeof column.eachCell !== 'function')
-          return;
+      worksheet.columns.forEach((column) => {
+        if (!column || typeof column.eachCell !== "function") return;
 
         let maxLength = 2;
         column.eachCell((cell: any) => {
-          if (!cell?.value)
-            return;
+          if (!cell?.value) return;
           maxLength = Math.max(maxLength, cell.value.toString().length);
         });
         column.width = column.width && maxLength + 2 < column.width ? column.width : maxLength + 2;
       });
 
     let data = await workbook.xlsx.writeBuffer();
-    const file = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const file = new Blob([data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
     const url = URL.createObjectURL(file);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = (typeof this.export.fileName === 'function' ? this.export.fileName(context) : this.export.fileName) || `${context.tab}.xlsx`;
+    link.download =
+      (typeof this.export.fileName === "function" ? this.export.fileName(context) : this.export.fileName) ||
+      `${context.tab}.xlsx`;
     link.click();
     URL.revokeObjectURL(url);
   }
 
   columnToggle(col: SharepointChoiceColumn, tab: string): void {
     let currentHidden = { ...this.hiddenColumns };
-    if (!col.field)
-      return;
+    if (!col.field) return;
 
-    if (!currentHidden[tab])
-      currentHidden[tab] = [];
+    if (!currentHidden[tab]) currentHidden[tab] = [];
 
-    if (!this.isHidden(col, tab))
-      currentHidden[tab] = [...currentHidden[tab], col.field];
-    else
-      currentHidden[tab] = currentHidden[tab].filter((c: string) => c != col.field);
+    if (!this.isHidden(col, tab)) currentHidden[tab] = [...currentHidden[tab], col.field];
+    else currentHidden[tab] = currentHidden[tab].filter((c: string) => c != col.field);
 
     // Reassign to trigger setter
     this.hiddenColumns = currentHidden;
   }
 
   toggleRow(col: SharepointChoiceColumn, checked: boolean): void {
-    this.allTabs.forEach(t => {
-      if (checked && !this.isHidden(col, t))
-        this.columnToggle(col, t);
-      else if (!checked && this.isHidden(col, t))
-        this.columnToggle(col, t);
+    this.allTabs.forEach((t) => {
+      if (checked && !this.isHidden(col, t)) this.columnToggle(col, t);
+      else if (!checked && this.isHidden(col, t)) this.columnToggle(col, t);
     });
   }
 
   toggleChildren(col: SharepointChoiceColumn, tab: string | null, checked: boolean): void {
-    this.allTabs.filter(t => !tab || t == tab).forEach(t => {
-      if (!col.children)
-        return;
-      col.children.forEach(child => {
-        if (checked && !this.isHidden(child, t))
-          this.columnToggle(child, t);
-        else if (!checked && this.isHidden(child, t))
-          this.columnToggle(child, t);
+    this.allTabs
+      .filter((t) => !tab || t == tab)
+      .forEach((t) => {
+        if (!col.children) return;
+        col.children.forEach((child) => {
+          if (checked && !this.isHidden(child, t)) this.columnToggle(child, t);
+          else if (!checked && this.isHidden(child, t)) this.columnToggle(child, t);
+        });
       });
-    });
   }
 
   isReorderable(col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): boolean {
@@ -675,54 +709,48 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   dragStart(event: DragEvent, col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): void {
     const dragKey = this.getColumnDragKey(col, parent);
-    if (!this.selectedTab || !dragKey)
-      return;
+    if (!this.selectedTab || !dragKey) return;
 
     this._dragColumn = col;
     this._dragParent = parent;
 
     if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.dropEffect = 'move';
-      event.dataTransfer.setData('text/plain', dragKey);
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.dropEffect = "move";
+      event.dataTransfer.setData("text/plain", dragKey);
     }
   }
 
   dragOver(event: DragEvent, col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): void {
-    if (!this.canDropColumn(col, parent))
-      return;
+    if (!this.canDropColumn(col, parent)) return;
 
     event.preventDefault();
-    if (event.dataTransfer)
-      event.dataTransfer.dropEffect = 'move';
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
   }
 
   dragDrop(event: DragEvent, col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): void {
-    if (!this.canDropColumn(col, parent) || !this.selectedTab || !this._dragColumn)
-      return;
+    if (!this.canDropColumn(col, parent) || !this.selectedTab || !this._dragColumn) return;
 
     event.preventDefault();
     event.stopPropagation();
 
     const nextOrder = parent
       ? this.moveField(
-        this.columnOrder[this.selectedTab] || [],
-        this._dragColumn.field || '',
-        col.field || '',
-        (parent.children || [])
-          .filter(sibling => !!sibling.field)
-          .map(sibling => sibling.field as string)
-      )
+          this.columnOrder[this.selectedTab] || [],
+          this._dragColumn.field || "",
+          col.field || "",
+          (parent.children || []).filter((sibling) => !!sibling.field).map((sibling) => sibling.field as string),
+        )
       : this.moveColumnGroup(
-        this.columnOrder[this.selectedTab] || [],
-        this._dragColumn,
-        col,
-        this.fields(this.selectedTab)
-      );
+          this.columnOrder[this.selectedTab] || [],
+          this._dragColumn,
+          col,
+          this.fields(this.selectedTab),
+        );
 
     this.columnOrder = {
       ...this.columnOrder,
-      [this.selectedTab]: nextOrder
+      [this.selectedTab]: nextOrder,
     };
 
     this._suppressHeaderClick = true;
@@ -741,32 +769,30 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     const startX = event.pageX;
     var target = event.target as HTMLElement;
     const startWidth = target.parentNode ? (target.parentNode as HTMLElement).offsetWidth : col.width || 100;
-    const min = parseInt(target.getAttribute('start-width') || '0');
-    if (!min)
-      target.setAttribute('start-width', startWidth.toString());
-    target.style.border = '1px solid #000';
+    const min = parseInt(target.getAttribute("start-width") || "0");
+    if (!min) target.setAttribute("start-width", startWidth.toString());
+    target.style.border = "1px solid #000";
 
     const onMouseMove = (e: MouseEvent) => {
-      target.style.right = startX - e.pageX + 'px';
-    }
+      target.style.right = startX - e.pageX + "px";
+    };
     const onMouseUp = (e: MouseEvent) => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      target.style.border = 'none';
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      target.style.border = "none";
       let newWidth = startWidth + (e.pageX - startX);
-      if (newWidth < min)
-        newWidth = min;
+      if (newWidth < min) newWidth = min;
       col.width = newWidth;
-      target.style.right = '0px';
+      target.style.right = "0px";
       this.chRef.markForCheck();
-    }
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
+    };
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
   }
 
   // handle cell click or row click, return true or false to current cell editing, done via then to avoid await in template as it doesnt impact outcome
   handleCellClick(col: SharepointChoiceColumn, row: SharepointChoiceRow, event: any): void {
-    let choice = event.target.tagName == 'APP-CHOICE';
+    let choice = event.target.tagName == "APP-CHOICE";
     // if its editable and not editing already (spc onchange from app-choice will return the component tag)
     if (col.spec && col.field && !choice) {
       // show this app-choice for editing early to later get focus
@@ -775,47 +801,39 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       // get the target cell to focus after render
       var target = event.target;
       // ensure we are at the cell level not any inner nodes
-      while (target && target.tagName != 'TD')
-        target = target.parentNode;
+      while (target && target.tagName != "TD") target = target.parentNode;
       // failed to find TD then end
-      if (!target)
-        return;
+      if (!target) return;
       // await render, init, all internals of app-choice then focus to edit
       setTimeout(() => {
-        var el = target.getElementsByTagName('select');
-        if (el.length == 0)
-          el = target.getElementsByTagName('textarea');
-        if (el.length == 0)
-          el = target.getElementsByTagName('input');
-        if (el.length > 0)
-          el[0].focus();
+        var el = target.getElementsByTagName("select");
+        if (el.length == 0) el = target.getElementsByTagName("textarea");
+        if (el.length == 0) el = target.getElementsByTagName("input");
+        if (el.length > 0) el[0].focus();
       }, 500);
     } else {
       // get the trigger functions in priority order
       var c: any = null;
-      if (col.cellClicked)
-        c = col.cellClicked(row, event.target);
-      else if (this.rowClicked)
-        c = this.rowClicked(row, event.target);
-      else
-        this.clicked.emit({ row: row, target: event.target });
+      if (col.cellClicked) c = col.cellClicked(row, event.target);
+      else if (this.rowClicked) c = this.rowClicked(row, event.target);
+      else this.clicked.emit({ row: row, target: event.target });
       // ensure editing ends/doesnt exist but after using target above
       row._editing = undefined;
       this.chRef.markForCheck();
       // cant clear cache end
-      if (!this.selectedTab)
-        return;
+      if (!this.selectedTab) return;
       // wont need to clear cache end
-      if (!choice && !c)
-        return;
+      if (!choice && !c) return;
       // if it is choice or got a function truethy outward reset cache
       if (!(c instanceof Promise)) {
         this._rowsCache.delete(this.selectedTab);
         this.chRef.markForCheck();
       } else {
         c.then((r?: any) => {
+          const selectedTab = this.selectedTab;
           if (r || choice) {
-            this._rowsCache.delete(this.selectedTab!);
+            if (!selectedTab) return;
+            this._rowsCache.delete(selectedTab);
             this.chRef.detectChanges();
           }
         });
@@ -833,15 +851,15 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   }
 
   sharepointChoiceField(field: string): string {
-    return field.substring(field.lastIndexOf('.') + 1);
+    return field.substring(field.lastIndexOf(".") + 1);
   }
 
   sharepointChoiceSpec(spec: SharepointChoiceField, field: string): SharepointChoiceList {
     var f = this.sharepointChoiceField(field);
     var s: SharepointChoiceList = {};
-    s[f] = spec;
+    const fieldSpec = (s[f] = spec);
     // ensure no title to avoid label rendering
-    s[f].Title = '';
+    fieldSpec.Title = "";
     return s;
   }
 
@@ -849,49 +867,47 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     var s = this.fieldPart(field);
     var f: any = row;
     for (let i = 0; i < s.length - 1; i++) {
-      f = f[s[i]];
+      f = f[s[i]!];
     }
     return f as SharepointChoiceForm;
   }
 
   isHidden(col: SharepointChoiceColumn, tab: string): boolean {
-    if (typeof col.hide == 'function')
-      return col.hide(tab);
-    if (!col.field || !this.allowHideColumns)
-      return false;
-    return this.hiddenColumns[tab]?.includes(col.field);
+    if (typeof col.hide == "function") return col.hide(tab);
+    if (!col.field || !this.allowHideColumns) return false;
+    return this.hiddenColumns[tab]?.includes(col.field) ?? false;
   }
 
   // get columns based on tab and hidden state
   fields(tab: string): SharepointChoiceColumn[] {
     // Return cached result if available (cache cleared on hide changes)
     const cached = this._colsCache.get(tab);
-    if (cached && cached.length > 0)
-      return cached;
+    if (cached && cached.length > 0) return cached;
 
     this._rowsCache.delete(tab);
 
     const order = new Map<string, number>();
     (this.columnOrder[tab] || []).forEach((field, index) => {
-      if (!order.has(field))
-        order.set(field, index);
+      if (!order.has(field)) order.set(field, index);
     });
 
     // hide based on tab function or hide state
-    const columns = this.allCols.filter(c => {
-      return !this.isHidden(c, tab);
-    }).map(c => {
-      if (c.children) {
-        let nc = { ...c };
-        nc.children = nc.children?.filter(ch => !this.isHidden(ch, tab));
-        return nc;
-      }
-      return c;
-    }).filter(c => {
-      if (c.children)
-        return c.children.length > 0;
-      return true;
-    });
+    const columns = this.allCols
+      .filter((c) => {
+        return !this.isHidden(c, tab);
+      })
+      .map((c) => {
+        if (c.children) {
+          let nc = { ...c };
+          nc.children = nc.children?.filter((ch) => !this.isHidden(ch, tab));
+          return nc;
+        }
+        return c;
+      })
+      .filter((c) => {
+        if (c.children) return c.children.length > 0;
+        return true;
+      });
 
     const ordered = this.orderColumns(columns, order);
 
@@ -902,110 +918,94 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   // utility functions
   niceName(col: SharepointChoiceColumn): string {
-    if (col.headerName)
-      return col.headerName;
-    if (!col.field)
-      return '';
-    var h = col.field.substring(col.field.lastIndexOf('.') + 1);
-    if (h)
-      col.headerName = h.charAt(0).toUpperCase() + h.slice(1).replace(/([a-z])([A-Z])/g, '$1 $2');
-    return col.headerName || '';
+    if (col.headerName) return col.headerName;
+    if (!col.field) return "";
+    var h = col.field.substring(col.field.lastIndexOf(".") + 1);
+    if (h) col.headerName = h.charAt(0).toUpperCase() + h.slice(1).replace(/([a-z])([A-Z])/g, "$1 $2");
+    return col.headerName || "";
   }
 
   fieldValue(row: SharepointChoiceRow, field?: string): any {
-    if (!field)
-      return null;
+    if (!field) return null;
     var f = this.fieldPart(field);
-    var c = row[f[0]];
-    for (let i = 1; c && i < f.length; i++)
-      c = c[f[i]];
+    var c = row[f[0]!];
+    for (let i = 1; c && i < f.length; i++) c = c[f[i]!];
     return c;
   }
 
   private fieldPart(field: string): Array<string> {
     const cached = this._fieldMapCache.get(field);
-    if (cached && cached.length > 0)
-      return cached;
-    const parts = field.split('.');
+    if (cached && cached.length > 0) return cached;
+    const parts = field.split(".");
     this._fieldMapCache.set(field, parts);
     return parts;
   }
 
   private canDropColumn(col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): boolean {
-    if (!this.isReorderable(col, parent) || !this._dragColumn)
-      return false;
+    if (!this.isReorderable(col, parent) || !this._dragColumn) return false;
     const draggedKey = this.getColumnDragKey(this._dragColumn, this._dragParent);
     const targetKey = this.getColumnDragKey(col, parent);
-    if (!draggedKey || !targetKey)
-      return false;
-    if (draggedKey == targetKey)
-      return false;
-    if (!this._dragParent && !parent)
-      return true;
+    if (!draggedKey || !targetKey) return false;
+    if (draggedKey == targetKey) return false;
+    if (!this._dragParent && !parent) return true;
     return this._dragParent === parent;
   }
 
   private getColumnDragKey(col: SharepointChoiceColumn, parent?: SharepointChoiceColumn): string | undefined {
-    if (col.field)
-      return col.field;
-    if (parent || !col.children?.length)
-      return undefined;
+    if (col.field) return col.field;
+    if (parent || !col.children?.length) return undefined;
 
     const explicitName = col.headerName?.trim();
-    if (explicitName)
-      return `__group__:${explicitName}`;
+    if (explicitName) return `__group__:${explicitName}`;
 
     const childKey = col.children
-      .map(child => child.field || child.headerName || '')
-      .filter(value => !!value)
-      .join('|');
+      .map((child) => child.field || child.headerName || "")
+      .filter((value) => !!value)
+      .join("|");
     return childKey ? `__group__:${childKey}` : undefined;
   }
 
   private getColumnFields(col: SharepointChoiceColumn): string[] {
-    if (col.field)
-      return [col.field];
-    return col.children
-      ?.map(child => child.field)
-      .filter((field): field is string => !!field) || [];
+    if (col.field) return [col.field];
+    return col.children?.map((child) => child.field).filter((field): field is string => !!field) || [];
   }
 
-  private moveColumnGroup(order: string[], draggedColumn: SharepointChoiceColumn, targetColumn: SharepointChoiceColumn, siblings: SharepointChoiceColumn[]): string[] {
+  private moveColumnGroup(
+    order: string[],
+    draggedColumn: SharepointChoiceColumn,
+    targetColumn: SharepointChoiceColumn,
+    siblings: SharepointChoiceColumn[],
+  ): string[] {
     const nextOrder = order.filter((field, index, values) => !!field && values.indexOf(field) == index);
-    const siblingFields = siblings.flatMap(col => this.getColumnFields(col));
-    siblingFields.forEach(field => {
-      if (!nextOrder.includes(field))
-        nextOrder.push(field);
+    const siblingFields = siblings.flatMap((col) => this.getColumnFields(col));
+    siblingFields.forEach((field) => {
+      if (!nextOrder.includes(field)) nextOrder.push(field);
     });
 
     const draggedFields = this.getColumnFields(draggedColumn);
     const targetFields = this.getColumnFields(targetColumn);
-    if (draggedFields.length == 0 || targetFields.length == 0)
-      return nextOrder;
+    if (draggedFields.length == 0 || targetFields.length == 0) return nextOrder;
 
-    const remaining = nextOrder.filter(field => !draggedFields.includes(field));
-    const targetField = targetFields.find(field => remaining.includes(field));
-    if (!targetField)
-      return nextOrder;
+    const remaining = nextOrder.filter((field) => !draggedFields.includes(field));
+    const targetField = targetFields.find((field) => remaining.includes(field));
+    if (!targetField) return nextOrder;
 
     const targetIndex = remaining.indexOf(targetField);
-    remaining.splice(targetIndex, 0, ...draggedFields.filter(field => siblingFields.includes(field)));
+    remaining.splice(targetIndex, 0, ...draggedFields.filter((field) => siblingFields.includes(field)));
     return remaining;
   }
 
   private moveField(order: string[], draggedField: string, targetField: string, siblings: string[]): string[] {
     const nextOrder = order.filter((field, index, values) => !!field && values.indexOf(field) == index);
 
-    siblings.forEach(field => {
-      if (!nextOrder.includes(field))
-        nextOrder.push(field);
+    siblings.forEach((field) => {
+      if (!nextOrder.includes(field)) nextOrder.push(field);
     });
 
     const from = nextOrder.indexOf(draggedField);
     const to = nextOrder.indexOf(targetField);
 
-    if (from < 0 || to < 0)
-      return nextOrder;
+    if (from < 0 || to < 0) return nextOrder;
 
     nextOrder.splice(from, 1);
     nextOrder.splice(from < to ? to - 1 : to, 0, draggedField);
@@ -1015,84 +1015,94 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   private orderColumns(columns: SharepointChoiceColumn[], order: Map<string, number>): SharepointChoiceColumn[] {
     const ordered = this.sortColumns(columns, order);
 
-    return ordered.map(col => {
-      if (!col.children || col.children.length < 2)
-        return col;
+    return ordered.map((col) => {
+      if (!col.children || col.children.length < 2) return col;
 
       return {
         ...col,
-        children: this.sortColumns(col.children, order, col)
+        children: this.sortColumns(col.children, order, col),
       };
     });
   }
 
-  private sortColumns(columns: SharepointChoiceColumn[], order: Map<string, number>, parent?: SharepointChoiceColumn): SharepointChoiceColumn[] {
-    if (columns.length < 2 || order.size == 0)
-      return columns;
+  private sortColumns(
+    columns: SharepointChoiceColumn[],
+    order: Map<string, number>,
+    parent?: SharepointChoiceColumn,
+  ): SharepointChoiceColumn[] {
+    if (columns.length < 2 || order.size == 0) return columns;
 
     const reorderable = columns
-      .map((col, index) => ({ col, index, sortIndex: this.getColumnSortIndex(col, order, parent) }))
-      .filter(item => item.sortIndex < Number.MAX_SAFE_INTEGER);
-    if (reorderable.length < 2)
-      return columns;
+      .map((col, index) => ({
+        col,
+        index,
+        sortIndex: this.getColumnSortIndex(col, order, parent),
+      }))
+      .filter((item) => item.sortIndex < Number.MAX_SAFE_INTEGER);
+    if (reorderable.length < 2) return columns;
 
     const sorted = [...reorderable]
       .sort((a, b) => {
-        if (a.sortIndex == b.sortIndex)
-          return a.index - b.index;
+        if (a.sortIndex == b.sortIndex) return a.index - b.index;
         return a.sortIndex - b.sortIndex;
       })
-      .map(item => item.col);
+      .map((item) => item.col);
 
     let position = 0;
-    return columns.map(col => this.getColumnSortIndex(col, order, parent) < Number.MAX_SAFE_INTEGER ? sorted[position++] : col);
+    return columns.map((col) => {
+      if (this.getColumnSortIndex(col, order, parent) >= Number.MAX_SAFE_INTEGER) return col;
+
+      return sorted[position++] ?? col;
+    });
   }
 
-  private getColumnSortIndex(col: SharepointChoiceColumn, order: Map<string, number>, parent?: SharepointChoiceColumn): number {
-    if (parent)
-      return col.field && order.has(col.field) ? order.get(col.field)! : Number.MAX_SAFE_INTEGER;
+  private getColumnSortIndex(
+    col: SharepointChoiceColumn,
+    order: Map<string, number>,
+    parent?: SharepointChoiceColumn,
+  ): number {
+    if (parent) return col.field && order.has(col.field) ? order.get(col.field)! : Number.MAX_SAFE_INTEGER;
 
     const indices = this.getColumnFields(col)
-      .filter(field => order.has(field))
-      .map(field => order.get(field)!);
+      .filter((field) => order.has(field))
+      .map((field) => order.get(field)!);
     return indices.length > 0 ? Math.min(...indices) : Number.MAX_SAFE_INTEGER;
   }
 
   private hasActiveValue(value: any): boolean {
-    if (value === null || value === undefined || value === '')
-      return false;
-    if (value instanceof Date)
-      return !isNaN(value.getTime());
-    if (Array.isArray(value))
-      return value.some(v => this.hasActiveValue(v));
-    if (typeof value === 'object')
-      return Object.values(value).some(v => this.hasActiveValue(v));
+    if (value === null || value === undefined || value === "") return false;
+    if (value instanceof Date) return !isNaN(value.getTime());
+    if (Array.isArray(value)) return value.some((v) => this.hasActiveValue(v));
+    if (typeof value === "object") return Object.values(value).some((v) => this.hasActiveValue(v));
     return true;
   }
 
   filterDistinct(field?: string, split: boolean = false): any[] {
-    if (!field || !this.allData || !this.selectedTab || !this.allData[this.selectedTab])
-      return [];
+    if (!field || !this.allData || !this.selectedTab) return [];
+
+    const tabData = this.allData[this.selectedTab];
+    if (!tabData) return [];
+
     let values: any[] = [];
-    this.allData[this.selectedTab].forEach(d => {
+    tabData.forEach((d) => {
       var c = this.fieldValue(d, field);
-      if ((c === null || c === undefined || c === '') && !values.includes('(blanks)'))
-        values.push('(blanks)');
+      if ((c === null || c === undefined || c === "") && !values.includes("(blanks)")) values.push("(blanks)");
       else if (c === 0 || c === false || c) {
         // if filter is split then split the value by comma or semicolon and trim to get distinct values for multi choice fields
-        if (split && typeof c === 'string' && (c.includes(',') || c.includes(';'))) {
-          c.split(/[,;]/).map((v: string) => v.trim()).forEach((v: string) => {
-            if (!values.includes(v))
-              values.push(v);
-          });
+        if (split && typeof c === "string" && (c.includes(",") || c.includes(";"))) {
+          c.split(/[,;]/)
+            .map((v: string) => v.trim())
+            .forEach((v: string) => {
+              if (!values.includes(v)) values.push(v);
+            });
         } else if (!values.includes(c)) {
           values.push(c);
         }
       }
     });
     return values.sort((a, b) => {
-      if (a === '(blanks)') return -1;
-      if (b === '(blanks)') return 1;
+      if (a === "(blanks)") return -1;
+      if (b === "(blanks)") return 1;
       if (a < b) return -1;
       if (a > b) return 1;
       return 0;
@@ -1101,8 +1111,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   currentPageRows(rows: SharepointChoiceRow[]): SharepointChoiceRow[] {
     const cached = this._pageCache;
-    if (cached && cached.length > 0)
-      return cached;
+    if (cached && cached.length > 0) return cached;
 
     const result = rows.slice((this.pageNumber - 1) * this.pageSize, this.pageNumber * this.pageSize);
     this._pageCache = result;
@@ -1114,8 +1123,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   rows(tab: string): SharepointChoiceRow[] {
     // Return cached result if available (cache cleared on filter/sort changes)
     const cached = this._rowsCache.get(tab);
-    if (cached && cached.length > 0)
-      return cached;
+    if (cached && cached.length > 0) return cached;
 
     this._pageCache = [];
     this._isObserved = !!this.rowClicked || this.clicked.observed;
@@ -1124,39 +1132,42 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     var filter = this.filter[tab] || {};
     // ensure any date filters are correctly converted
     for (let f in filter) {
-      if (filter[f].greater)
-        filter[f].greater = typeof filter[f].greater === 'string' ? new Date(filter[f].greater as string) : filter[f].greater;
-      if (filter[f].less)
-        filter[f].less = typeof filter[f].less === 'string' ? new Date(filter[f].less as string) : filter[f].less;
+      const fieldFilter = filter[f];
+      if (!fieldFilter) continue;
+
+      if (fieldFilter.greater)
+        fieldFilter.greater =
+          typeof fieldFilter.greater === "string" ? new Date(fieldFilter.greater) : fieldFilter.greater;
+      if (fieldFilter.less)
+        fieldFilter.less = typeof fieldFilter.less === "string" ? new Date(fieldFilter.less) : fieldFilter.less;
     }
 
     var sort = this.sort[tab] || [];
 
-    if (filter['_selected'])
-      filter = { '_selected': filter['_selected'] };
+    if (filter["_selected"]) filter = { _selected: filter["_selected"] };
 
-    const hasFilter = Object.keys(filter).some(field => {
-      if (this.isHidden({ field }, tab))
-        return false;
+    const hasFilter = Object.keys(filter).some((field) => {
+      if (this.isHidden({ field }, tab)) return false;
       return true;
     });
 
-    const hasSort = sort && sort.length > 0 && sort.some(s => {
-      if (this.isHidden({ field: s.field }, tab))
-        return false;
-      return true;
-    });
+    const hasSort =
+      sort &&
+      sort.length > 0 &&
+      sort.some((s) => {
+        if (this.isHidden({ field: s.field }, tab)) return false;
+        return true;
+      });
 
     // never mutate the input array (this.allData[tab]) if there is sorting
-    let result: SharepointChoiceRow[] = hasSort ? [...this.allData[tab] ?? []] : this.allData[tab] ?? [];
+    let result: SharepointChoiceRow[] = hasSort ? [...(this.allData[tab] ?? [])] : (this.allData[tab] ?? []);
 
     if (hasFilter) {
       result = result.filter((row: SharepointChoiceRow) => {
         // apply all filters
         for (let field in filter) {
           // user hidden columns to skip filters
-          if (this.isHidden({ field }, tab))
-            continue;
+          if (this.isHidden({ field }, tab)) continue;
 
           let ops = filter[field];
           for (let op in ops) {
@@ -1164,21 +1175,29 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
             // get the field value
             var c = this.fieldValue(row, field);
             // apply the operation, all inverted as its easier to think about what is required
-            if (op == 'contains') {
-              if (!(c?.toString().toLowerCase().includes(value.toString().toLowerCase())))
-                return false;
-            } else if (op == 'equals') {
+            if (op == "contains") {
+              if (!c?.toString().toLowerCase().includes(value.toString().toLowerCase())) return false;
+            } else if (op == "equals") {
               if (value instanceof Array) {
-                if (!value.some((v: any) => c?.toString() === v?.toString() || (v == '(blanks)' && (c === null || c === undefined || c === ''))))
+                if (
+                  !value.some(
+                    (v: any) =>
+                      c?.toString() === v?.toString() ||
+                      (v == "(blanks)" && (c === null || c === undefined || c === "")),
+                  )
+                )
                   return false;
-              } else if (!(c?.toString() === value?.toString() || (value == '(blanks)' && (c === null || c === undefined || c === ''))))
+              } else if (
+                !(
+                  c?.toString() === value?.toString() ||
+                  (value == "(blanks)" && (c === null || c === undefined || c === ""))
+                )
+              )
                 return false;
-            } else if (op == 'greater') {
-              if (!(c >= value))
-                return false;
-            } else if (op == 'less') {
-              if (!(c === null || c <= value))
-                return false;
+            } else if (op == "greater") {
+              if (!(c >= value)) return false;
+            } else if (op == "less") {
+              if (!(c === null || c <= value)) return false;
             }
           }
         }
@@ -1190,23 +1209,17 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       result.sort((a: SharepointChoiceRow, b: SharepointChoiceRow) => {
         for (let s of sort) {
           // user hidden columns to skip sorts
-          if (this.isHidden({ field: s.field }, tab))
-            continue;
+          if (this.isHidden({ field: s.field }, tab)) continue;
 
           let aValue = this.fieldValue(a, s.field);
           let bValue = this.fieldValue(b, s.field);
-          let direction = s.direction == 'desc' ? -1 : 1;
+          let direction = s.direction == "desc" ? -1 : 1;
 
-          if (aValue === null && bValue === null)
-            continue;
-          if (aValue === null)
-            return 1;
-          if (bValue === null)
-            return -1;
-          if (aValue < bValue)
-            return -1 * direction;
-          if (aValue > bValue)
-            return 1 * direction;
+          if (aValue === null && bValue === null) continue;
+          if (aValue === null) return 1;
+          if (bValue === null) return -1;
+          if (aValue < bValue) return -1 * direction;
+          if (aValue > bValue) return 1 * direction;
         }
 
         return 0;
@@ -1217,42 +1230,55 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     return result;
   }
 
-  renderNode(col: SharepointChoiceColumn, value: any, row: SharepointChoiceRow, rowIndex: number, colIndex: number, childIndex?: number): any {
-    if (!col.cellRenderer)
-      return null;
+  renderNode(
+    col: SharepointChoiceColumn,
+    value: any,
+    row: SharepointChoiceRow,
+    rowIndex: number,
+    colIndex: number,
+    childIndex?: number,
+  ): SharepointChoiceRenderContent {
+    if (!col.cellRenderer) return null;
 
     // could return issues if cols hidden and many aren't named at all
-    const key = `${row['_tracking']}::${col.field ?? col.headerName ?? ((1000 * colIndex) + (childIndex ?? 0)).toString()}`;
+    const key = `${row["_tracking"]}::${col.field ?? col.headerName ?? (1000 * colIndex + (childIndex ?? 0)).toString()}`;
 
-    const cached = this._nodeCache.get(key);
-    if (cached)
-      return cached;
+    let content = this._nodeCache.get(key);
+    if (!content) {
+      content = col.cellRenderer(value, row, rowIndex);
+      this._nodeCache.set(key, content);
+    }
 
-    const node = col.cellRenderer(value, row, rowIndex);
-    this._nodeCache.set(key, node);
-    return node;
+    const hyperlink = this.beingObserved(col) ? undefined : this.hyperlink(row);
+    if (!hyperlink) return content;
+
+    return {
+      content,
+      hyperlink,
+      hyperlinkTarget: this.hyperlinkTarget,
+    };
   }
 
   // Helper method to determine cell type (reduces template complexity)
-  getCellType(col: SharepointChoiceColumn, value: any): 'renderer' | 'date' | 'number' | 'boolean' | 'default' {
+  getCellType(col: SharepointChoiceColumn, value: any): "renderer" | "date" | "number" | "boolean" | "default" {
     // quick checks for type
-    if (col.cellRenderer) return 'renderer';
-    if (col.filter === 'date') return 'date';
-    if (col.filter === 'number') return 'number';
+    if (col.cellRenderer) return "renderer";
+    if (col.filter === "date") return "date";
+    if (col.filter === "number") return "number";
     // slower checks based on value
     switch (typeof value) {
-      case 'number':
-        return 'number';
-      case 'boolean':
-        return 'boolean';
+      case "number":
+        return "number";
+      case "boolean":
+        return "boolean";
     }
     // check for date object
-    return value instanceof Date ? 'date' : 'default';
+    return value instanceof Date ? "date" : "default";
   }
 
   // Helper to format boolean values
   formatBoolean(value: any): string {
-    return value === true ? '✔' : value === false ? '✘' : '';
+    return value === true ? "✔" : value === false ? "✘" : "";
   }
 
   ceil(number: number): number {
