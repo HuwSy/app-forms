@@ -1,11 +1,11 @@
 {
   "name": "sharepoint-choice",
-  "version": "22.0.42",
+  "version": "22.0.45",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
     "build": "ng build sharepoint-choice",
-    "version": "npx -y shx sed -i \"s/\\\"peerDependencies\\\":/\\\"dependencies\\\":/\" package.json && npx -y npm-check-updates -u && npx -y shx sed -i \"s/\\\"dependencies\\\":/\\\"peerDependencies\\\":/\" package.json && npx -y shx rm -rf node_modules package-lock.json && pause && npm install && npm audit --omit=dev --audit-level=high && pause && npm run build && npm version patch --no-git-tag-version --ignore-scripts && pause && git add . && git commit -m \"Version bump\" && git push"
+    "version": "npx -y shx sed -i \"s/\\\"peerDependencies\\\":/\\\"dependencies\\\":/\" package.json && npx -y npm-check-updates -u && npx -y shx sed -i \"s/\\\"dependencies\\\":/\\\"peerDependencies\\\":/\" package.json && npx -y shx rm -rf node_modules package-lock.json && pause && npm install && npm audit --omit=dev --audit-level=high && npm run build && npm version patch --no-git-tag-version --ignore-scripts && git add . && git commit -m \"Version bump\" && git push"
   },
   "private": false,
   "sideEffects": false,
@@ -17,25 +17,25 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@angular/common": "^22.0.7",
-    "@angular/core": "^22.0.7",
-    "@angular/forms": "^22.0.7",
-    "@angular/platform-browser": "^22.0.7",
-    "@azure/msal-browser": "^5.17.1",
+    "@angular/common": "^22.1.0",
+    "@angular/core": "^22.1.0",
+    "@angular/forms": "^22.1.0",
+    "@angular/platform-browser": "^22.1.0",
+    "@azure/msal-browser": "^5.17.3",
     "@bobbyquantum/ngx-editor": "^22.0.0",
     "@kenjiuno/msgreader": "^1.28.0",
     "@pnp/sp": "^4.20.0",
-    "devextreme-exceljs-fork": "^4.4.11",
+    "devextreme-exceljs-fork": "^4.4.12",
     "@turbowarp/jszip": "^3.12.0",
     "buffer": "^6.0.3",
     "eml-parse-js": "^1.2.0-beta.1",
     "stacktrace-js": "^2.0.2"
   },
   "devDependencies": {
-    "@angular/build": "^22.0.7",
-    "@angular/cli": "^22.0.7",
-    "@types/office-js": "^1.0.600",
-    "ng-packagr": "^22.0.1",
+    "@angular/build": "^22.1.2",
+    "@angular/cli": "^22.1.2",
+    "@types/office-js": "^1.0.602",
+    "ng-packagr": "^22.1.0",
     "typescript": "^6.0.3"
   }
 }
