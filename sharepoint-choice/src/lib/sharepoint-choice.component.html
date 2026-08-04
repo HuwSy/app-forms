@@ -670,7 +670,7 @@
                         <app-choice
                           [form]="listItem"
                           [spec]="file.spec || spec"
-                          [field]="fs?.InternalName ?? ''"
+                          [field]="fs.InternalName"
                           [prefix]="field + '_' + i"
                           [disabled]="
                             disabled ||
@@ -850,7 +850,7 @@
                           <app-choice
                             [form]="listItem"
                             [spec]="file.spec || spec"
-                            [field]="fs?.InternalName ?? ''"
+                            [field]="fs.InternalName"
                             [prefix]="field + '_' + i"
                             (change)="changed()"
                             [disabled]="
