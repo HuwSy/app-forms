@@ -2,11 +2,14 @@
 
 A set of simple reusable Angular controls to use within SharePoint for rapid prototyping and development. Originally in AngularJS/JavaScript and progressed to run within Angular (2+) within an included SPFx wrapper. This gives table controls, dynamic form fields driven off list data and type from schema and some helper utils. 
 
-This repository contains three related pieces:
+This repository contains three main related pieces:
 
 - `sharepoint-choice`: the Angular library
 - `sample`: a standalone Angular sample app that consumes the library
 - `angular-wrapper`: an SPFx web part that loads a bundled Angular app from a document library folder and renders it on the page
+
+Additionally this has
+- `sharepoint-choice.json`: a sample file to upload to the tenancy app catalog under /sites/AppCatalog/SiteAssets which houses reused config settings between all apps on the tenancy
 - `AngularJS`: the start of this journey and kept only for nostalgia
 
 The library is aimed at SharePoint-hosted Angular experiences, including:
