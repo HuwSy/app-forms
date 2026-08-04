@@ -1,7 +1,9 @@
 {
   "tenancy": "",
   "graphClient": "",
+  
   "grafana": null,
+  
   "environmentMappings": [
     {
       "patterns": ["/app-", "prd/"],
@@ -20,6 +22,7 @@
       "environment": "SIT"
     }
   ],
+  
   "apiServers": {
     "grafana": {
       "LIVE": "https://grafanaprd/loki/api/v1/push",
