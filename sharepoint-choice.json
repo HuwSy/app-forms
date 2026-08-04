@@ -1,0 +1,60 @@
+{
+  "tenancy": "",
+  "graphClient": "",
+  "grafana": null,
+  "environmentMappings": [
+    {
+      "patterns": ["/app-", "prd/"],
+      "environment": "LIVE"
+    },
+    {
+      "patterns": ["/pre-", "pre/"],
+      "environment": "PRE"
+    },
+    {
+      "patterns": ["/tst-", "tst/"],
+      "environment": "TST"
+    },
+    {
+      "patterns": ["/sit-", "sit/"],
+      "environment": "SIT"
+    }
+  ],
+  "apiServers": {
+    "grafana": {
+      "LIVE": "https://grafanaprd/loki/api/v1/push",
+      "PRE": "https://grafanapre/loki/api/v1/push",
+      "TST": "https://grafanatst/loki/api/v1/push",
+      "SIT": "https://grafanasit/loki/api/v1/push",
+      "DEV": "https://grafanadev/loki/api/v1/push"
+    },
+    "common": {
+      "LIVE": "https://apiprd",
+      "PRE": "https://apipre",
+      "TST": "https://apitst",
+      "SIT": "https://apisit",
+      "DEV": "https://apidev"
+    }
+  },
+  "apiToken": {
+    "common": {
+      "LIVE": "api://API.",
+      "PRE": "api://API-Pre.",
+      "TST": "api://API-Tst.",
+      "SIT": "api://API-Sit.",
+      "DEV": "api://API-Dev."
+    }
+  },
+  "apiMap": {
+    "test": {
+      "LIVE": "",
+      "PRE": "",
+      "TST": "",
+      "SIT": "",
+      "DEV": "",
+      "name": "Test",
+      "port": 44301,
+      "server": "common"
+    }
+  }
+}
