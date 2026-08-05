@@ -552,7 +552,7 @@ export class SharepointChoiceUtils {
 
       return r;
     } catch (e) {
-      throw `Exception getting API data with status ${r?.status} response ${e} and body ${r?.body}`;
+      throw `Exception getting API data with status ${r?.status ?? "no response"} response ${e} and body ${r && r.text ? await r.text().catch(() => "<unreadable body>") : r?.body ?? ""}`;
     }
   }
 
