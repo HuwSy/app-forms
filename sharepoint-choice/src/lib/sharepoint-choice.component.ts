@@ -15,7 +15,7 @@ import { Web } from "@pnp/sp/webs";
 import { IPeoplePickerEntity } from "@pnp/sp/profiles";
 import { Editor, NgxEditorModule, Toolbar } from "@bobbyquantum/ngx-editor";
 import MsgReader from "@kenjiuno/msgreader";
-import { Attachment, readEml } from "eml-parse-js";
+import PostalMime, { type Attachment as PostalMimeAttachment } from "postal-mime";
 import { loadAsync } from "@turbowarp/jszip";
 import { Subject, Subscription } from "rxjs";
 import { debounceTime, distinctUntilChanged } from "rxjs/operators";
@@ -1323,8 +1323,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     results.push(file);
 
-    if (this.file?.extract && e.toLowerCase() == "zip")
-      if (await this.zips(data, results)) this.delete(results.filter((r) => r.FileName == newName)[0]);
+    if (this.file?.extract && e.toLowerCase() == "zip" && (await this.zips(data, results)))
+      this.delete(results.filter((r) => r.FileName == newName)[0]);
     if (this.file?.extract && e.toLowerCase() == "msg") await this.msgs(data, results, newName);
     if (this.file?.extract && e.toLowerCase() == "eml") await this.emls(data, results, newName);
 
@@ -1384,6 +1384,12 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     } catch (loggingError) {}
   }
 
+  private attachmentContentBuffer(content: ArrayBuffer | Uint8Array | string): ArrayBuffer {
+    if (content instanceof ArrayBuffer) return content;
+    if (content instanceof Uint8Array) return Uint8Array.from(content).buffer;
+    return new TextEncoder().encode(content).buffer;
+  }
+
   // extract and append msg email attachments to results
   async msgs(data: ArrayBuffer, results: SharepointChoiceAttachment[], sourceFile: string) {
     const errors: string[] = [];
@@ -1401,24 +1407,27 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       var received = dateHeader ? new Date(dateHeader.replace("Date: ", "")) : new Date();
       // get all attachments
       for (const attachment of fileData.attachments || []) {
-        if (attachment.attachmentHidden) return;
+        if (attachment.attachmentHidden) continue;
 
         try {
           var file = msgReader.getAttachment(attachment);
-          await this.appendFile(file.fileName, file.content.buffer as ArrayBuffer, results, `Sent: ${received}`);
+          await this.appendFile(
+            file.fileName,
+            this.attachmentContentBuffer(file.content),
+            results,
+            `Sent: ${received}`,
+          );
         } catch (e) {
           errors.push(`Error extracting MSG attachment from ${sourceFile}: ${e}`);
         }
       }
     } catch (e) {
       this.reportExtractionError(sourceFile, e);
-      throw e;
     }
 
     if (errors.length > 0) {
       const message = errors.join("\n");
       this.reportExtractionError(sourceFile, message);
-      throw new Error(message);
     }
   }
 
@@ -1427,45 +1436,33 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     const errors: string[] = [];
 
     try {
-      // reads the email string data into a json object
-      const readEmlJson = await new Promise<any>((resolve, reject) => {
-        readEml(new TextDecoder().decode(data), (err, parsed) => {
-          if (err) reject(err);
-          else resolve(parsed);
-        });
-      });
+      const email = await PostalMime.parse(data, { attachmentEncoding: "arraybuffer" });
 
-      if (!readEmlJson || !readEmlJson.attachments) throw new Error("Not a valid EML email file");
+      if (!email || !email.from) throw new Error("Not a valid EML email file");
 
-      var received =
-        (typeof readEmlJson.date == "string" ? new Date(readEmlJson.date) : readEmlJson.date) || new Date();
+      var received = (email.date ? new Date(email.date) : null) || new Date();
 
-      for (const attachment of readEmlJson.attachments as Attachment[]) {
-        if (attachment.inline) continue;
+      for (const attachment of email.attachments as PostalMimeAttachment[]) {
+        if (attachment.disposition === "inline" || attachment.related) continue;
 
         try {
-          // work out the name from id which is more consistent across sources, otherwise from name.
-          var name = attachment.id?.replace(/^</, "").replace(/>$/, "").split("@")[0];
-          if (!name || name.indexOf(".") < 0) name = attachment.name;
-          await this.appendFile(
-            name,
-            Uint8Array.from(atob(attachment.data64), (c) => c.charCodeAt(0)).buffer,
-            results,
-            `Sent: ${received}`,
-          );
+          // work out the name from content id which is more consistent across sources, otherwise from filename.
+          var name = attachment.contentId?.replace(/^</, "").replace(/>$/, "").split("@")[0];
+          if (!name || name.indexOf(".") < 0) name = attachment.filename || undefined;
+          if (!name) throw new Error("Attachment is missing a file name");
+
+          await this.appendFile(name, this.attachmentContentBuffer(attachment.content), results, `Sent: ${received}`);
         } catch (e) {
           errors.push(`Error extracting EML attachment from ${sourceFile}: ${e}`);
         }
       }
     } catch (e) {
       this.reportExtractionError(sourceFile, e);
-      throw e;
     }
 
     if (errors.length > 0) {
       const message = errors.join("\n");
       this.reportExtractionError(sourceFile, message);
-      throw new Error(message);
     }
   }
 

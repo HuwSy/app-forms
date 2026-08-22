@@ -609,15 +609,20 @@ export class SharepointChoiceUtils {
   private cleanSaveKeys(save: SharepointChoiceForm, uned?: SharepointChoiceForm): void {
     if (!uned) uned = {};
 
+    // mutate the save object directly
     delete save["$$hashKey"];
+    delete save["Id"];
+    delete save["ID"];
+    delete save["Attachments"];
 
     for (let key of Object.keys(save)) {
       if (save[key] === "") save[key] = null;
 
-      if ((save[key] === null && uned[key] !== null) || key == "Id") continue;
+      // keep fields becoming blank
+      if (save[key] === null && uned[key] !== null) continue;
 
       // remove and unedited, including internal fields
-      if (key == "Attachments" || (uned[key] !== undefined && JSON.stringify(uned[key]) == JSON.stringify(save[key]))) {
+      if (uned[key] !== undefined && JSON.stringify(uned[key]) == JSON.stringify(save[key])) {
         delete save[key];
         continue;
       }
@@ -691,6 +696,12 @@ export class SharepointChoiceUtils {
     return false;
   }
 
+  private normalizePath(path: string): string {
+    if (!path) return "";
+    if (path.indexOf("://") >= 0) path = path.substring(path.indexOf("/", 9));
+    return decodeURIComponent(path).replace(/\/$/, "");
+  }
+
   // patch save list item data and parse any data types appropriate for use in <sharepoint-choice ngModel=""> attributes
   public async save(
     formDataIncIdToUpdate: SharepointChoiceForm,
@@ -698,16 +709,18 @@ export class SharepointChoiceUtils {
     listTitle: string,
   ): Promise<number> {
     var save = JSON.parse(JSON.stringify(formDataIncIdToUpdate));
+    let id = save.Id;
     var errors: Array<string> = [];
+
     try {
       this.cleanSaveKeys(save, uneditedDataToBuildPatch);
 
       // save/update the item
-      if (!save.Id) {
+      if (!id) {
         var saving = await this.sp.web.lists.getByTitle(listTitle).items.add(save);
-        save.Id = saving.Id;
+        id = saving.Id;
       } else if (this.hasData(save)) {
-        await this.sp.web.lists.getByTitle(listTitle).items.getById(save.Id).update(save);
+        await this.sp.web.lists.getByTitle(listTitle).items.getById(id).update(save);
       }
 
       // process attachments as deletes then uploads
@@ -728,13 +741,11 @@ export class SharepointChoiceUtils {
           try {
             await this.sp.web.lists
               .getByTitle(listTitle)
-              .items.getById(save.Id)
+              .items.getById(id)
               .attachmentFiles.getByName(deletes[i]!)
               .delete();
           } catch (e) {
-            errors.push(
-              `Error deleting attachment ${deletes[i]} for item ${save.Id} in list ${listTitle} with error ${e}`,
-            );
+            errors.push(`Error deleting attachment ${deletes[i]} for item ${id} in list ${listTitle} with error ${e}`);
           }
 
         var adds = formDataIncIdToUpdate.Attachments.results
@@ -753,12 +764,10 @@ export class SharepointChoiceUtils {
           try {
             await this.sp.web.lists
               .getByTitle(listTitle)
-              .items.getById(save.Id)
+              .items.getById(id)
               .attachmentFiles.add(adds[a]!.name, adds[a]!.content ?? "");
           } catch (e) {
-            errors.push(
-              `Error adding attachment ${adds[a]!.name} for item ${save.Id} in list ${listTitle} with error ${e}`,
-            );
+            errors.push(`Error adding attachment ${adds[a]!.name} for item ${id} in list ${listTitle} with error ${e}`);
           }
         }
       }
@@ -772,7 +781,64 @@ export class SharepointChoiceUtils {
       throw errors.join("\n");
     }
 
-    return save.Id;
+    return id;
+  }
+
+  public async saveFolderListItem(
+    formDataIncIdToUpdate: SharepointChoiceForm,
+    uneditedDataToBuildPatch: SharepointChoiceForm,
+    listTitle: string,
+    folderPath: string,
+    additionalProps?: { leafName?: string; objectType?: 0 | 1 | 2 },
+  ): Promise<{ id: number; folderPath: string }> {
+    folderPath = this.normalizePath(folderPath);
+
+    if (!formDataIncIdToUpdate["Id"]) {
+      let save = JSON.parse(JSON.stringify(formDataIncIdToUpdate));
+
+      try {
+        this.cleanSaveKeys(save, undefined);
+
+        // return the data in the format required for folder/child items
+        let simpleSave = Object.keys(save)
+          .map((key) => {
+            let value = save[key];
+            // exclude complex objects for 2nd update to catch
+            if (typeof value == "object") return null;
+            // define values as string required for the api
+            else if (value === null) value = "";
+            else if (typeof value == "boolean") value = value ? "1" : "0";
+            else if (typeof value == "number") value = value.toString();
+            else if (typeof value == "string") value = value.trim();
+            return {
+              FieldName: key,
+              FieldValue: value,
+            };
+          })
+          .filter((item) => item !== undefined && item !== null);
+
+        let results = await this.sp.web.lists
+          .getByTitle(listTitle)
+          .addValidateUpdateItemUsingPath(simpleSave, folderPath, false, undefined, additionalProps);
+
+        formDataIncIdToUpdate["Id"] = results.find((result) => result.ItemId)?.ItemId;
+        if (!formDataIncIdToUpdate["Id"]) throw new Error(`Unable to determine created item id for list ${listTitle}`);
+
+        // purposly blank the unedited here so all fields are rewritten in case of any dropped above or data type issues etc
+        uneditedDataToBuildPatch = {};
+      } catch (e) {
+        window.alert("Error saving data:\n\n" + e);
+        throw e;
+      }
+    }
+
+    let id = await this.save(formDataIncIdToUpdate, uneditedDataToBuildPatch, listTitle);
+    let item = await this.sp.web.lists.getByTitle(listTitle).items.getById(id).select("FileRef")();
+
+    return {
+      id,
+      folderPath: this.normalizePath(item?.FileRef),
+    };
   }
 
   // get query parameters, not strictly sharepoint but reused a lot
@@ -783,8 +849,7 @@ export class SharepointChoiceUtils {
   }
 
   public async ensurePath(path: string, start: number): Promise<void> {
-    if (path.indexOf("://") >= 0) path = path.substring(path.indexOf("/", 9));
-    path = decodeURIComponent(path).replace(/\/$/, "");
+    path = this.normalizePath(path);
 
     var p = path
       .split("/")
@@ -811,8 +876,7 @@ export class SharepointChoiceUtils {
   }
 
   public async getFiles(path: string, additional: string | undefined): Promise<SharepointChoiceAttachment[]> {
-    if (path.indexOf("://") >= 0) path = path.substring(path.indexOf("/", 9));
-    path = decodeURIComponent(path).replace(/\/$/, "");
+    path = this.normalizePath(path);
 
     var files = await this.sp.web
       .getFolderByServerRelativePath(path + (additional ? "/" + additional : ""))
@@ -837,10 +901,8 @@ export class SharepointChoiceUtils {
 
   public async relocateFolder(source: string, destination: string): Promise<string | null> {
     // ensure these are server relative paths
-    var dst = decodeURIComponent(
-      destination.includes("://") ? destination.substring(destination.indexOf("/", 9)) : destination,
-    );
-    var src = decodeURIComponent(source.includes("://") ? source.substring(source.indexOf("/", 9)) : source);
+    var dst = this.normalizePath(destination);
+    var src = this.normalizePath(source);
 
     // if the destination folder is the same as the current then return null
     if (src.toLowerCase().replace(/\/$/, "") == dst.toLowerCase().replace(/\/$/, "")) return null;
@@ -867,8 +929,7 @@ export class SharepointChoiceUtils {
     files: { results: SharepointChoiceAttachment[] },
     metadata: SharepointChoiceForm | undefined,
   ): Promise<void> {
-    if (path.indexOf("://") >= 0) path = path.substring(path.indexOf("/", 9));
-    path = decodeURIComponent(path).replace(/\/$/, "");
+    path = this.normalizePath(path);
 
     // common metadata for folder and each file, unless overridden at a file level
     var commonmeta = metadata ? JSON.parse(JSON.stringify(metadata)) : {};
