@@ -954,6 +954,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // gets a drag and drop new outlook item which includes ids not file data and adds to the files array
   async outlook(transfer: DataTransfer): Promise<void> {
     let spc = new SharepointChoiceUtils();
+    let errors: Array<string> = [];
 
     let mailType = (transfer: DataTransfer, type: string) => {
       let item = transfer.getData(type);
@@ -964,7 +965,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // one or more email messages dropped
     let maillistrow = mailType(transfer, "multimaillistmessagerows") || mailType(transfer, "maillistrow");
     if (maillistrow) {
-      let errors: Array<string> = [];
       for (let i = 0; i < maillistrow.mailboxInfos.length; i++) {
         let fileName = maillistrow.subjects[i].trim() + ".eml";
 
@@ -988,12 +988,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         } catch (e) {
           errors.push(`Email append error: ${fileName} with error ${e}`);
         }
-      }
-
-      if (errors.length > 0) {
-        // if there are errors then alert them
-        alert(`Errors saving emails:\n\n${errors.join("\n")}`);
-        throw errors.join("\n");
       }
     }
 
@@ -1028,8 +1022,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           `Sent: ${new Date(getAttachment.lastModifiedDateTime)}`,
         );
       } catch (e) {
-        alert(`Error saving attachment: ${fileName} with error ${e}`);
-        throw e;
+        errors.push(`Attachment append error: ${fileName} with error ${e}`);
       }
     }
 
@@ -1057,12 +1050,11 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           errors.push(`SharePoint file append error: ${spo.itemKeys[i][2]} with error ${e}`);
         }
       }
+    }
 
-      if (errors.length > 0) {
-        // if there are errors then alert them
-        alert(`Errors saving SharePoint files:\n\n${errors.join("\n")}`);
-        throw errors.join("\n");
-      }
+    if (errors.length > 0) {
+      throw errors.join("\n");
+      alert(`Error saving file:\n\n${e}`);
     }
   }
 
@@ -1139,13 +1131,19 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // if the adding type is outlook then get the selected email(s)
     var spc = new SharepointChoiceUtils();
 
-    if (office.context.mailbox["initialData"]?.isFromSharedFolder) {
-      office.context.mailbox.item?.getSharedPropertiesAsync((shared) => {
-        if (shared.status === Office.AsyncResultStatus.Failed) return;
-        this.getMailItem(office, shared?.value?.targetMailbox, spc);
-      });
-    } else {
-      this.getMailItem(office, null, spc);
+    try {
+      if (office.context.mailbox["initialData"]?.isFromSharedFolder) {
+        office.context.mailbox.item?.getSharedPropertiesAsync((shared) => {
+          if (shared.status === Office.AsyncResultStatus.Failed) return;
+          this.getMailItem(office, shared?.value?.targetMailbox, spc);
+        });
+      } else {
+        this.getMailItem(office, null, spc);
+      }
+    } catch (e) {
+      this.office.loading = false;
+      // if there is an error then alert it
+      alert(`Error saving file:\n\n${e}`);
     }
   }
 
@@ -1181,9 +1179,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         }
 
         if (errors.length > 0) {
-          this.office.loading = false;
-          // if there are errors then alert them
-          alert(`Errors saving emails:\n\n${errors.join("\n")}`);
           throw errors.join("\n");
         }
       },
@@ -1277,7 +1272,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this.office.loading = false;
       // if there is an error then alert it
       alert(`Error saving file:\n\n${e}`);
-      throw e;
     }
   }
 
@@ -1333,7 +1327,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
 
   // extract zip files and append to results
-  async zips(data: ArrayBuffer, results: SharepointChoiceAttachment[]) {
+  async zips(data: ArrayBuffer, results: SharepointChoiceAttachment[], sourceFile: string) {
+    const errors: string[] = [];
     var failiures = 0;
     try {
       var zip = await loadAsync(data);
@@ -1362,13 +1357,21 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             else failiures++;
           } catch (e) {
             failiures++;
+            errors.push(`Error extracting ZIP file ${file.name} from ${sourceFile}: ${e}`);
           }
         }),
       );
     } catch (e) {
       // zip is uploaded so any extracted elements are only nice to have
       failiures++;
+      errors.push(`Error extracting ZIP from ${sourceFile}: ${e}`);
     }
+
+    if (errors.length > 0) {
+      const message = errors.join("\n");
+      this.reportExtractionError(sourceFile, message);
+    }
+    
     return failiures == 0;
   }
 
@@ -1422,7 +1425,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         }
       }
     } catch (e) {
-      this.reportExtractionError(sourceFile, e);
+      errors.push(`Error extracting MSG from ${sourceFile}: ${e}`);
     }
 
     if (errors.length > 0) {
@@ -1457,7 +1460,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         }
       }
     } catch (e) {
-      this.reportExtractionError(sourceFile, e);
+      errors.push(`Error extracting EML from ${sourceFile}: ${e}`);
     }
 
     if (errors.length > 0) {
