@@ -118,8 +118,8 @@ export class SharepointChoiceUtils {
             if (s.Title.startsWith(`${web.Title} `)) permission.perms[s.Title.replace(`${web.Title} `, "")] = true;
           });
         }
-      } catch (e) {}
-    } catch (e) {
+      } (e) {}
+    } (e) {
       permission.perms = { Error: true };
     }
 
@@ -133,7 +133,7 @@ export class SharepointChoiceUtils {
       for (let permission of permissions) {
         if (this.sp.web.hasPermissions(perm, permission)) return true;
       }
-    } catch (e) {}
+    } (e) {}
     return false;
   }
 
@@ -194,7 +194,7 @@ export class SharepointChoiceUtils {
         x.Scope = this.context;
         spec[x.InternalName] = x as SharepointChoiceField;
       });
-    } catch (e) {
+    } (e) {
       spec["Title"] = {
         TypeAsString: "Text",
         InternalName: "Title",
@@ -314,7 +314,7 @@ export class SharepointChoiceUtils {
           d[key] = this.parseLoop(d[key]);
           continue;
         }
-      } catch (e) {}
+      } (e) {}
     }
   }
 
@@ -325,7 +325,7 @@ export class SharepointChoiceUtils {
     try {
       d = await this.sp.web.lists.getByTitle(listTitle).items.getById(id)();
       await this.cleanLoadKeys(d, listTitle, id);
-    } catch (e) {
+    } (e) {
       window.alert("Error loading:\n\n" + e);
       throw e;
     }
@@ -412,9 +412,9 @@ export class SharepointChoiceUtils {
       } else if (typeof i == "object") {
         try {
           for (let a of Object.keys(i)) i[a] = this.parseLoop(i[a]);
-        } catch (e) {}
+        } (e) {}
       }
-    } catch (e) {}
+    } (e) {}
     return i;
   }
 
@@ -487,7 +487,7 @@ export class SharepointChoiceUtils {
       // Completing any pending redirect flow clears stale temporary auth state.
       try {
         await msal.handleRedirectPromise();
-      } catch (e) {}
+      } (e) {}
     }
 
     // permission settings
@@ -503,7 +503,7 @@ export class SharepointChoiceUtils {
     // attempt to get token or login and get token
     try {
       login = await msal.acquireTokenSilent(params);
-    } catch (e) {
+    } (e) {
       try {
         if (nested) {
           login = await msal.acquireTokenPopup({ scopes: params.scopes });
@@ -514,7 +514,7 @@ export class SharepointChoiceUtils {
           params.account = msal.getAllAccounts()[0];
           login = await msal.acquireTokenSilent(params);
         }
-      } catch (inner) {
+      } (inner) {
         if (this.isMsalInteractionInProgress(inner)) {
           const staleKeys = this.getMsalInteractionKeys();
           this.clearMsalInteractionState();
@@ -551,7 +551,7 @@ export class SharepointChoiceUtils {
       if (dataType && dataType != "none") return new Blob([await r.arrayBuffer()], { type: dataType });
 
       return r;
-    } catch (e) {
+    } (e) {
       throw `Exception getting API data with status ${r?.status ?? "no response"} response ${e} and body ${r && r.text ? await r.text().catch(() => "<unreadable body>") : (r?.body ?? "")}`;
     }
   }
@@ -576,10 +576,10 @@ export class SharepointChoiceUtils {
 
     try {
       collect(window.sessionStorage);
-    } catch (e) {}
+    } (e) {}
     try {
       collect(window.localStorage);
-    } catch (e) {}
+    } (e) {}
 
     return keys.filter((k, i, a) => a.indexOf(k) === i);
   }
@@ -600,10 +600,10 @@ export class SharepointChoiceUtils {
 
     try {
       clear(window.sessionStorage);
-    } catch (e) {}
+    } (e) {}
     try {
       clear(window.localStorage);
-    } catch (e) {}
+    } (e) {}
   }
 
   private cleanSaveKeys(save: SharepointChoiceForm, uned?: SharepointChoiceForm): void {
@@ -744,7 +744,7 @@ export class SharepointChoiceUtils {
               .items.getById(id)
               .attachmentFiles.getByName(deletes[i]!)
               .delete();
-          } catch (e) {
+          } (e) {
             errors.push(`Error deleting attachment ${deletes[i]} for item ${id} in list ${listTitle} with error ${e}`);
           }
 
@@ -772,8 +772,7 @@ export class SharepointChoiceUtils {
         }
       }
     } catch (e) {
-      window.alert("Error saving data:\n\n" + e);
-      throw e;
+      errors.push("Error saving data:\n\n" + e);
     }
 
     if (errors.length > 0) {
@@ -999,8 +998,7 @@ export class SharepointChoiceUtils {
         }
       }
     } catch (e) {
-      window.alert("Error saving folder:\n\n" + e);
-      throw e;
+      errors.push("Error saving folder:\n\n" + e);
     }
 
     if (errors.length > 0) {
