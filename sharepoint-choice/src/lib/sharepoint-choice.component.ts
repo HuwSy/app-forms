@@ -918,38 +918,77 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // add attachment to array
   async add(file: HTMLInputElement | DataTransfer) {
-    if (!file.files || file.files.length == 0) return;
-    // read the files into the files array
-    let files: Array<File> = [];
-    for (let i = file.files.length - 1; i >= 0; i--) files.push(file.files[i]!);
-    // copy these outside for reuse in the loop
-    let remaining = files.length;
-    // loop the array in forEach for variable isolation
-    files.forEach((f: File) => {
-      let reader = new FileReader();
-      reader.onload = async (event: ProgressEvent<FileReader>) => {
-        try {
-          await this.appendFile(f.name, event.target?.result as ArrayBuffer, this.form[this.field].results);
+    if (!file || !file.files || !file.files.length || file.files.length === 0) return;
 
-          remaining--;
+    let files = Array.from(file.files).reverse();
+    let errors: string[] = [];
 
-          // if last file added then clear the file input
-          if (remaining == 0 && file instanceof HTMLInputElement)
-            setTimeout(() => {
-              file.value = "";
-            }, 0);
-        } catch (e) {
-          alert(`File onread error: ${f.name} with error ${e}`);
-          throw e;
-        }
-      };
-      reader.onerror = function (e) {
-        alert(`File read onerror: ${f.name} with error ${e}`);
-        throw e;
-      };
-      // may need to consider how to await these each until all done if extractions start getting timely
-      reader.readAsArrayBuffer(f);
+    let processFile = (f: File): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        let reader = new FileReader();
+
+        reader.onload = async (event: ProgressEvent<FileReader>) => {
+          try {
+            await this.appendFile(
+              f.name,
+              event.target?.result as ArrayBuffer,
+              this.form[this.field].results
+            );
+            resolve();
+          } catch (error) {
+            reject({
+              type: "onread",
+              error
+            });
+          }
+        };
+
+        reader.onerror = () => {
+          reject({
+            type: "onerror",
+            error: reader.error ?? "Unknown file read error"
+          });
+        };
+
+        reader.onabort = () => {
+          reject({
+            type: "onabort",
+            error: "File read was aborted"
+          });
+        };
+
+        reader.readAsArrayBuffer(f);
+      });
+    };
+
+    let results = await Promise.allSettled(
+      files.map((f) => processFile(f))
+    );
+
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        let fileName = files[index].name;
+        let reason = result.reason;
+
+        errors.push(
+          `File ${reason.type} error: ${fileName} with error ${reason.error}`
+        );
+      }
     });
+
+    // Clear the input after every file has finished processing
+    if (file instanceof HTMLInputElement) {
+      setTimeout(() => {
+        file.value = "";
+      }, 0);
+    }
+
+    // Show one alert containing all errors
+    if (errors.length > 0) {
+      let message = errors.join("\n");
+      alert(message);
+      throw message;
+    }
   }
 
   // gets a drag and drop new outlook item which includes ids not file data and adds to the files array
