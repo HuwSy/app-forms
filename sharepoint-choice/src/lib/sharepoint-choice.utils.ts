@@ -106,23 +106,25 @@ export class SharepointChoiceUtils {
         permission.perms[x.LoginName] = true;
         if (x.LoginName.startsWith(`${web.Title} `)) permission.perms[x.LoginName.replace(`${web.Title} `, "")] = true;
       });
-
-      // ad and aad groups within sp groups dont always expose groups above
-      // this depends on hidden, no crawl list with specific permissions assigned to the same list item title and created by SHAREPOINT\System Account
-      try {
-        let sec = await this.sp.web.lists.getByTitle("Security")();
-        if (sec.Hidden && sec.IsApplicationList) {
-          let per = await this.sp.web.lists.getByTitle("Security").items.select("Title").top(5000)();
-          per.forEach((s) => {
-            permission.perms[s.Title] = true;
-            if (s.Title.startsWith(`${web.Title} `)) permission.perms[s.Title.replace(`${web.Title} `, "")] = true;
-          });
-        }
-      } catch (e) {}
     } catch (e) {
-      permission.perms = { Error: true };
+      // no permission from groups accessible therefore rely on security group below
     }
 
+    // ad and aad groups within sp groups dont always expose groups above
+    // this depends on hidden, no crawl list with specific permissions assigned to the same list item title and created by SHAREPOINT\System Account
+    try {
+      let sec = await this.sp.web.lists.getByTitle("Security")();
+      if (sec.Hidden && sec.IsApplicationList) {
+        let per = await this.sp.web.lists.getByTitle("Security").items.select("Title").top(5000)();
+        per.forEach((s) => {
+          permission.perms[s.Title] = true;
+          if (s.Title.startsWith(`${web.Title} `)) permission.perms[s.Title.replace(`${web.Title} `, "")] = true;
+        });
+      }
+    } catch (e) {
+      // inner security nesting list may not exist correctly so assume no additional permissions
+    }
+    
     return permission;
   }
 
@@ -133,7 +135,9 @@ export class SharepointChoiceUtils {
       for (let permission of permissions) {
         if (this.sp.web.hasPermissions(perm, permission)) return true;
       }
-    } catch (e) {}
+    } catch (e) {
+      // permission request failed so return false below
+    }
     return false;
   }
 
@@ -195,6 +199,7 @@ export class SharepointChoiceUtils {
         spec[x.InternalName] = x as SharepointChoiceField;
       });
     } catch (e) {
+      // return basic title which exists on (almost) every list, useful for test suites not attached to lists
       spec["Title"] = {
         TypeAsString: "Text",
         InternalName: "Title",
@@ -314,7 +319,9 @@ export class SharepointChoiceUtils {
           d[key] = this.parseLoop(d[key]);
           continue;
         }
-      } catch (e) {}
+      } catch (e) {
+        // no further parsable dates
+      }
     }
   }
 
@@ -326,7 +333,7 @@ export class SharepointChoiceUtils {
       d = await this.sp.web.lists.getByTitle(listTitle).items.getById(id)();
       await this.cleanLoadKeys(d, listTitle, id);
     } catch (e) {
-      window.alert("Error loading:\n\n" + e);
+      alert("Error loading:\n\n" + e);
       throw e;
     }
 
@@ -412,9 +419,13 @@ export class SharepointChoiceUtils {
       } else if (typeof i == "object") {
         try {
           for (let a of Object.keys(i)) i[a] = this.parseLoop(i[a]);
-        } catch (e) {}
+        } catch (e) {
+          // no further nested loops to parse
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      // no loop to parse
+    }
     return i;
   }
 
@@ -487,7 +498,9 @@ export class SharepointChoiceUtils {
       // Completing any pending redirect flow clears stale temporary auth state.
       try {
         await msal.handleRedirectPromise();
-      } catch (e) {}
+      } catch (e) {
+        // await may have nothing to do
+      }
     }
 
     // permission settings
@@ -518,10 +531,11 @@ export class SharepointChoiceUtils {
         if (this.isMsalInteractionInProgress(inner)) {
           const staleKeys = this.getMsalInteractionKeys();
           this.clearMsalInteractionState();
-          alert("Error logging in, please refresh the page and try again.");
+          alert("Error logging in login already in progress, please refresh the page and try again.");
           throw `MSAL interaction_in_progress detected. Cleared stale keys (${staleKeys.length}${staleKeys.length > 0 ? `: ${staleKeys.join(", ")}` : ""})`;
         }
 
+        alert("Error logging in login token exception, please refresh the page and try again.");
         throw `Exception acquiring token silently or via popup for tenant ${tenancyOnMicrosoft || App.Tenancy} with error ${inner}`;
       }
     }
@@ -576,10 +590,14 @@ export class SharepointChoiceUtils {
 
     try {
       collect(window.sessionStorage);
-    } catch (e) {}
+    } catch (e) {
+      // no cleanup here needed
+    }
     try {
       collect(window.localStorage);
-    } catch (e) {}
+    } catch (e) {
+      // no cleanup here needed
+    }
 
     return keys.filter((k, i, a) => a.indexOf(k) === i);
   }
@@ -600,10 +618,14 @@ export class SharepointChoiceUtils {
 
     try {
       clear(window.sessionStorage);
-    } catch (e) {}
+    } catch (e) {
+      // no cleanup here needed
+    }
     try {
       clear(window.localStorage);
-    } catch (e) {}
+    } catch (e) {
+      // no cleanup here needed
+    }
   }
 
   private cleanSaveKeys(save: SharepointChoiceForm, uned?: SharepointChoiceForm): void {
@@ -710,7 +732,6 @@ export class SharepointChoiceUtils {
   ): Promise<number> {
     var save = JSON.parse(JSON.stringify(formDataIncIdToUpdate));
     let id = save.Id;
-    var errors: Array<string> = [];
 
     try {
       this.cleanSaveKeys(save, uneditedDataToBuildPatch);
@@ -722,61 +743,64 @@ export class SharepointChoiceUtils {
       } else if (this.hasData(save)) {
         await this.sp.web.lists.getByTitle(listTitle).items.getById(id).update(save);
       }
-
-      // process attachments as deletes then uploads
-      if (
-        formDataIncIdToUpdate.Attachments &&
-        formDataIncIdToUpdate.Attachments.results &&
-        formDataIncIdToUpdate.Attachments.results.length > 0
-      ) {
-        var deletes = formDataIncIdToUpdate.Attachments.results
-          .filter((a: SharepointChoiceAttachment) => {
-            return a.Deleted;
-          })
-          .map((a: SharepointChoiceAttachment) => {
-            return a.FileName;
-          });
-
-        for (let i = 0; i < deletes.length; i++)
-          try {
-            await this.sp.web.lists
-              .getByTitle(listTitle)
-              .items.getById(id)
-              .attachmentFiles.getByName(deletes[i]!)
-              .delete();
-          } catch (e) {
-            errors.push(`Error deleting attachment ${deletes[i]} for item ${id} in list ${listTitle} with error ${e}`);
-          }
-
-        var adds = formDataIncIdToUpdate.Attachments.results
-          .filter((a: SharepointChoiceAttachment) => {
-            return !a.Deleted && !a.ServerRelativeUrl;
-          })
-          .map((a: SharepointChoiceAttachment) => {
-            return {
-              name: a.FileName,
-              content: a.Data,
-            };
-          });
-
-        for (let a = 0; a < adds.length; a++) {
-          if (adds[a]!.content == undefined) continue;
-          try {
-            await this.sp.web.lists
-              .getByTitle(listTitle)
-              .items.getById(id)
-              .attachmentFiles.add(adds[a]!.name, adds[a]!.content ?? "");
-          } catch (e) {
-            errors.push(`Error adding attachment ${adds[a]!.name} for item ${id} in list ${listTitle} with error ${e}`);
-          }
-        }
-      }
     } catch (e) {
-      errors.push("Error saving data:\n\n" + e);
+      alert("Error saving item:\n\n" + e);
+      throw e;
     }
 
+    var errors: Array<string> = [];
+    // process attachments as deletes then uploads
+    if (
+      id &&
+      formDataIncIdToUpdate.Attachments &&
+      formDataIncIdToUpdate.Attachments.results &&
+      formDataIncIdToUpdate.Attachments.results.length > 0
+    ) {
+      var deletes = formDataIncIdToUpdate.Attachments.results
+        .filter((a: SharepointChoiceAttachment) => {
+          return a.Deleted;
+        })
+        .map((a: SharepointChoiceAttachment) => {
+          return a.FileName;
+        });
+
+      for (let i = 0; i < deletes.length; i++)
+        try {
+          await this.sp.web.lists
+            .getByTitle(listTitle)
+            .items.getById(id)
+            .attachmentFiles.getByName(deletes[i]!)
+            .delete();
+        } catch (e) {
+          errors.push(`Error deleting attachment ${deletes[i]} for item ${id} in list ${listTitle} with error ${e}`);
+        }
+
+      var adds = formDataIncIdToUpdate.Attachments.results
+        .filter((a: SharepointChoiceAttachment) => {
+          return !a.Deleted && !a.ServerRelativeUrl;
+        })
+        .map((a: SharepointChoiceAttachment) => {
+          return {
+            name: a.FileName,
+            content: a.Data,
+          };
+        });
+
+      for (let a = 0; a < adds.length; a++) {
+        if (adds[a]!.content == undefined) continue;
+        try {
+          await this.sp.web.lists
+            .getByTitle(listTitle)
+            .items.getById(id)
+            .attachmentFiles.add(adds[a]!.name, adds[a]!.content ?? "");
+        } catch (e) {
+          errors.push(`Error adding attachment ${adds[a]!.name} for item ${id} in list ${listTitle} with error ${e}`);
+        }
+      }
+    }
+  
     if (errors.length > 0) {
-      window.alert("Error saving attachments:\n\n" + errors.join("\n"));
+      alert("Error saving attachments:\n\n" + errors.join("\n"));
       throw errors.join("\n");
     }
 
@@ -826,7 +850,7 @@ export class SharepointChoiceUtils {
         // purposly blank the unedited here so all fields are rewritten in case of any dropped above or data type issues etc
         uneditedDataToBuildPatch = {};
       } catch (e) {
-        window.alert("Error saving data:\n\n" + e);
+        alert("Error saving folder item:\n\n" + e);
         throw e;
       }
     }
@@ -944,65 +968,65 @@ export class SharepointChoiceUtils {
         folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
         await folder.update(commonmeta);
       }
-
+  
       // subfolders for these
       if (additional) {
         path += "/" + additional;
         folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
         await folder.update(commonmeta);
       }
+    } catch (e) {
+      errors.push("Error saving folder metadata " + e);
+    }
+  
+    // process saves and deletes
+    for (let i = 0; i < files.results.length; i++) {
+      let file = files.results[i]!;
+      try {
+        if (!file.ListItemAllFields) file.ListItemAllFields = {};
 
-      // process saves and deletes
-      for (let i = 0; i < files.results.length; i++) {
-        let file = files.results[i]!;
-        try {
-          if (!file.ListItemAllFields) file.ListItemAllFields = {};
+        // clone common metadata for files
+        for (let m of Object.keys(commonmeta)) {
+          file.ListItemAllFields[m] = commonmeta[m];
+        }
 
-          // clone common metadata for files
-          for (let m of Object.keys(commonmeta)) {
-            file.ListItemAllFields[m] = commonmeta[m];
-          }
+        // basic list item fields cleanup
+        delete file.ListItemAllFields["$$hashKey"];
+        delete file.ListItemAllFields["Id"];
+        delete file.ListItemAllFields["ID"];
 
-          // basic list item fields cleanup
-          delete file.ListItemAllFields["$$hashKey"];
-          delete file.ListItemAllFields["Id"];
-          delete file.ListItemAllFields["ID"];
+        this.cleanSaveKeys(file.ListItemAllFields, file.OldListItemAllFields);
 
-          this.cleanSaveKeys(file.ListItemAllFields, file.OldListItemAllFields);
-
-          if (file.Deleted) {
-            // file to delete
-            await this.sp.web.getFolderByServerRelativePath(path + "/" + file.FileName).recycle();
-          } else if (file.Data) {
-            // file to upload
-            var uploaded = await this.sp.web
-              .getFolderByServerRelativePath(path)
-              .files.addUsingPath(file.FileName, file.Data, {
-                EnsureUniqueFileName: true,
-              });
-            if (this.hasData(file.ListItemAllFields)) {
-              let i = await this.sp.web.getFileByServerRelativePath(uploaded.ServerRelativeUrl).getItem();
-              await i.update(file.ListItemAllFields);
-            }
-            // mock the data back in so submit again doesnt fail
-            file.TimeCreated = new Date();
-            file.ServerRelativeUrl = uploaded.ServerRelativeUrl;
-            delete file.Data;
-          } else if (this.hasData(file.ListItemAllFields)) {
-            // get current item and check for changes
-            let i = await this.sp.web.getFileByServerRelativePath(path + "/" + file.FileName).getItem();
+        if (file.Deleted) {
+          // file to delete
+          await this.sp.web.getFolderByServerRelativePath(path + "/" + file.FileName).recycle();
+        } else if (file.Data) {
+          // file to upload
+          var uploaded = await this.sp.web
+            .getFolderByServerRelativePath(path)
+            .files.addUsingPath(file.FileName, file.Data, {
+              EnsureUniqueFileName: true,
+            });
+          if (this.hasData(file.ListItemAllFields)) {
+            let i = await this.sp.web.getFileByServerRelativePath(uploaded.ServerRelativeUrl).getItem();
             await i.update(file.ListItemAllFields);
           }
-        } catch (e) {
-          errors.push(`Error saving file ${file.FileName} in folder ${path} with error ${e}`);
+          // mock the data back in so submit again doesnt fail
+          file.TimeCreated = new Date();
+          file.ServerRelativeUrl = uploaded.ServerRelativeUrl;
+          delete file.Data;
+        } else if (this.hasData(file.ListItemAllFields)) {
+          // get current item and check for changes
+          let i = await this.sp.web.getFileByServerRelativePath(path + "/" + file.FileName).getItem();
+          await i.update(file.ListItemAllFields);
         }
+      } catch (e) {
+        errors.push(`Error saving file ${file.FileName} in folder ${path} with error ${e}`);
       }
-    } catch (e) {
-      errors.push("Error saving folder:\n\n" + e);
     }
 
     if (errors.length > 0) {
-      window.alert("Error saving files:\n\n" + errors.join("\n"));
+      alert("Error saving:\n\n" + errors.join("\n"));
       throw errors.join("\n");
     }
   }
