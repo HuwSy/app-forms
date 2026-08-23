@@ -940,6 +940,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             }, 0);
         } catch (e) {
           alert(`File onread error: ${f.name} with error ${e}`);
+          throw e;
         }
       };
       reader.onerror = function (e) {
@@ -1053,8 +1054,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
 
     if (errors.length > 0) {
+      alert(`Error retreiving item(s):\n\n${e}`);
       throw errors.join("\n");
-      alert(`Error saving file:\n\n${e}`);
     }
   }
 
@@ -1143,7 +1144,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     } catch (e) {
       this.office.loading = false;
       // if there is an error then alert it
-      alert(`Error saving file:\n\n${e}`);
+      alert(`Error retreiving mail(s):\n\n${e}`);
+      throw e;
     }
   }
 
@@ -1271,7 +1273,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     } catch (e) {
       this.office.loading = false;
       // if there is an error then alert it
-      alert(`Error saving file:\n\n${e}`);
+      alert(`Error retreiving file(s):\n\n${e}`);
+      throw e;
     }
   }
 
