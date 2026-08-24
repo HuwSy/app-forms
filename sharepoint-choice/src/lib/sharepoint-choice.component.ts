@@ -918,29 +918,39 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // add attachment to array
   async add(file: HTMLInputElement | DataTransfer) {
-    if (!file || !file.files || !file.files.length || file.files.length === 0) return;
+    if (!file.files?.length) return;
 
-    let files = Array.from(file.files).reverse();
+    let files = Array.from(file.files);
     let errors: string[] = [];
 
     let processFile = (f: File): Promise<void> => {
       return new Promise((resolve, reject) => {
         let reader = new FileReader();
 
-        reader.onload = async (event: ProgressEvent<FileReader>) => {
+        reader.onload = () => {
+          let result = reader.result;
+
+          if (result === null || typeof result === "string") {
+            reject({
+              type: "onread",
+              error: "Expected FileReader to return an ArrayBuffer"
+            });
+            return;
+          }
+
           try {
             await this.appendFile(
               f.name,
-              event.target?.result as ArrayBuffer,
+              result,
               this.form[this.field].results
             );
             resolve();
-          } catch (error) {
+          } catch {
             reject({
               type: "onread",
               error
             });
-          }
+          });
         };
 
         reader.onerror = () => {
@@ -961,29 +971,32 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       });
     };
 
-    let results = await Promise.allSettled(
-      files.map((f) => processFile(f))
-    );
+    for (let f of files) {
+      try {
+        await processFile(f);
+      } catch (reason) {
+        let rejection = reason as {
+          type?: string;
+          error?: unknown;
+        };
 
-    results.forEach((result, index) => {
-      if (result.status === "rejected") {
-        let fileName = files[index].name;
-        let reason = result.reason;
+        let detail =
+          rejection.error instanceof Error
+            ? rejection.error.message
+            : rejection?.error?.toString();
 
         errors.push(
-          `File ${reason.type} error: ${fileName} with error ${reason.error}`
+          `File ${rejection.type ?? "unknown"} error: ${f.name} with error ${detail}`
         );
       }
-    });
+    }
 
-    // Clear the input after every file has finished processing
     if (file instanceof HTMLInputElement) {
       setTimeout(() => {
         file.value = "";
       }, 0);
     }
 
-    // Show one alert containing all errors
     if (errors.length > 0) {
       let message = errors.join("\n");
       alert(message);
