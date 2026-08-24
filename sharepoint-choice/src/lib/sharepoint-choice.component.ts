@@ -922,7 +922,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     let files = Array.from(file.files);
     let errors: Array<string> = [];
-
+    
     let processFile = (f: File): Promise<void> => {
       return new Promise((resolve, reject) => {
         let reader = new FileReader();
@@ -959,9 +959,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     for (let f of files) {
       try {
         await processFile(f);
-      } catch (error) {
-        errors.push(`File error: ${f.name} with error ${error?.message ?? error ?? "Unknown error"}`
-        );
+      } catch (error: any) {
+        errors.push(`File error: ${f.name} with error ${error?.message ?? error ?? "Unknown error"}`);
       }
     }
 
