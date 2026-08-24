@@ -930,7 +930,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         reader.onload = () => {
           let result = reader.result;
 
-          if (result === null || typeof result === "string") {
+          if (!(result instanceof ArrayBuffer)) {
             reject({
               type: "onread",
               error: "Expected FileReader to return an ArrayBuffer"
@@ -938,19 +938,18 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             return;
           }
 
-          try {
-            await this.appendFile(
-              f.name,
-              result,
-              this.form[this.field].results
-            );
-            resolve();
-          } catch (error) {
-            reject({
-              type: "onread",
-              error
+          this.appendFile(
+            f.name,
+            result,
+            this.form[this.field].results
+          )
+            .then(resolve)
+            .catch((error) => {
+              reject({
+                type: "onread",
+                error,
+              });
             });
-          });
         };
 
         reader.onerror = () => {
