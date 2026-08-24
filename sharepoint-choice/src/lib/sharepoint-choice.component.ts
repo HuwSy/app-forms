@@ -928,42 +928,28 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         let reader = new FileReader();
 
         reader.onload = () => {
-          let result = reader.result;
-
-          if (!(result instanceof ArrayBuffer)) {
-            reject({
-              type: "onread",
-              error: "Expected FileReader to return an ArrayBuffer"
-            });
+          if (!(reader.result instanceof ArrayBuffer)) {
+            reject("Expected FileReader to return an ArrayBuffer");
             return;
           }
 
           this.appendFile(
             f.name,
-            result,
+            reader.result,
             this.form[this.field].results
           )
             .then(resolve)
             .catch((error) => {
-              reject({
-                type: "onread",
-                error: error,
-              });
+              reject(error ?? "Unknown file add error");
             });
         };
 
         reader.onerror = () => {
-          reject({
-            type: "onerror",
-            error: reader.error ?? "Unknown file read error"
-          });
+          reject(reader.error ?? "Unknown file read error");
         };
 
         reader.onabort = () => {
-          reject({
-            type: "onabort",
-            error: "File read was aborted"
-          });
+          reject("File read was aborted");
         };
 
         reader.readAsArrayBuffer(f);
@@ -973,19 +959,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     for (let f of files) {
       try {
         await processFile(f);
-      } catch (reason) {
-        let rejection = reason as {
-          type?: string;
-          error?: unknown;
-        };
-
-        let detail =
-          rejection?.error instanceof Error
-            ? rejection.error.message
-            : rejection?.error?.toString();
-
-        errors.push(
-          `File ${rejection.type ?? "unknown"} error: ${f.name} with error ${detail}`
+      } catch (error) {
+        errors.push(`File error: ${f.name} with error ${error?.message ?? error ?? "Unknown error"}`
         );
       }
     }
