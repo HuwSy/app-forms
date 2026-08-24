@@ -921,7 +921,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (!file.files?.length) return;
 
     let files = Array.from(file.files);
-    let errors: string[] = [];
+    let errors: Array<string> = [];
 
     let processFile = (f: File): Promise<void> => {
       return new Promise((resolve, reject) => {
@@ -945,7 +945,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
               this.form[this.field].results
             );
             resolve();
-          } catch {
+          } catch (error) {
             reject({
               type: "onread",
               error
