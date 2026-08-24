@@ -947,7 +947,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             .catch((error) => {
               reject({
                 type: "onread",
-                error,
+                error: error,
               });
             });
         };
@@ -980,7 +980,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         };
 
         let detail =
-          rejection.error instanceof Error
+          rejection?.error instanceof Error
             ? rejection.error.message
             : rejection?.error?.toString();
 
