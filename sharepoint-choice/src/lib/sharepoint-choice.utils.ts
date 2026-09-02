@@ -94,20 +94,28 @@ export class SharepointChoiceUtils {
       perms: {},
     };
 
+    // do throw if these fail
+    let web: string = "";
     try {
-      let web = await this.sp.web();
+      web = (await this.sp.web()).Title;
       // ensure user id
       if (permission.userId == null) permission.userId = (await this.sp.web.currentUser()).Id;
+    } catch (e) {
+      // failed to get web title or user id
+      console.log("SharepointChoiceUtils.permissions web/user lookup error", e);
+    }
 
+    try {
       // get any directly assigned groups
       // this doesnt work well with ad and aad groups assignments
       let perm = await this.sp.web.currentUser.groups();
       perm.forEach((x) => {
         permission.perms[x.LoginName] = true;
-        if (x.LoginName.startsWith(`${web.Title} `)) permission.perms[x.LoginName.replace(`${web.Title} `, "")] = true;
+        if (x.LoginName.startsWith(`${web} `)) permission.perms[x.LoginName.replace(`${web} `, "")] = true;
       });
     } catch (e) {
       // no permission from groups accessible therefore rely on security group below
+      console.log("SharepointChoiceUtils.permissions group lookup error", e);
     }
 
     // ad and aad groups within sp groups dont always expose groups above
@@ -118,13 +126,14 @@ export class SharepointChoiceUtils {
         let per = await this.sp.web.lists.getByTitle("Security").items.select("Title").top(5000)();
         per.forEach((s) => {
           permission.perms[s.Title] = true;
-          if (s.Title.startsWith(`${web.Title} `)) permission.perms[s.Title.replace(`${web.Title} `, "")] = true;
+          if (s.Title.startsWith(`${web} `)) permission.perms[s.Title.replace(`${web} `, "")] = true;
         });
       }
     } catch (e) {
       // inner security nesting list may not exist correctly so assume no additional permissions
+      console.log("SharepointChoiceUtils.permissions security list lookup error", e);
     }
-    
+
     return permission;
   }
 
@@ -137,6 +146,7 @@ export class SharepointChoiceUtils {
       }
     } catch (e) {
       // permission request failed so return false below
+      console.log("SharepointChoiceUtils.hasPermission lookup error", e);
     }
     return false;
   }
@@ -200,6 +210,7 @@ export class SharepointChoiceUtils {
       });
     } catch (e) {
       // return basic title which exists on (almost) every list, useful for test suites not attached to lists
+      console.log("SharepointChoiceUtils.fields schema lookup error", e);
       spec["Title"] = {
         TypeAsString: "Text",
         InternalName: "Title",
@@ -321,6 +332,7 @@ export class SharepointChoiceUtils {
         }
       } catch (e) {
         // no further parsable dates
+        console.log("SharepointChoiceUtils.cleanLoadKeys parse fallback", e, key, d[key]);
       }
     }
   }
@@ -500,6 +512,7 @@ export class SharepointChoiceUtils {
         await msal.handleRedirectPromise();
       } catch (e) {
         // await may have nothing to do
+        console.log("SharepointChoiceUtils.callApi handleRedirectPromise fallback", e);
       }
     }
 
@@ -592,11 +605,13 @@ export class SharepointChoiceUtils {
       collect(window.sessionStorage);
     } catch (e) {
       // no cleanup here needed
+      console.log("SharepointChoiceUtils.getMsalInteractionKeys sessionStorage access error", e);
     }
     try {
       collect(window.localStorage);
     } catch (e) {
       // no cleanup here needed
+      console.log("SharepointChoiceUtils.getMsalInteractionKeys localStorage access error", e);
     }
 
     return keys.filter((k, i, a) => a.indexOf(k) === i);
@@ -620,11 +635,13 @@ export class SharepointChoiceUtils {
       clear(window.sessionStorage);
     } catch (e) {
       // no cleanup here needed
+      console.log("SharepointChoiceUtils.clearMsalInteractionState sessionStorage access error", e);
     }
     try {
       clear(window.localStorage);
     } catch (e) {
       // no cleanup here needed
+      console.log("SharepointChoiceUtils.clearMsalInteractionState localStorage access error", e);
     }
   }
 
@@ -798,7 +815,7 @@ export class SharepointChoiceUtils {
         }
       }
     }
-  
+
     if (errors.length > 0) {
       alert("Error saving attachments:\n\n" + errors.join("\n"));
       throw errors.join("\n");
@@ -906,20 +923,19 @@ export class SharepointChoiceUtils {
       .files.orderBy("TimeCreated")
       .expand("ListItemAllFields")();
 
-    var ret: SharepointChoiceAttachment[] = [];
-    files.forEach(async (file) => {
-      await this.cleanLoadKeys(file["ListItemAllFields"]);
+    return await Promise.all(
+      files.map(async (file) => {
+        await this.cleanLoadKeys(file["ListItemAllFields"]);
 
-      ret.push({
-        FileName: file.Name,
-        TimeCreated: new Date(file.TimeCreated),
-        ServerRelativeUrl: file.ServerRelativeUrl,
-        ListItemAllFields: file["ListItemAllFields"],
-        OldListItemAllFields: JSON.parse(JSON.stringify(file["ListItemAllFields"])),
-      });
-    });
-
-    return ret;
+        return {
+          FileName: file.Name,
+          TimeCreated: new Date(file.TimeCreated),
+          ServerRelativeUrl: file.ServerRelativeUrl,
+          ListItemAllFields: file["ListItemAllFields"],
+          OldListItemAllFields: JSON.parse(JSON.stringify(file["ListItemAllFields"])),
+        };
+      }),
+    );
   }
 
   public async relocateFolder(source: string, destination: string): Promise<string | null> {
@@ -968,7 +984,7 @@ export class SharepointChoiceUtils {
         folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
         await folder.update(commonmeta);
       }
-  
+
       // subfolders for these
       if (additional) {
         path += "/" + additional;
@@ -978,7 +994,7 @@ export class SharepointChoiceUtils {
     } catch (e) {
       errors.push("Error saving folder metadata " + e);
     }
-  
+
     // process saves and deletes
     for (let i = 0; i < files.results.length; i++) {
       let file = files.results[i]!;

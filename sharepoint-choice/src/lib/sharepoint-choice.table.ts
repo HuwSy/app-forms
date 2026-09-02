@@ -277,6 +277,8 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this.setStorage(`Hide`, this.hiddenColumns);
     // rebuild all on change as the ticks can be any
     this._colsCache.clear();
+    this._rowsCache.clear();
+    this._pageCache = [];
     this.chRef.markForCheck();
   }
   get hiddenColumns(): SharepointChoiceHide {
@@ -304,27 +306,39 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     if (!this._sort)
       try {
         this._sort = this.getStorage(`Sort`);
-      } catch {}
+      } catch (error) {
+        console.log("SharepointChoiceTable.ngOnInit storage load error: Sort", error);
+      }
     if (!this._filter)
       try {
         this._filter = this.getStorage(`Filter`);
-      } catch {}
+      } catch (error) {
+        console.log("SharepointChoiceTable.ngOnInit storage load error: Filter", error);
+      }
     if (!this._columnOrder)
       try {
         this._columnOrder = this.getStorage(`Order`);
-      } catch {}
+      } catch (error) {
+        console.log("SharepointChoiceTable.ngOnInit storage load error: Order", error);
+      }
     if (!this._hiddenColumns)
       try {
         this._hiddenColumns = this.getStorage(`Hide`);
-      } catch {}
+      } catch (error) {
+        console.log("SharepointChoiceTable.ngOnInit storage load error: Hide", error);
+      }
     if (!this._selectedTab)
       try {
         this._selectedTab = this.getStorage(`Tab`);
-      } catch {}
+      } catch (error) {
+        console.log("SharepointChoiceTable.ngOnInit storage load error: Tab", error);
+      }
     if (!this._pageSize)
       try {
         this._pageSize = this.getStorage(`Size`);
-      } catch {}
+      } catch (error) {
+        console.log("SharepointChoiceTable.ngOnInit storage load error: Size", error);
+      }
   }
 
   ngOnDestroy(): void {
@@ -356,11 +370,15 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
-    } catch {}
+    } catch (error) {
+      console.log("SharepointChoiceTable.storageObject read error", error);
+    }
 
     try {
       localStorage.setItem(key, "{}");
-    } catch {}
+    } catch (error) {
+      console.log("SharepointChoiceTable.storageObject reset error", error);
+    }
 
     return {};
   }
@@ -836,6 +854,8 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
             this._rowsCache.delete(selectedTab);
             this.chRef.detectChanges();
           }
+        }).catch((error: any) => {
+          console.log("SharepointChoiceTable.handleCellClick async error", error);
         });
       }
     }
@@ -884,8 +904,6 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     const cached = this._colsCache.get(tab);
     if (cached && cached.length > 0) return cached;
 
-    this._rowsCache.delete(tab);
-
     const order = new Map<string, number>();
     (this.columnOrder[tab] || []).forEach((field, index) => {
       if (!order.has(field)) order.set(field, index);
@@ -921,8 +939,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     if (col.headerName) return col.headerName;
     if (!col.field) return "";
     var h = col.field.substring(col.field.lastIndexOf(".") + 1);
-    if (h) col.headerName = h.charAt(0).toUpperCase() + h.slice(1).replace(/([a-z])([A-Z])/g, "$1 $2");
-    return col.headerName || "";
+    return h ? h.charAt(0).toUpperCase() + h.slice(1).replace(/([a-z])([A-Z])/g, "$1 $2") : "";
   }
 
   fieldValue(row: SharepointChoiceRow, field?: string): any {
@@ -1129,17 +1146,19 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this._isObserved = !!this.rowClicked || this.clicked.observed;
     this._nodeCache.clear();
 
-    var filter = this.filter[tab] || {};
-    // ensure any date filters are correctly converted
-    for (let f in filter) {
-      const fieldFilter = filter[f];
+    let filterIn = this.filter[tab] || {};
+    let filter: SharepointChoiceFilter[string] = {};
+
+    for (let f in filterIn) {
+      let fieldFilter = filterIn[f];
       if (!fieldFilter) continue;
 
-      if (fieldFilter.greater)
-        fieldFilter.greater =
-          typeof fieldFilter.greater === "string" ? new Date(fieldFilter.greater) : fieldFilter.greater;
-      if (fieldFilter.less)
-        fieldFilter.less = typeof fieldFilter.less === "string" ? new Date(fieldFilter.less) : fieldFilter.less;
+      filter[f] = {
+        ...fieldFilter,
+        greater:
+          typeof fieldFilter.greater === "string" ? new Date(fieldFilter.greater) : (fieldFilter.greater ?? null),
+        less: typeof fieldFilter.less === "string" ? new Date(fieldFilter.less) : (fieldFilter.less ?? null),
+      };
     }
 
     var sort = this.sort[tab] || [];

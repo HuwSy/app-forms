@@ -59,6 +59,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // not using ngModel as it requires extra boilerplate such as ngModel=form['field'] spec=spec['field'] etc for each field
   @Input() set form(value: SharepointChoiceForm) {
     this._form = value;
+    void this.lookupLabel();
     this.chRef.markForCheck();
   }
   get form(): SharepointChoiceForm {
@@ -70,6 +71,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // as spec must match datatype and form data for successful save then tie all of these together by this.field not separately
   @Input() set spec(value: SharepointChoiceList | undefined) {
     this._spec = value;
+    void this.lookupLabel();
     this.chRef.markForCheck();
   }
   get spec(): SharepointChoiceList | undefined {
@@ -189,7 +191,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   pos: number = -1;
   sort?: string;
   otherText: string = "";
-  lookupDisplay: string = "";
 
   users: SharepointChoiceUser[] = [];
 
@@ -217,11 +218,14 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   // on init, destroy
   ngOnInit(): void {
     this.elRef.nativeElement.setAttribute("field", this.field);
+    void this.lookupLabel();
 
     this.refreshSub = this.refreshBus.changes$.subscribe((event) => {
       if (event.sourceId === this.instanceId) return;
-      if ((event.form && event.form === this._form) || (event.spec && event.spec === this._spec))
+      if ((event.form && event.form === this._form) || (event.spec && event.spec === this._spec)) {
+        void this.lookupLabel();
         this.chRef.markForCheck();
+      }
     });
   }
 
@@ -363,6 +367,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   validator(type?: string): string {
     switch (type) {
       case "User":
+      case "Lookup":
         return this.form[this.field + "Id"] ? "true" : "";
       case "UserMulti":
         return this.form[this.field + "Id"] &&
@@ -467,13 +472,16 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           this.form[this.field] = {
             results: [],
           };
-      } else if (p == "Text" || p == "Lookup") {
-        if (!this.textKey && (p == "Lookup" || this.text?.search)) {
+      } else if (p == "Lookup") {
+        if (!this.textKey) {
           this.textKey = new Subject<string>();
           this.textKey.pipe(debounceTime(250), distinctUntilChanged()).subscribe((key) => this.onUpTextSearch(key));
         }
-
-        if (p == "Lookup" && !this.lookupDisplay) this.lookupDisplay = this.lookupLabel();
+      } else if (p == "Text") {
+        if (!this.textKey && this.text?.search) {
+          this.textKey = new Subject<string>();
+          this.textKey.pipe(debounceTime(250), distinctUntilChanged()).subscribe((key) => this.onUpTextSearch(key));
+        }
       }
 
       // if the field is empty (not set null) then set the default value only if there is one
@@ -482,6 +490,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         if (d && p == "MultiChoice") this.form[this.field].results = [d];
         else if (d && p == "UserMulti") this.form[this.field + "Id"].results = [d];
         else if (d && p == "User") this.form[this.field + "Id"] = d;
+        else if (d && p == "Lookup") this.form[this.field + "Id"] = d;
         else if (d)
           this.form[this.field] =
             p == "DateTime"
@@ -517,9 +526,13 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
   // any field changes trigger for relevant updates
   changed(): void {
+    let type = this.get("TypeAsString");
+    let field = type == "Lookup" || type == "User" || type == "UserMulti" ? this.field + "Id" : this.field;
+    let value = this.form[field]?.results ?? this.form[field];
+
     this.change.emit({
-      field: this.field,
-      value: this.form[this.field]?.results ?? this.form[this.field],
+      field: field,
+      value: value,
       target: this.elRef.nativeElement,
     });
 
@@ -620,7 +633,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     if (this.get("TypeAsString") == "Lookup") {
       let spc = new SharepointChoiceUtils();
       let list = this.get("LookupList");
-      let field = this.lookupResultField();
+      let field = this.get("LookupField");
 
       if (!list || !field || !text.trim()) this.results = [];
       else {
@@ -649,7 +662,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       if (lookup) this.setLookupValue(null, "");
       else this.form[this.field] = null;
     } else if (lookup) {
-      this.setLookupValue(res["Id"], this.lookupOptionLabel(res));
+      this.setLookupValue(res["Id"], res[this.get("LookupField")]);
     } else {
       this.form[this.field] = res[this.field];
       if (this.text.select) await this.text.select(res, this.text.parent);
@@ -659,43 +672,31 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     this.changed();
   }
 
-  lookupResultField(): string {
-    return this.get("LookupField") || this.field;
-  }
-
-  lookupOptionLabel(result?: SharepointChoiceForm | null): string {
-    if (!result) return "";
-
-    let field = this.lookupResultField();
-    return result[field]?.toString() || "";
-  }
-
-  lookupLabel(): string {
-    if (this.otherText) return this.otherText;
-
-    let current = this.form[this.field];
-    if (current?.LookupValue) return current.LookupValue.toString();
-    if (typeof current == "string") return current;
-    if (typeof current == "number" && this.lookupDisplay) return this.lookupDisplay;
+  async lookupLabel(): Promise<void> {
+    if (!this._form || !this.field || this.get("TypeAsString") != "Lookup") return;
 
     let currentId = this.form[this.field + "Id"];
-    if (currentId?.LookupValue) return currentId.LookupValue.toString();
+    if (!currentId) {
+      this.otherText = "";
+      return;
+    }
+    let list = this.get("LookupList");
+    let field = this.get("LookupField");
+    if (!list || !field) {
+      this.otherText = "";
+      return;
+    }
 
-    return this.lookupDisplay;
-  }
+    let spc = new SharepointChoiceUtils();
+    let item = await spc.sp.web.lists.getById(list).items.getById(currentId).select(field)();
 
-  lookupSet(value: string): void {
-    this.otherText = value;
-    if (!value.trim()) this.lookupDisplay = "";
+    this.otherText = item[field]?.toString() || "";
+    this.chRef.markForCheck();
   }
 
   setLookupValue(id: number | null, label: string): void {
-    this.lookupDisplay = label;
     this.otherText = label;
-
-    if (this.form[this.field + "Id"] !== undefined) this.form[this.field + "Id"] = id;
-
-    this.form[this.field] = id == null ? null : id;
+    this.form[this.field + "Id"] = id;
   }
 
   /*
@@ -922,7 +923,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     let files = Array.from(file.files);
     let errors: Array<string> = [];
-    
+
     let processFile = (f: File): Promise<void> => {
       return new Promise((resolve, reject) => {
         let reader = new FileReader();
@@ -933,11 +934,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
             return;
           }
 
-          this.appendFile(
-            f.name,
-            reader.result,
-            this.form[this.field].results
-          )
+          this.appendFile(f.name, reader.result, this.form[this.field].results)
             .then(resolve)
             .catch((error) => {
               reject(error ?? "Unknown file add error");
@@ -1055,7 +1052,6 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     // a teams file drop, only works for teams libraries not onedrive/chat
     let spo = mailType(transfer, "application/x-item-keys");
     if (spo) {
-      var errors: Array<string> = [];
       for (var i = 0; i < spo.itemKeys.length; i++) {
         try {
           // the inner is still JSON encoded from teams
@@ -1079,8 +1075,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     }
 
     if (errors.length > 0) {
-      alert(`Error retreiving item(s):\n\n${e}`);
-      throw errors.join("\n");
+      let messages = errors.join("\n");
+      alert(`Error retreiving item(s):\n\n${messages}`);
+      throw messages;
     }
   }
 
@@ -1222,6 +1219,17 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     let docDataSlices: number[][] = [];
     let slicesReceived = 0;
     let file: Office.File | undefined;
+    let closeFile = () => {
+      let current = file;
+      file = undefined;
+      current?.closeAsync();
+    };
+    let failImport = (error: unknown) => {
+      this.office.loading = false;
+      closeFile();
+      alert(`Error retreiving file(s):\n\n${error}`);
+      throw error;
+    };
 
     try {
       // get the file in 64k slices until complete
@@ -1229,26 +1237,25 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         Office.FileType.Compressed,
         { sliceSize: 65536 },
         (asyncResult: Office.AsyncResult<Office.File>) => {
-          if (asyncResult.status === Office.AsyncResultStatus.Failed) return;
+          if (asyncResult.status === Office.AsyncResultStatus.Failed) return failImport(asyncResult.error.message);
 
           file = asyncResult.value;
-          try {
-            file.getSliceAsync(0, processSlice);
-          } finally {
-            file.closeAsync();
-          }
+          file.getSliceAsync(0, processSlice);
         },
       );
 
       // process the slice and append until completed
       let processSlice = (sliceResult: Office.AsyncResult<Office.Slice>) => {
-        if (sliceResult.status === Office.AsyncResultStatus.Failed) throw sliceResult.error.message;
+        if (sliceResult.status === Office.AsyncResultStatus.Failed) return failImport(sliceResult.error.message);
 
         docDataSlices[sliceResult.value.index] = sliceResult.value.data as number[];
         const currentFile = file;
         if (!currentFile) return;
 
-        if (++slicesReceived == currentFile.sliceCount) saveFile();
+        if (++slicesReceived == currentFile.sliceCount)
+          void saveFile()
+            .then(() => closeFile())
+            .catch((error) => failImport(error));
         else currentFile.getSliceAsync(slicesReceived, processSlice);
       };
 
@@ -1296,10 +1303,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         );
       };
     } catch (e) {
-      this.office.loading = false;
-      // if there is an error then alert it
-      alert(`Error retreiving file(s):\n\n${e}`);
-      throw e;
+      failImport(e);
     }
   }
 
@@ -1345,7 +1349,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     results.push(file);
 
-    if (this.file?.extract && e.toLowerCase() == "zip" && (await this.zips(data, results)))
+    if (this.file?.extract && e.toLowerCase() == "zip" && (await this.zips(data, results, newName)))
       this.delete(results.filter((r) => r.FileName == newName)[0]);
     if (this.file?.extract && e.toLowerCase() == "msg") await this.msgs(data, results, newName);
     if (this.file?.extract && e.toLowerCase() == "eml") await this.emls(data, results, newName);
@@ -1399,7 +1403,7 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       const message = errors.join("\n");
       this.reportExtractionError(sourceFile, message);
     }
-    
+
     return failiures == 0;
   }
 
@@ -1412,7 +1416,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
         message: `Malformed extracted file ${sourceFile}: ${message}`,
         error,
       });
-    } catch (loggingError) {}
+    } catch (loggingError) {
+      console.log("SharepointChoiceComponent.reportExtractionError logger failure", loggingError);
+    }
   }
 
   private attachmentContentBuffer(content: ArrayBuffer | Uint8Array | string): ArrayBuffer {
@@ -1604,6 +1610,9 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
           });
 
           this.chRef.markForCheck();
+        })
+        .catch((error: any) => {
+          console.log("SharepointChoiceComponent.displayUser load error", error);
         });
     }
 
@@ -1656,6 +1665,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
 
     let spc = new SharepointChoiceUtils();
     let allUsers = await spc.sp.profiles.clientPeoplePickerSearchUser(search);
+    this.users = [];
+    this.pos = -1;
     allUsers
       .filter((x: IPeoplePickerEntity) => {
         return x.EntityData?.Email && !x.Key?.includes("_adm") && !x.Key?.includes("adm_");

@@ -1,8 +1,8 @@
+@let type = get("TypeAsString");
 @let title = get("Title");
 @let internal = friendlyName(get("InternalName") ?? field);
 @let desc = get("Description");
 @let req = required();
-@let type = get("TypeAsString");
 
 <div
   class="choice"
@@ -54,6 +54,7 @@
             placeholder="Filter or search {{ title || internal }} below"
             name="SharepointChoice{{ prefix }}{{ field }}_Search"
             [(ngModel)]="otherText"
+            [ngModelOptions]="{ standalone: true }"
           /><br />
         }
         <select
@@ -272,12 +273,13 @@
         }
       }
       @case ("Lookup") {
+        @let lookup = get("LookupField");
         <input
           [disabled]="disabled"
           type="text"
           [pattern]="text.pattern || '.*'"
-          [ngModel]="lookupLabel()"
-          (ngModelChange)="lookupSet($event)"
+          [ngModel]="otherText"
+          (ngModelChange)="otherText = $event"
           [required]="req"
           name="SharepointChoice{{ prefix }}{{ field }}"
           (change)="changed()"
@@ -296,7 +298,7 @@
                     [hidden]="result['hide']"
                     [style]="pos == i ? 'background-color: rgba(0, 0, 0, 0.04);' : ''"
                   >
-                    {{ lookupOptionLabel(result) }}
+                    {{ result[lookup] }}
                   </li>
                 }
                 <li
@@ -489,6 +491,7 @@
                     <select
                       style="width: 30px; border: none; margin-left: 8px"
                       [(ngModel)]="otherText"
+                      [ngModelOptions]="{ standalone: true }"
                       name="SharepointChoice{{ prefix }}{{ field }}_Filter"
                     >
                       <option value>All</option>
@@ -555,6 +558,7 @@
                         fileSizeOver
                       "
                       [(ngModel)]="f.Checked"
+                      [ngModelOptions]="{ standalone: true }"
                       name="SharepointChoice{{ prefix }}{{ field }}_Checked_{{ i }}"
                     />
                   </td>
@@ -761,6 +765,7 @@
                           fileSizeOver
                         "
                         [(ngModel)]="f.Checked"
+                        [ngModelOptions]="{ standalone: true }"
                         (change)="changed()"
                         name="SharepointChoice{{ prefix }}{{ field }}_Check_{{ i }}"
                       />
@@ -960,6 +965,7 @@
         <input
           type="text"
           [(ngModel)]="otherText"
+          [ngModelOptions]="{ standalone: true }"
           name="SharepointChoice{{ prefix }}{{ field }}"
           (keyup)="onUpUser($event.key)"
           (click)="onUpUser(undefined)"
@@ -1016,6 +1022,7 @@
         <input
           type="text"
           [(ngModel)]="otherText"
+          [ngModelOptions]="{ standalone: true }"
           name="SharepointChoice{{ prefix }}{{ field }}"
           (keyup)="onUpUser($event.key)"
           (click)="onUpUser(undefined)"
