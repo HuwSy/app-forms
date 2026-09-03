@@ -92,18 +92,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
         // cleanup all data to only external filtered
         let filtered = !this.search
           ? this._allDataIn[tab]
-          : this._allDataIn[tab].filter((row) => {
-              for (let t in this.search) {
-                if (this.search[t] === null || this.search[t] === undefined) continue;
-                if (this.search[t] === "(blanks)") {
-                  if (row[t] !== null && row[t] !== undefined && row[t] !== "") return false;
-                  continue;
-                }
-                if (row[t] === null || row[t] === undefined || row[t] === "") return false;
-                if (!row[t].toString().toLowerCase().includes(this.search[t]!.toString().toLowerCase())) return false;
-              }
-              return true;
-            });
+          : this._allDataIn[tab].filter((row) => this.matches(row, this.search!));
         // only have tabs for ones with data
         if (this.showEmptyTabs || filtered.length > 0) this._allData[tab] = filtered;
       }
@@ -343,6 +332,35 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     clearTimeout(this._debounceFilterSort);
+  }
+
+  private matches(row: SharepointChoiceRow, search: SharepointChoiceRowChild): boolean {
+    for (let key in search) {
+      let searchValue = search[key];
+      if (searchValue === null || searchValue === undefined) continue;
+
+      if (
+        searchValue instanceof Date === false &&
+        typeof searchValue === "object" &&
+        Array.isArray(searchValue) === false
+      ) {
+        let rowValue = row[key];
+        if (!rowValue || typeof rowValue !== "object" || Array.isArray(rowValue)) return false;
+        if (!this.matches(rowValue as SharepointChoiceRow, searchValue)) return false;
+        continue;
+      }
+
+      let rowValue = row[key];
+      if (searchValue === "(blanks)") {
+        if (rowValue !== null && rowValue !== undefined && rowValue !== "") return false;
+        continue;
+      }
+
+      if (rowValue === null || rowValue === undefined || rowValue === "") return false;
+      if (!rowValue.toString().toLowerCase().includes(searchValue.toString().toLowerCase())) return false;
+    }
+
+    return true;
   }
 
   private debounceAndMark(): void {

@@ -185,7 +185,7 @@ export interface SharepointChoiceRow {
 }
 
 export interface SharepointChoiceRowChild {
-  [key: string]: string | number | boolean | Date | null | undefined;
+  [key: string]: string | number | boolean | Date | SharepointChoiceRowChild | null | undefined;
 }
 
 export interface SharepointChoiceExportColumn {
