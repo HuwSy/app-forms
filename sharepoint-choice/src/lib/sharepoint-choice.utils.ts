@@ -862,7 +862,15 @@ export class SharepointChoiceUtils {
           .getByTitle(listTitle)
           .addValidateUpdateItemUsingPath(simpleSave, folderPath, false, undefined, additionalProps);
 
-        formDataIncIdToUpdate["Id"] = results.find((result) => result.ItemId)?.ItemId;
+        let updateResults = Array.isArray(results) ? results : (results as { value?: any[] })?.value || [];
+        let itemId = updateResults.find((result) => result.ItemId)?.ItemId;
+
+        if (!itemId) {
+          let idField = updateResults.find((result) => result.FieldName == "Id")?.FieldValue;
+          if (idField !== undefined && idField !== null && idField !== "") itemId = parseInt(idField, 10);
+        }
+
+        formDataIncIdToUpdate["Id"] = itemId;
         if (!formDataIncIdToUpdate["Id"]) throw new Error(`Unable to determine created item id for list ${listTitle}`);
 
         // purposly blank the unedited here so all fields are rewritten in case of any dropped above or data type issues etc
