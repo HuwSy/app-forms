@@ -442,6 +442,7 @@ currentPage = currentPageRows(currentRows); @let maxpage = ceil(currentRows.leng
             [field]="sharepointChoiceField(child.field)"
             [form]="sharepointChoiceForm(row, child.field)"
             [spec]="sharepointChoiceSpec(child.spec, child.field)"
+            [refreshKey]="sharepointChoiceRefreshKey(row, child.field)"
             (change)="handleCellClick(child, row, $event)"
             (click)="$event.stopPropagation()"
           >
@@ -487,6 +488,7 @@ currentPage = currentPageRows(currentRows); @let maxpage = ceil(currentRows.leng
             [field]="sharepointChoiceField(col.field)"
             [form]="sharepointChoiceForm(row, col.field)"
             [spec]="sharepointChoiceSpec(col.spec, col.field)"
+            [refreshKey]="sharepointChoiceRefreshKey(row, col.field)"
             (change)="handleCellClick(col, row, $event)"
             (click)="$event.stopPropagation()"
           >

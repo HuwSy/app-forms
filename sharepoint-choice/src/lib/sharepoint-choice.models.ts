@@ -1,3 +1,42 @@
+export interface SharepointChoiceTextOptions {
+  // override text for field
+  pattern?: string; // regex pattern for validation
+  height?: number; // height of text area in px
+  width?: number; // min-width of text area in px
+
+  // should move from call backs that depend on parent being passed in to @Output keys sent @Input search results @Output selected but it would place these for all field types
+  search?: Function; // search via api for drop down options
+  select?: Function; // upon selection in drop down call back function
+  parent?: any; // parent object that the control belongs to for call backs or specific search functions
+}
+
+export interface SharepointChoiceSelectOptions {
+  // override select for field
+  none?: string; // none option text instead of null
+  other?: string; // Other fill-in option text, will override to allow other
+
+  filter?: Function; // filter choices by a function
+}
+
+export interface SharepointChoiceFileOptions {
+  // override file for field
+  extract?: boolean; // extract files from zip and email
+  check?: boolean; // show check box for each file
+
+  accept?: string; // accept file types attribute
+  download?: boolean; // force download of files
+  uploadonly?: boolean; // only upload files
+
+  archive?: string; // archive field name
+  view?: number; // view type 0 - all, 1 - not archived, -1 - archived
+
+  doctypes?: Array<string>; // document types
+  doctype?: string; // document type field name
+
+  notes?: string; // notes input field name for singular note input space
+  spec?: SharepointChoiceList; // field spec for additional fields,
+}
+
 export interface SharepointChoiceForm {
   [key: string]: any;
   Attachments?: {

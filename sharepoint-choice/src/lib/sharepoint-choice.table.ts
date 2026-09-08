@@ -74,6 +74,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this._allData = {};
 
     this._dataLoadCycles++;
+    this._refreshCycle++;
     let tabs = Object.keys(this._allDataIn);
     for (let tab of tabs) {
       if (this._allDataIn[tab]) {
@@ -189,6 +190,19 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   }
   private _search?: SharepointChoiceRowChild;
 
+  @Input() set refreshKey(value: unknown) {
+    this._refreshKey = value;
+    this._refreshCycle++;
+    this._rowsCache.clear();
+    this._pageCache = [];
+    this._nodeCache.clear();
+    this.chRef.markForCheck();
+  }
+  get refreshKey(): unknown {
+    return this._refreshKey;
+  }
+  private _refreshKey?: unknown;
+
   // simple inputs that dont need getter/setter
   @Input() prefix: string = document.location.href.toLowerCase().split("?")[0]!.split("#")[0]!;
   @Input() tableHeight: string = "calc(100vh - 310px)";
@@ -276,6 +290,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   private _hiddenColumns?: SharepointChoiceHide;
 
   private _dataLoadCycles: number = 0;
+  private _refreshCycle: number = 0;
   private _debounceFilterSort?: ReturnType<typeof setTimeout>;
 
   // Memoization cache for columns filtered/sorted rows
@@ -895,10 +910,15 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   sharepointChoiceSpec(spec: SharepointChoiceField, field: string): SharepointChoiceList {
     var f = this.sharepointChoiceField(field);
     var s: SharepointChoiceList = {};
-    const fieldSpec = (s[f] = spec);
-    // ensure no title to avoid label rendering
-    fieldSpec.Title = "";
+    s[f] = {
+      ...spec,
+      Title: "",
+    };
     return s;
+  }
+
+  sharepointChoiceRefreshKey(row: SharepointChoiceRow, field?: string): string {
+    return `${row["_tracking"] ?? ""}:${field ?? ""}:${this._refreshCycle}`;
   }
 
   sharepointChoiceForm(row: SharepointChoiceRow, field: string): SharepointChoiceForm {

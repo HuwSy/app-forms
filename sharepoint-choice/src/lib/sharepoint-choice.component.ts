@@ -24,6 +24,9 @@ import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { SharepointChoiceLogging } from "./sharepoint-choice.logging";
 import {
+  SharepointChoiceTextOptions,
+  SharepointChoiceSelectOptions,
+  SharepointChoiceFileOptions,
   SharepointChoiceForm,
   SharepointChoiceList,
   SharepointChoiceField,
@@ -111,6 +114,16 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
   }
   private _versions?: SharepointChoiceForm[];
 
+  @Input() set refreshKey(value: unknown) {
+    this._refreshKey = value;
+    void this.lookupLabel();
+    this.chRef.markForCheck();
+  }
+  get refreshKey(): unknown {
+    return this._refreshKey;
+  }
+  private _refreshKey?: unknown;
+
   @Input() prefix: string = ""; // prefix name attributes for uniqness, usefull for nesting
 
   @Input() field!: string; // internal field name on form object, used for push back and against spec
@@ -122,44 +135,32 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
     target: HTMLElement;
   }>(); // emit changes to parent through (change) binding
 
-  @Input() text: {
-    // override text for field
-    pattern?: string; // regex pattern for validation
-    height?: number; // height of text area in px
-    width?: number; // min-width of text area in px
+  @Input() set text(value: SharepointChoiceTextOptions | undefined) {
+    this._text = value || {};
+    this.chRef.markForCheck();
+  }
+  get text(): SharepointChoiceTextOptions {
+    return this._text;
+  }
+  private _text: SharepointChoiceTextOptions = {};
 
-    // should move from call backs that depend on parent being passed in to @Output keys sent @Input search results @Output selected but it would place these for all field types
-    search?: Function; // search via api for drop down options
-    select?: Function; // upon selection in drop down call back function
-    parent?: any; // parent object that the control belongs to for call backs or specific search functions
-  } = {};
+  @Input() set select(value: SharepointChoiceSelectOptions | undefined) {
+    this._select = value || {};
+    this.chRef.markForCheck();
+  }
+  get select(): SharepointChoiceSelectOptions {
+    return this._select;
+  }
+  private _select: SharepointChoiceSelectOptions = {};
 
-  @Input() select: {
-    // override select for field
-    none?: string; // none option text instead of null
-    other?: string; // Other fill-in option text, will override to allow other
-
-    filter?: Function; // filter choices by a function
-  } = {};
-
-  @Input() file: {
-    // override file for field
-    extract?: boolean; // extract files from zip and email
-    check?: boolean; // show check box for each file
-
-    accept?: string; // accept file types attribute
-    download?: boolean; // force download of files
-    uploadonly?: boolean; // only upload files
-
-    archive?: string; // archive field name
-    view?: number; // view type 0 - all, 1 - not archived, -1 - archived
-
-    doctypes?: Array<string>; // document types
-    doctype?: string; // document type field name
-
-    notes?: string; // notes input field name for singular note input space
-    spec?: SharepointChoiceList; // field spec for additional fields,
-  } = {};
+  @Input() set file(value: SharepointChoiceFileOptions | undefined) {
+    this._file = value || {};
+    this.chRef.markForCheck();
+  }
+  get file(): SharepointChoiceFileOptions {
+    return this._file;
+  }
+  private _file: SharepointChoiceFileOptions = {};
 
   tooltip?: boolean;
 
