@@ -846,6 +846,7 @@ export class SharepointChoiceUtils {
             // exclude complex objects for 2nd update to catch
             if (typeof value == "object") return null;
             else if (typeof value == "string" && /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]/.test(value)) return null;
+            else if (key.endsWith("Id")) return null;
             // define values as string required for the api
             else if (value === null) value = "";
             else if (typeof value == "boolean") value = value ? "1" : "0";
