@@ -579,7 +579,7 @@ export class SharepointChoiceUtils {
 
       return r;
     } catch (e) {
-      throw `Exception getting API data with status ${r?.status ?? "no response"} response ${e} and body ${r && r.text ? await r.text().catch(() => "<unreadable body>") : (r?.body ?? "")}`;
+      throw `Exception getting API data with status ${r?.status ?? "no response"} response ${e} and body ${r && typeof r.text === "function" ? await r.text().catch(() => "<unreadable body>") : (r?.body ?? "")}`;
     }
   }
 
@@ -737,7 +737,8 @@ export class SharepointChoiceUtils {
 
   private normalizePath(path: string): string {
     if (!path) return "";
-    if (path.indexOf("://") >= 0) path = path.substring(path.indexOf("/", 9));
+    let s = path.indexOf("://");
+    if (s >= 0) path = path.substring(path.indexOf("/", s + 3));
     return decodeURIComponent(path).replace(/\/$/, "");
   }
 
