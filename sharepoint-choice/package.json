@@ -1,6 +1,6 @@
 {
   "name": "sharepoint-choice",
-  "version": "22.1.26",
+  "version": "22.2.3",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
@@ -28,7 +28,7 @@
     "@turbowarp/jszip": "^3",
     "buffer": "^6",
     "devextreme-exceljs-fork": "^4",
-    "postal-mime": "^3",
+    "postal-mime": "^4",
     "stacktrace-js": "^2"
   },
   "devDependencies": {
