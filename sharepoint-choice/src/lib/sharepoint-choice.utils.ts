@@ -738,7 +738,7 @@ export class SharepointChoiceUtils {
   private normalizePath(path: string): string {
     if (!path) return "";
     let s = path.indexOf("://");
-    if (s >= 0) path = path.substring(path.indexOf("/", s + 3));
+    if (s >= 0) path = path.substring(path.indexOf("/", s + 4));
     return decodeURIComponent(path).replace(/\/$/, "");
   }
 
