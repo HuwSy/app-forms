@@ -104,7 +104,7 @@ export class SharepointChoiceLogging implements ErrorHandler {
 
     // any logs sending on current page then delay and retry
     if (w._grafana) {
-      setTimeout(this.sendErrors, 25);
+      setTimeout(this.sendErrors.bind(this), 25);
       return;
     }
 
