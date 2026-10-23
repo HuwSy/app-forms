@@ -1233,7 +1233,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
             var c = this.fieldValue(row, field);
             // apply the operation, all inverted as its easier to think about what is required
             if (op == "contains") {
-              if (!c?.toString().toLowerCase().includes(value.toString().toLowerCase())) return false;
+              if (!c?.toString()?.toLowerCase()?.includes(value.toString().toLowerCase())) return false;
             } else if (op == "equals") {
               if (value instanceof Array) {
                 if (
@@ -1298,7 +1298,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     if (!col.cellRenderer) return null;
 
     // could return issues if cols hidden and many aren't named at all
-    const key = `${row["_tracking"]}::${col.field ?? col.headerName ?? (1000 * colIndex + (childIndex ?? 0)).toString()}`;
+    const key = `${row["_tracking"] ?? rowIndex}::${col.field ?? col.headerName ?? (1000 * colIndex + (childIndex ?? 0)).toString()}`;
 
     let content = this._nodeCache.get(key);
     if (!content) {
