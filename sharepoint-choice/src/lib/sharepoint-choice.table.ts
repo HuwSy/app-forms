@@ -100,7 +100,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     }
 
     // Clear cache when data changes
-    this._rowsCache.clear();
+    this.invalidateRows(true);
     this.chRef.markForCheck();
   }
   get allData(): SharepointChoiceTabs {
@@ -123,7 +123,9 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   // all tabs or derive from all data
   @Input() set allTabs(value: string[]) {
+    const previousTab = this.selectedTab;
     this._allTabs = value;
+    if (this.selectedTab !== previousTab) this.pageNumber = 1;
     this.chRef.markForCheck();
   }
   get allTabs(): string[] {
@@ -150,7 +152,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   @Input() set pageSize(value: number) {
     this._pageSize = value;
     this.setStorage(`Size`, this.pageSize);
-    this._pageCache = [];
+    this.pageNumber = 1;
     this.chRef.markForCheck();
   }
   get pageSize(): number {
@@ -161,7 +163,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   // should show loading state and disable clicks etc
   @Input() set loading(value: boolean) {
     this._loading = value;
-    this._rowsCache.clear();
+    this.invalidateRows();
     this.chRef.markForCheck();
   }
   get loading(): boolean {
@@ -181,7 +183,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
     // trigger setter to apply search filter to all data and reset caches
     this.allData = this._allDataIn;
-    this._rowsCache.clear();
+    this.invalidateRows(true);
 
     this.debounceAndMark();
   }
@@ -193,8 +195,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   @Input() set refreshKey(value: unknown) {
     this._refreshKey = value;
     this._refreshCycle++;
-    this._rowsCache.clear();
-    this._pageCache = [];
+    this.invalidateRows(true);
     this._nodeCache.clear();
     this.chRef.markForCheck();
   }
@@ -257,6 +258,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   set filter(value: SharepointChoiceFilter) {
     this._filter = value;
     this.setStorage(`Filter`, this.filter);
+    this.pageNumber = 1;
     this.debounceAndMark();
   }
   get filter(): SharepointChoiceFilter {
@@ -280,8 +282,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     this.setStorage(`Hide`, this.hiddenColumns);
     // rebuild all on change as the ticks can be any
     this._colsCache.clear();
-    this._rowsCache.clear();
-    this._pageCache = [];
+    this.invalidateRows(true);
     this.chRef.markForCheck();
   }
   get hiddenColumns(): SharepointChoiceHide {
@@ -378,8 +379,16 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     return true;
   }
 
-  private debounceAndMark(): void {
+  private invalidateRows(resetPage: boolean = false): void {
+    this._rowsCache.clear();
+    this._pageCache = [];
+    if (resetPage && this.pageNumber !== 1) this.pageNumber = 1;
+    this.chRef.markForCheck();
+  }
+
+  private debounceAndMark(resetPage: boolean = false): void {
     // use debounce to avoid multiple rapid changes clearing cache too often across multiple columns and filter/sort types etc so simpler than rxjs
+    this.invalidateRows(resetPage);
     clearTimeout(this._debounceFilterSort);
     this._debounceFilterSort = setTimeout(() => {
       if (!this.selectedTab) return;
@@ -436,7 +445,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   selectionChanged(row: SharepointChoiceRow): void {
     row._selected = !row._selected;
     // if there is filtering on selected, debounce so users can click and unclick multiple without multiple emits or the item vanishing immediately
-    if (this.selectedTab && !!this.filter[this.selectedTab]?.["_selected"]) this.debounceAndMark();
+    if (this.selectedTab && !!this.filter[this.selectedTab]?.["_selected"]) this.debounceAndMark(true);
     else this.emitSelection();
   }
 
@@ -877,14 +886,14 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       if (!choice && !c) return;
       // if it is choice or got a function truethy outward reset cache
       if (!(c instanceof Promise)) {
-        this._rowsCache.delete(this.selectedTab);
+        this.invalidateRows(true);
         this.chRef.markForCheck();
       } else {
         c.then((r?: any) => {
           const selectedTab = this.selectedTab;
           if (r || choice) {
             if (!selectedTab) return;
-            this._rowsCache.delete(selectedTab);
+            this.invalidateRows(true);
             this.chRef.detectChanges();
           }
         }).catch((error: any) => {
@@ -1191,12 +1200,9 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       let fieldFilter = filterIn[f];
       if (!fieldFilter) continue;
 
-      filter[f] = {
-        ...fieldFilter,
-        greater:
-          typeof fieldFilter.greater === "string" ? new Date(fieldFilter.greater) : (fieldFilter.greater ?? null),
-        less: typeof fieldFilter.less === "string" ? new Date(fieldFilter.less) : (fieldFilter.less ?? null),
-      };
+      filter[f] = { ...fieldFilter };
+      if (typeof fieldFilter.greater === "string") filter[f].greater = new Date(fieldFilter.greater);
+      if (typeof fieldFilter.less === "string") filter[f].less = new Date(fieldFilter.less);
     }
 
     var sort = this.sort[tab] || [];
@@ -1229,6 +1235,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
           let ops = filter[field];
           for (let op in ops) {
             let value = ops[op];
+            if (value === null || value === undefined) continue;
             // get the field value
             var c = this.fieldValue(row, field);
             // apply the operation, all inverted as its easier to think about what is required
