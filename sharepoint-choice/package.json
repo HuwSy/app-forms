@@ -1,11 +1,10 @@
 {
   "name": "sharepoint-choice",
-  "version": "22.2.9",
+  "version": "22.2.11",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
-    "build": "ng build sharepoint-choice",
-    "version": "rm -r node_modules && rm package-lock.json && npm install && npm audit --omit=dev --audit-level=high && npm run build && npm version patch --no-git-tag-version --ignore-scripts && git add . && git commit -m \"Version bump\" && git push"
+    "build": "ng build sharepoint-choice"
   },
   "private": false,
   "sideEffects": false,
