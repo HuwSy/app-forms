@@ -9,6 +9,6 @@
     "types": ["office-js"]
   },
   "exclude": [
-    "**/*.spec.ts"
+    "**/*.spec.ts", "**/*.test.ts", "**/*.tests.ts"
   ]
 }
