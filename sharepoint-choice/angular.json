@@ -23,6 +23,15 @@
             }
           },
           "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "buildTarget": "sharepoint-choice:build:development",
+            "tsConfig": "tsconfig.spec.json",
+            "include": ["src/lib/sharepoint-choice.tests.ts"],
+            "runner": "vitest"
+          }
         }
       }
     }
