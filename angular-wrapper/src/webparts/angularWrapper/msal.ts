@@ -1,8 +1,10 @@
 try {
   // get all parameters from search and hash, combine them into a single string
-  const source = `${window.location.search.replace(/^\?/, "") || ""}&${window.location.hash.replace(/^#/, "") || ""}`;
+  const source = [window.location.search.replace(/^\?/, ""), window.location.hash.replace(/^#/, "")]
+    .filter(Boolean)
+    .join("&");
   // get state to decode library info
-  const state = new URLSearchParams(source).get("state") || '';
+  const state = new URLSearchParams(source).get("state") || "";
   // base64 decode state and parse library info
   const normalized = state.split("|")[0].replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
