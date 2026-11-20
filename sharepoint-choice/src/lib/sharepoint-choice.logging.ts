@@ -1,68 +1,175 @@
 import { ErrorHandler } from "@angular/core";
-import { fromError } from "stacktrace-js";
 import { App } from "./sharepoint-choice.settings";
 
-export class SharepointChoiceLogging implements ErrorHandler {
-  private _grafana: {
-    stream: { [key: string]: string };
-    values: Array<[string, string]>;
+type GrafanaLogEntry = [timestamp: string, line: string];
+
+interface SharePointPageContext {
+  userLoginName?: string;
+  webTitle?: string;
+  webAbsoluteUrl?: string;
+}
+
+interface GrafanaLoggerState {
+  stream: Record<string, string>;
+  values: GrafanaLogEntry[];
+  pendingMessages: Set<string>;
+  sending: boolean;
+  retryCount: number;
+  flushTimer: number | undefined;
+  lastTimestampNs: bigint;
+  configurationWarningShown: boolean;
+}
+
+type LoggerWindow = Window & {
+  GrafanaLogging?: unknown;
+  _spPageContextInfo?: SharePointPageContext;
+};
+
+const FLUSH_DELAY_MS = 50;
+const REQUEST_TIMEOUT_MS = 15_000;
+const RETRY_BASE_DELAY_MS = 1_000;
+const MAX_RETRY_DELAY_MS = 30_000;
+const MAX_RETRY_COUNT = 7;
+const STACK_TRACE_LIMIT = 2_048;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isGrafanaLogEntry(value: unknown): value is GrafanaLogEntry {
+  return Array.isArray(value) && typeof value[0] === "string" && typeof value[1] === "string";
+}
+
+function isGrafanaLoggerState(value: unknown): value is GrafanaLoggerState {
+  if (!isRecord(value) || !isRecord(value["stream"])) return false;
+
+  return (
+    Object.values(value["stream"]).every((label) => typeof label === "string") &&
+    Array.isArray(value["values"]) &&
+    value["values"].every(isGrafanaLogEntry) &&
+    value["pendingMessages"] instanceof Set &&
+    typeof value["sending"] === "boolean" &&
+    typeof value["retryCount"] === "number" &&
+    (value["flushTimer"] === undefined || typeof value["flushTimer"] === "number") &&
+    typeof value["lastTimestampNs"] === "bigint" &&
+    typeof value["configurationWarningShown"] === "boolean"
+  );
+}
+
+function normalizeStream(value: unknown): Record<string, string> {
+  if (!isRecord(value)) return {};
+
+  const stream: Record<string, string> = {};
+  for (const [label, rawValue] of Object.entries(value)) {
+    stream[label] = rawValue == null ? "" : String(rawValue);
+  }
+  return stream;
+}
+
+function createDefaultStream(): Record<string, string> {
+  return {
+    Environment: App.Release,
+    System: "SharePoint-Choice",
+    Hostname: window.location.origin,
+    Username: "",
+    UserAgent: navigator.userAgent,
+    Language: navigator.language,
+  };
+}
+
+function initialTimestamp(values: GrafanaLogEntry[]): bigint {
+  let latest = 0n;
+  for (const [timestamp] of values) {
+    if (/^\d+$/.test(timestamp)) {
+      const parsed = BigInt(timestamp);
+      if (parsed > latest) latest = parsed;
+    }
+  }
+  return latest;
+}
+
+function getSharedLoggerState(): GrafanaLoggerState {
+  const browserWindow = window as LoggerWindow;
+  const existing = browserWindow.GrafanaLogging;
+  if (isGrafanaLoggerState(existing)) return existing;
+
+  const existingObject = isRecord(existing) ? existing : undefined;
+  const values = Array.isArray(existingObject?.["values"])
+    ? existingObject["values"].filter(isGrafanaLogEntry)
+    : [];
+  const configuredStream = normalizeStream(existingObject?.["stream"] ?? App.Grafana);
+  const stream = Object.keys(configuredStream).length > 0 ? configuredStream : createDefaultStream();
+  const state: GrafanaLoggerState = {
+    stream,
+    values,
+    pendingMessages: new Set(values.map(([, line]) => line)),
+    sending: false,
+    retryCount: 0,
+    flushTimer: undefined,
+    lastTimestampNs: initialTimestamp(values),
+    configurationWarningShown: false,
   };
 
-  constructor() {
-    let w: any = window;
+  browserWindow.GrafanaLogging = state;
+  return state;
+}
 
-    // base object for this page, only 1 logger per page should be present to avoid time conflicts
-    this._grafana = w[`GrafanaLogging`] || {
-      stream: App.Grafana || {
-        Environment: App.Release,
-        System: "SharePoint-Choice",
-        Hostname: window.location.origin,
-        Username: undefined,
-        UserAgent: navigator?.userAgent,
-        Language: navigator?.language,
-      },
-      values: [],
-    };
+function errorMessage(value: unknown): string {
+  if (value instanceof Error) return value.message;
+  if (typeof value === "string") return value;
+
+  try {
+    return JSON.stringify(value) ?? String(value);
+  } catch (serializationError) {
+    console.warn("Unable to serialize a SharePoint Choice error message.", serializationError);
+    return String(value);
+  }
+}
+
+export class SharepointChoiceLogging implements ErrorHandler {
+  private readonly _grafana: GrafanaLoggerState;
+
+  constructor() {
+    this._grafana = getSharedLoggerState();
   }
 
-  public async handleError(error: any): Promise<void> {
-    let w: any = window;
+  public handleError(error: unknown): void {
+    void this.processError(error).catch((loggingError: unknown) => {
+      console.error("SharepointChoiceLogging failed to process an error.", loggingError);
+    });
+  }
 
-    // get the stack trace and reduce for grafana posting
-    let stackTrace = "";
-    try {
-      stackTrace = JSON.stringify(await fromError(error?.error ?? error, { offline: true }));
-      if (!stackTrace || stackTrace == "null") stackTrace = "";
-      else if (stackTrace.length >= 2048) stackTrace = stackTrace.substring(0, 2045) + "...";
-    } catch (e) {
-      // fail stack trace silently and log the remainder of the error as is
-    }
+  private async processError(error: unknown): Promise<void> {
+    const source = isRecord(error) ? (error["error"] ?? error) : error;
+    const sourceObject = isRecord(source) ? source : undefined;
+    const outerObject = isRecord(error) ? error : undefined;
+    const levelValue = sourceObject?.["level"] ?? outerObject?.["level"];
+    const level = typeof levelValue === "string" ? levelValue : "Unknown";
+    const messageValue = outerObject?.["message"] ?? sourceObject?.["message"] ?? source;
+    const message = errorMessage(messageValue);
 
-    // attempt fixup of user name, site title etc on logging, as spo doesnt have user in context immediately
-    if (w._spPageContextInfo) {
-      for (let t in this._grafana.stream) {
-        if (t.includes("Username") && w._spPageContextInfo.userLoginName)
-          this._grafana.stream[t] = w._spPageContextInfo.userLoginName;
-        if (t.includes("System") && w._spPageContextInfo.webTitle)
-          this._grafana.stream[t] = w._spPageContextInfo.webTitle;
-        if (t.includes("Hostname") && w._spPageContextInfo.webAbsoluteUrl)
-          this._grafana.stream[t] = w._spPageContextInfo.webAbsoluteUrl;
-      }
-    }
+    const stackValue = sourceObject?.["stack"] ?? outerObject?.["stack"];
+    const rawStackTrace = typeof stackValue === "string" ? stackValue : "";
+    const stackTrace =
+      rawStackTrace.length >= STACK_TRACE_LIMIT
+        ? `${rawStackTrace.substring(0, STACK_TRACE_LIMIT - 3)}...`
+        : rawStackTrace;
 
-    // define current page path params
-    var split = window.location.pathname.split("/");
-    var path = window.location.pathname.match(/\/[^\/]*\/[^\/]*\/([^?]*)/);
-    let Params = {
-      prefix: split[1] ?? "",
-      site: split[2] ?? "",
-      path: path && path[1] ? path[1] : "",
+    this.updateSharePointContext();
+
+    const pathSegments = window.location.pathname.split("/");
+    const pathMatch = window.location.pathname.match(/\/[^\/]*\/[^\/]*\/([^?]*)/);
+    // Accepted privacy and payload-size risk: page query/hash values, user identifiers, errors, and stack traces
+    // are sent without redaction or a total payload-size limit; callers should not put secrets in URLs or errors.
+    const Params = {
+      prefix: pathSegments[1] ?? "",
+      site: pathSegments[2] ?? "",
+      path: pathMatch?.[1] ?? "",
       search: window.location.search,
       hash: window.location.hash,
     };
 
-    // console here to keep click into source working
-    switch ((error?.error ?? error)?.level?.substring(0, 1).toUpperCase()) {
+    switch (level.substring(0, 1).toUpperCase()) {
       case "E":
         console.error(error);
         break;
@@ -80,70 +187,120 @@ export class SharepointChoiceLogging implements ErrorHandler {
         break;
     }
 
-    let body: [string, string] = [
-      (new Date().getTime() * 1_000_000).toString(),
-      JSON.stringify({
-        Params,
-        Level: (error?.error ?? error)?.level ?? "Unknown",
-        Message: error?.message ?? error,
-        StackTrace: stackTrace,
-      }),
-    ];
+    const line = JSON.stringify({
+      Params,
+      Level: level,
+      Message: message,
+      StackTrace: stackTrace,
+    });
 
-    // prevent flooding from multiple loggers on screen as timestamps must be sequential or grafana will not accept
-    if (
-      this._grafana.values.filter((x) => x[1] == body[1] && parseInt(x[0]) + 1_000_000 < parseInt(body[0])).length == 0
-    ) {
-      this._grafana.values.push(body);
-      this.sendErrors();
+    if (this._grafana.pendingMessages.has(line)) return;
+
+    const wallClockTimestamp = BigInt(Date.now()) * 1_000_000n;
+    const timestamp = wallClockTimestamp > this._grafana.lastTimestampNs
+      ? wallClockTimestamp
+      : this._grafana.lastTimestampNs + 1n;
+    this._grafana.lastTimestampNs = timestamp;
+
+    this._grafana.values.push([timestamp.toString(), line]);
+    this._grafana.pendingMessages.add(line);
+    this.scheduleFlush(FLUSH_DELAY_MS);
+  }
+
+  private updateSharePointContext(): void {
+    const pageContext = (window as LoggerWindow)._spPageContextInfo;
+    if (!pageContext) return;
+
+    const replacements: Record<string, string | undefined> = {
+      Username: pageContext.userLoginName,
+      System: pageContext.webTitle,
+      Hostname: pageContext.webAbsoluteUrl,
+    };
+
+    for (const label of Object.keys(this._grafana.stream)) {
+      for (const [name, value] of Object.entries(replacements)) {
+        if (label.includes(name) && value) this._grafana.stream[label] = value;
+      }
     }
   }
 
-  private sendErrors() {
-    let w: any = window;
-
-    // any logs sending on current page then delay and retry
-    if (w._grafana) {
-      setTimeout(this.sendErrors.bind(this), 25);
+  private scheduleFlush(delay: number): void {
+    if (this._grafana.sending || this._grafana.flushTimer !== undefined || this._grafana.values.length === 0) {
       return;
     }
 
-    // get how many records right now
-    var saving = this._grafana.values.length;
+    this._grafana.flushTimer = window.setTimeout(() => {
+      this._grafana.flushTimer = undefined;
+      void this.sendErrors();
+    }, delay);
+  }
 
-    // no logs then end
-    if (saving == 0) return;
+  private async sendErrors(): Promise<void> {
+    if (this._grafana.sending || this._grafana.values.length === 0) return;
 
-    // build post message sending
-    let body = JSON.stringify({
-      streams: [this._grafana],
-    });
+    // Remote logging is skipped on localhost. Without a release endpoint, pending records are warned about and
+    // discarded; there is no durable offline store.
+    if (window.location.hostname === "localhost") {
+      this.discardPendingLogs();
+      return;
+    }
 
-    // console log what will send
-    for (var e = 0; e < saving; e++) console.error(this._grafana.values[e]?.[1]);
+    const configuredEndpoints: unknown = App.ApiServers?.["grafana"];
+    const endpoint = isRecord(configuredEndpoints) ? configuredEndpoints[App.Release] : undefined;
+    if (typeof endpoint !== "string" || endpoint.length === 0) {
+      if (!this._grafana.configurationWarningShown) {
+        console.warn(`Grafana logging is not configured for release ${App.Release}; pending logs will be discarded.`);
+        this._grafana.configurationWarningShown = true;
+      }
+      this.discardPendingLogs();
+      return;
+    }
 
-    // truncate whats being logged so new additions are going in here during posting
-    this._grafana.values = this._grafana.values.splice(saving);
+    const batch = this._grafana.values.slice();
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    this._grafana.sending = true;
 
-    // dont log under localhost or if no grafana api map
-    if (window.location.host.includes("localhost") || !App.ApiServers?.["grafana"]?.[App.Release]) return;
-
-    // start posting
-    w._grafana = true;
-    fetch(App.ApiServers["grafana"][App.Release], {
-      method: "POST",
-      body: body,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((b) => {
-        w._grafana = false;
-        console.log(`Submitted ${saving} to grafana ${b}.`);
-      })
-      .catch((e) => {
-        w._grafana = false;
-        console.error(`Error logging ${saving} to grafana ${e}.`);
+    let retryDelay: number | undefined;
+    try {
+      const body = JSON.stringify({
+        streams: [{ stream: this._grafana.stream, values: batch }],
       });
+      const response = await fetch(endpoint, {
+        method: "POST",
+        body,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Grafana returned HTTP ${response.status} ${response.statusText}.`);
+      }
+
+      this._grafana.values.splice(0, batch.length);
+      for (const [, line] of batch) this._grafana.pendingMessages.delete(line);
+      this._grafana.retryCount = 0;
+      console.info(`Submitted ${batch.length} logs to Grafana.`);
+    } catch (error) {
+      this._grafana.retryCount = Math.min(this._grafana.retryCount + 1, MAX_RETRY_COUNT);
+      retryDelay = Math.min(
+        RETRY_BASE_DELAY_MS * 2 ** Math.min(this._grafana.retryCount - 1, MAX_RETRY_COUNT),
+        MAX_RETRY_DELAY_MS,
+      );
+      console.error(`Error logging ${batch.length} records to Grafana; retrying in ${retryDelay}ms.`, error);
+    } finally {
+      window.clearTimeout(timeout);
+      this._grafana.sending = false;
+    }
+
+    if (retryDelay !== undefined) this.scheduleFlush(retryDelay);
+    else if (this._grafana.values.length > 0) this.scheduleFlush(FLUSH_DELAY_MS);
+  }
+
+  private discardPendingLogs(): void {
+    this._grafana.values.length = 0;
+    this._grafana.pendingMessages.clear();
   }
 }

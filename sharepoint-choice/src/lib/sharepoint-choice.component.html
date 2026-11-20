@@ -61,7 +61,7 @@
           (mousedown)="(false)"
           (click)="changedM($event)"
           multiple="multiple"
-          class="{{ multiLargeorSmall() }}"
+          class="{{ multiLargeorSmall(c) }}"
           [disabled]="disabled"
           [ngModel]="form[field].results"
           [required]="req"
@@ -177,7 +177,6 @@
           name="SharepointChoice{{ prefix }}{{ field }}"
           [min]="get('Min')"
           [max]="get('Max')"
-          (change)="changed()"
           placeholder="{{ title || internal }}..."
         />
       }
@@ -194,7 +193,6 @@
           name="SharepointChoice{{ prefix }}{{ field }}"
           [min]="get('Min')"
           [max]="get('Max')"
-          (change)="changed()"
           placeholder="{{ title || internal }}..."
         />
       }
@@ -207,7 +205,6 @@
             (ngModelChange)="dateSet($event)"
             [required]="req"
             name="SharepointChoice{{ prefix }}{{ field }}"
-            (change)="changed()"
             [min]="get('Min')"
             [max]="get('Max')"
             placeholder="{{ title || internal }}..."
@@ -220,7 +217,6 @@
             (ngModelChange)="dateSet($event)"
             [required]="req"
             name="SharepointChoice{{ prefix }}{{ field }}"
-            (change)="changed()"
             [min]="get('Min')"
             [max]="get('Max')"
             placeholder="{{ title || internal }}..."
@@ -279,13 +275,73 @@
           type="text"
           [pattern]="text.pattern || '.*'"
           [ngModel]="otherText"
-          (ngModelChange)="otherText = $event"
+          (ngModelChange)="setLookupSearchText($event)"
           [required]="req"
           name="SharepointChoice{{ prefix }}{{ field }}"
           (change)="changed()"
           (keyup)="onUpText($event.key)"
           (click)="onUpText(undefined)"
           placeholder="{{ title || internal }}..."
+        />
+
+        @if (!disabled && results.length > 0) {
+          <div style="position: relative; padding: 0">
+            <div class="AutoComplete">
+              <ul>
+                @for (result of results; track $index; let i = $index) {
+                  <li
+                    (click)="selectedText(result)"
+                    [hidden]="result['hide']"
+                    [style]="pos == i ? 'background-color: rgba(0, 0, 0, 0.04);' : ''"
+                  >
+                    {{ result[lookup] }}
+                  </li>
+                }
+                <li
+                  style="text-align: right"
+                  (click)="selectedText(null)"
+                >
+                  Cancel
+                </li>
+              </ul>
+            </div>
+          </div>
+        }
+      }
+      @case ("LookupMulti") {
+        @let lookup = get("LookupField");
+        <div class="people">
+          @for (item of lookupLabels; track item.id) {
+            <span style="padding: 8px"
+              >{{ item.label }}
+              <button
+                type="button"
+                (click)="removeLookup(item.id)"
+                [disabled]="disabled"
+                aria-label="Remove {{ item.label }}"
+                >X</button
+              ></span
+            >
+          }
+        </div>
+        <input
+          [disabled]="disabled"
+          type="text"
+          [pattern]="text.pattern || '.*'"
+          [ngModel]="otherText"
+          (ngModelChange)="setLookupSearchText($event)"
+          [ngModelOptions]="{ standalone: true }"
+          name="SharepointChoice{{ prefix }}{{ field }}_Search"
+          (keyup)="onUpText($event.key)"
+          (click)="onUpText(undefined)"
+          placeholder="{{ title || internal }}..."
+        />
+        <input
+          style="display: none !important"
+          type="text"
+          [required]="req"
+          [value]="validator('LookupMulti')"
+          name="SharepointChoice{{ prefix }}{{ field }}_Validator"
         />
 
         @if (!disabled && results.length > 0) {

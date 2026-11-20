@@ -22,12 +22,293 @@ import {
   SharepointChoiceAttachment,
 } from "./sharepoint-choice.models";
 
-///<summary>
-/// This is to be used in place of specific pnp.sp function when using these form fields to aid in data transforms and a few other fringe cases outlined in the method coments
-///</summary>
+export function MapErrors(error: unknown, context?: string): string {
+  function stripStackTrace(details: string): string {
+    const lines = details.split(/\r?\n/);
+    const stackStart = lines.findIndex((line) => /^\s*(?:at\s+\S+|stack trace\s*:|--- End of stack trace)/i.test(line));
+    return lines
+      .slice(0, stackStart < 0 ? lines.length : stackStart)
+      .join("\n")
+      .trim();
+  }
+
+  function errorDetails(error: unknown): string {
+    if (typeof error === "string") return stripStackTrace(error);
+    if (error instanceof Error) return `${error.name}: ${error.message}`;
+
+    try {
+      return JSON.stringify(error, (key, value: unknown) => (key === "stack" ? undefined : value)) ?? String(error);
+    } catch (serializationError) {
+      return stripStackTrace(String(error));
+    }
+  }
+
+  function errorCodes(error: unknown): string {
+    if (typeof error !== "object" || error === null) return "";
+
+    const record = error as Record<string, unknown>;
+    return ["errorCode", "code", "errorMessage", "message"]
+      .map((key) => record[key])
+      .filter((value): value is string => typeof value === "string")
+      .join("\n");
+  }
+
+  interface AlertMessageCandidate {
+    message: string;
+    score: number;
+    kind: "extracted" | "guidance";
+    details?: string;
+  }
+
+  const alertMessageKeyScores: Record<string, number> = {
+    usermessage: 110,
+    errordescription: 105,
+    errormessage: 100,
+    message: 95,
+    detail: 90,
+    details: 85,
+    title: 80,
+    reason: 75,
+    description: 70,
+    messages: 70,
+    errors: 65,
+    error: 60,
+    body: 35,
+    responsetext: 35,
+    returned: 20,
+    value: 10,
+  };
+
+  function embeddedJsonValues(text: string): unknown[] {
+    const values: unknown[] = [];
+
+    const raw = text.slice(0, 100_000);
+    const decoded = raw.replace(/\\"/g, '"').replace(/\\\\u([0-9a-f]{4})/gi, (_match, code: string) => `\\u${code}`);
+
+    for (const searchable of raw === decoded ? [raw] : [raw, decoded]) {
+      for (let start = 0; start < searchable.length && values.length < 20; start++) {
+        const opening = searchable[start];
+        if (opening !== "{" && opening !== "[") continue;
+
+        const closings: string[] = [opening === "{" ? "}" : "]"];
+        let inString = false;
+        let escaped = false;
+
+        for (let end = start + 1; end < searchable.length; end++) {
+          const character = searchable[end]!;
+          if (inString) {
+            if (escaped) escaped = false;
+            else if (character === "\\") escaped = true;
+            else if (character === '"') inString = false;
+            continue;
+          }
+
+          if (character === '"') inString = true;
+          else if (character === "{") closings.push("}");
+          else if (character === "[") closings.push("]");
+          else if (character === "}" || character === "]") {
+            if (closings.pop() !== character) break;
+            if (closings.length > 0) continue;
+
+            const segment = searchable.slice(start, end + 1);
+            let parsed = false;
+            let value: unknown;
+            try {
+              value = JSON.parse(segment);
+              parsed = true;
+            } catch {}
+
+            if (!parsed) {
+              try {
+                const decoded = JSON.parse(`"${segment}"`);
+                if (typeof decoded === "string") {
+                  value = JSON.parse(decoded);
+                  parsed = true;
+                }
+              } catch {}
+            }
+
+            if (parsed) {
+              values.push(value);
+              start = end;
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    return values;
+  }
+
+  function alertMessageKeyScore(key: string): number {
+    return alertMessageKeyScores[key.toLowerCase().replace(/[-_\s]/g, "")] ?? 0;
+  }
+
+  function collectAlertMessageCandidates(error: unknown): AlertMessageCandidate[] {
+    const candidates: AlertMessageCandidate[] = [];
+    const visited = new WeakSet<object>();
+    let visitedCount = 0;
+
+    const addCandidate = (value: string, relevance: number): void => {
+      const message = stripStackTrace(value);
+      if (!message) return;
+
+      let score = relevance + Math.min(message.length, 240) / 80;
+      if (
+        /^(?:bad request|internal server error|request failed(?: with status code \d+)?|validation failed|one or more validation errors occurred|the request is invalid|something went wrong|an error occurred|unknown error)[.!:]?$/i.test(
+          message,
+        )
+      )
+        score -= 50;
+      if (/^(?:exception getting API data|error making HttpClient request|http failure response)/i.test(message))
+        score -= 60;
+      if (/\b(?:stack trace|at\s+[\w.$]+\s*\()/i.test(message)) score -= 30;
+
+      candidates.push({ message, score, kind: "extracted" });
+    };
+
+    const visit = (value: unknown, depth: number, relevance: number, allowPlainText: boolean): void => {
+      if (depth > 10 || visitedCount > 300) return;
+
+      if (typeof value === "string") {
+        const embedded = embeddedJsonValues(value);
+        if (embedded.length > 0) {
+          embedded.forEach((item) => visit(item, depth + 1, relevance, false));
+        } else if (allowPlainText || relevance > 0) {
+          addCandidate(value, relevance);
+        }
+        return;
+      }
+
+      if (typeof value !== "object" || value === null || visited.has(value)) return;
+      visited.add(value);
+      visitedCount++;
+
+      if (Array.isArray(value)) {
+        value.forEach((item) => visit(item, depth + 1, relevance, relevance > 0));
+        return;
+      }
+
+      if (value instanceof Error) {
+        visit(value.message, depth + 1, Math.max(relevance, alertMessageKeyScore("message")), true);
+        const cause = (value as Error & { cause?: unknown }).cause;
+        if (cause !== undefined) visit(cause, depth + 1, Math.max(relevance, alertMessageKeyScore("error")), false);
+        if (typeof value.stack === "string") visit(value.stack, depth + 1, relevance, false);
+      }
+
+      for (const key of Object.keys(value)) {
+        if (value instanceof Error && (key === "message" || key === "stack" || key === "cause")) continue;
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        if (!descriptor || !("value" in descriptor)) continue;
+
+        const keyScore = alertMessageKeyScore(key);
+        visit(descriptor.value, depth + 1, Math.max(relevance, keyScore), keyScore > 0 || relevance > 0);
+      }
+    };
+
+    visit(error, 0, 0, true);
+    return candidates;
+  }
+
+  function alertHeading(context: string | undefined, details: string): string | undefined {
+    if (context?.trim()) return context.trim();
+    const firstLine = details.trim().split(/\r?\n/, 1)[0]?.trim();
+    return firstLine &&
+      /^Error\s+(?:saving|loading|retrieving|retreiving|deleting|adding|extracting|importing)[^:\r\n]*:\s*$/i.test(
+        firstLine,
+      )
+      ? firstLine
+      : undefined;
+  }
+
+  const alertMessageRules: Array<{
+    matches: RegExp;
+    message: (details: string) => string;
+  }> = [
+    {
+      matches: /locked for shared use/i,
+      message: (details) => {
+        const fileName = details.match(/Error saving file (.+?) in folder /i)?.[1];
+        return `${fileName ? `File "${fileName}"` : "This file"} is already open for shared use, blocking the save. Please close any open tabs or clients using this file before trying again.`;
+      },
+    },
+    {
+      matches: /interaction_in_progress/i,
+      message: () => "A sign-in is already in progress. Complete the open sign-in flow before trying again.",
+    },
+    {
+      matches: /consent_required/i,
+      message: () =>
+        "This app needs additional permissions before it can continue. Ask your administrator to grant consent.",
+    },
+    {
+      matches: /login_required|interaction_required/i,
+      message: () => "Your sign-in needs to be refreshed. Sign in again, then retry.",
+    },
+    {
+      matches: /\[(?:401|403)\]|access denied|unauthorized|forbidden/i,
+      message: () =>
+        "You do not have permission to complete this SharePoint action. Sign in with an account that has access, then try again.",
+    },
+    {
+      matches: /\[404\]|file not found|does not exist/i,
+      message: () =>
+        "The requested SharePoint item could not be found. It may have been moved or deleted; refresh and try again.",
+    },
+    {
+      matches: /failed to fetch|network error|network request failed/i,
+      message: () => "The request could not reach the service. Check your connection and try again.",
+    },
+  ];
+
+  const rawDetails = errorDetails(error);
+  const details = context ? `${context}\n\n${rawDetails}` : rawDetails;
+  const candidates = collectAlertMessageCandidates(error);
+  const bestExtractedCandidate = candidates.reduce<AlertMessageCandidate | undefined>(
+    (best, candidate) => (best === undefined || candidate.score > best.score ? candidate : best),
+    undefined,
+  );
+  const searchable = `${details}\n${errorCodes(error)}\n${candidates.map((candidate) => candidate.message).join("\n")}`;
+  const matchingRule = alertMessageRules.find((rule) => rule.matches.test(searchable));
+  if (matchingRule) {
+    candidates.push({
+      message: matchingRule.message(details),
+      score: 120,
+      kind: "guidance",
+      details: bestExtractedCandidate?.message,
+    });
+  }
+
+  const bestCandidate = candidates.reduce<AlertMessageCandidate | undefined>(
+    (best, candidate) => (best === undefined || candidate.score > best.score ? candidate : best),
+    undefined,
+  );
+  if (bestCandidate?.kind === "guidance") {
+    const heading = alertHeading(context, rawDetails);
+    return [
+      heading,
+      bestCandidate.message,
+      bestCandidate.details ? `Error details:\n${bestCandidate.details}` : undefined,
+      `Debug details:\n${details}`,
+    ]
+      .filter((section): section is string => !!section)
+      .join("\n\n");
+  }
+  if (bestCandidate && bestCandidate.message !== rawDetails) {
+    const heading = alertHeading(context, rawDetails);
+    return heading ? `${heading}\n\n${bestCandidate.message}` : bestCandidate.message;
+  }
+  return details;
+}
+
+/**
+ * Candidate future seams, subject to consumer-usage review: browser context/watermark,
+ * SharePoint reads and permissions, data transforms/version diffs, MSAL/API calls,
+ * and list/folder/file persistence. Keep this facade intact until consumers are checked.
+ */
 export class SharepointChoiceUtils {
-  // context can be read and updated
-  public context: string = "";
+  public readonly context: string;
   public sp: SPFI;
 
   // attempt to establish correct context url for the site from one of the available sources then setup logging for this class
@@ -47,7 +328,10 @@ export class SharepointChoiceUtils {
 
     this.sp = spfi().using(SPBrowser({ baseUrl: this.context }));
 
-    this.mockClassicContext(!!context);
+    // Best effort for consumers that may use classic context later; this is not a readiness signal.
+    void this.mockClassicContext(!!context).catch((error: unknown) => {
+      console.error("SharepointChoiceUtils.mockClassicContext initialization error", error);
+    });
 
     this.watermark();
   }
@@ -83,27 +367,28 @@ export class SharepointChoiceUtils {
     }
   }
 
-  // get the current user and permissions to a flat object for easier use in [disabled]="permission['']" etc
-  // NOTE: this will only detect direct assignments or users added to a mail enabled global security group
+  // Get the current user and permissions to a flat object for easier use in [disabled]="permission['']" etc.
+  // NOTE: this will only detect direct assignments or users added to a mail enabled global security group.
+  // Any lookup failure returns an invalid user id and no permissions so consumers fail closed.
   public async permissions(): Promise<SharepointChoicePermission> {
     let w: any = window;
 
-    // start permission object, user id should be known by now but just in case
     let permission: SharepointChoicePermission = {
-      userId: w._spPageContextInfo?.userId as number,
+      userId: 0,
       perms: {},
     };
 
-    // do throw if these fail
     let web: string = "";
     try {
       web = (await this.sp.web()).Title;
-      // ensure user id
-      if (permission.userId == null) permission.userId = (await this.sp.web.currentUser()).Id;
+      let contextUserId = w._spPageContextInfo?.userId;
+      permission.userId =
+        typeof contextUserId == "number" && contextUserId > 0 ? contextUserId : (await this.sp.web.currentUser()).Id;
     } catch (e) {
-      // failed to get web title or user id
-      console.log("SharepointChoiceUtils.permissions web/user lookup error", e);
+      console.error("SharepointChoiceUtils.permissions web/user lookup error", e);
+      return permission;
     }
+    if (permission.userId <= 0) return permission;
 
     try {
       // get any directly assigned groups
@@ -114,8 +399,8 @@ export class SharepointChoiceUtils {
         if (x.LoginName.startsWith(`${web} `)) permission.perms[x.LoginName.replace(`${web} `, "")] = true;
       });
     } catch (e) {
-      // no permission from groups accessible therefore rely on security group below
-      console.log("SharepointChoiceUtils.permissions group lookup error", e);
+      console.error("SharepointChoiceUtils.permissions group lookup error", e);
+      return { userId: 0, perms: {} };
     }
 
     // ad and aad groups within sp groups dont always expose groups above
@@ -130,8 +415,8 @@ export class SharepointChoiceUtils {
         });
       }
     } catch (e) {
-      // inner security nesting list may not exist correctly so assume no additional permissions
-      console.log("SharepointChoiceUtils.permissions security list lookup error", e);
+      console.error("SharepointChoiceUtils.permissions security list lookup error", e);
+      return { userId: 0, perms: {} };
     }
 
     return permission;
@@ -146,7 +431,7 @@ export class SharepointChoiceUtils {
       }
     } catch (e) {
       // permission request failed so return false below
-      console.log("SharepointChoiceUtils.hasPermission lookup error", e);
+      console.error("SharepointChoiceUtils.hasPermission lookup error", e);
     }
     return false;
   }
@@ -209,8 +494,8 @@ export class SharepointChoiceUtils {
         spec[x.InternalName] = x as SharepointChoiceField;
       });
     } catch (e) {
-      // return basic title which exists on (almost) every list, useful for test suites not attached to lists
-      console.log("SharepointChoiceUtils.fields schema lookup error", e);
+      // This mock fallback is required by consuming-app unit tests without a SharePoint list.
+      console.error("SharepointChoiceUtils.fields schema lookup error", e);
       spec["Title"] = {
         TypeAsString: "Text",
         InternalName: "Title",
@@ -332,7 +617,7 @@ export class SharepointChoiceUtils {
         }
       } catch (e) {
         // no further parsable dates
-        console.log("SharepointChoiceUtils.cleanLoadKeys parse fallback", e, key, d[key]);
+        console.error("SharepointChoiceUtils.cleanLoadKeys parse fallback", e, key);
       }
     }
   }
@@ -345,7 +630,7 @@ export class SharepointChoiceUtils {
       d = await this.sp.web.lists.getByTitle(listTitle).items.getById(id)();
       await this.cleanLoadKeys(d, listTitle, id);
     } catch (e) {
-      alert("Error loading:\n\n" + e);
+      alert(MapErrors(e, "Error loading:"));
       throw e;
     }
 
@@ -357,6 +642,7 @@ export class SharepointChoiceUtils {
     listTitle: string,
     spec: SharepointChoiceList | null = null,
   ): Promise<SharepointChoiceForm[]> {
+    // SharePoint returns versions in reverse order; this endpoint request is capped at 5,000.
     let d = await this.sp.web.lists.getByTitle(listTitle).items.getById(id).versions.top(5000)();
 
     // exclude these fields
@@ -378,16 +664,38 @@ export class SharepointChoiceUtils {
       "UniqueId",
     ];
 
-    let format = (v) => {
+    let normalize = (v: any): any => {
+      if (v instanceof Date) return v.toJSON();
+      if (Array.isArray(v)) return v.map(normalize);
+      if (v && typeof v == "object") {
+        return Object.keys(v)
+          .sort()
+          .reduce(
+            (normalized, key) => {
+              normalized[key] = normalize(v[key]);
+              return normalized;
+            },
+            {} as Record<string, any>,
+          );
+      }
+      return v;
+    };
+
+    let format = (v: any) => {
       if (!v || typeof v != "object") return v;
       if (v instanceof Date) return v.toLocaleString();
-      if (v.results) return v.results.sort().join(", ");
-      return null;
+      if (Array.isArray(v.results))
+        return v.results
+          .map(format)
+          .sort((a, b) => String(a).localeCompare(String(b)))
+          .join(", ");
+      return JSON.stringify(normalize(v));
     };
 
     // versions return reverse order, so process from oldest to newest
     let i = d.length - 1;
     let lastVersion: any = null;
+    // SharePoint includes the current item as a version, so the returned collection is non-empty.
     do {
       // these dates are always utc when they lack z or +
       d[i].Created += d[i].Created.includes("Z") || d[i].Created.includes("+") ? "" : "Z";
@@ -432,11 +740,11 @@ export class SharepointChoiceUtils {
         try {
           for (let a of Object.keys(i)) i[a] = this.parseLoop(i[a]);
         } catch (e) {
-          // no further nested loops to parse
+          console.error("SharepointChoiceUtils.parseLoop nested value error", e);
         }
       }
     } catch (e) {
-      // no loop to parse
+      // silently continue
     }
     return i;
   }
@@ -512,7 +820,7 @@ export class SharepointChoiceUtils {
         await msal.handleRedirectPromise();
       } catch (e) {
         // await may have nothing to do
-        console.log("SharepointChoiceUtils.callApi handleRedirectPromise fallback", e);
+        console.error("SharepointChoiceUtils.callApi handleRedirectPromise error", e);
       }
     }
 
@@ -536,19 +844,20 @@ export class SharepointChoiceUtils {
           params.account = login.account || msal.getAllAccounts()[0];
           if (!login.accessToken && params.account) login = await msal.acquireTokenSilent(params);
         } else {
-          await msal.loginPopup(params);
-          params.account = msal.getAllAccounts()[0];
+          let loginResult = await msal.loginPopup(params);
+          params.account = loginResult.account || msal.getAllAccounts()[0];
           login = await msal.acquireTokenSilent(params);
         }
       } catch (inner) {
         if (this.isMsalInteractionInProgress(inner)) {
           const staleKeys = this.getMsalInteractionKeys();
+          // Intentionally aggressive recovery: remove stale interaction state before asking the user to retry.
           this.clearMsalInteractionState();
-          alert("Error logging in login already in progress, please refresh the page and try again.");
+          alert(MapErrors(inner, "Error logging in:"));
           throw `MSAL interaction_in_progress detected. Cleared stale keys (${staleKeys.length}${staleKeys.length > 0 ? `: ${staleKeys.join(", ")}` : ""})`;
         }
 
-        alert("Error logging in login token exception, please refresh the page and try again.");
+        alert(MapErrors(inner, "Error logging in:"));
         throw `Exception acquiring token silently or via popup for tenant ${tenancyOnMicrosoft || App.Tenancy} with error ${inner}`;
       }
     }
@@ -605,13 +914,13 @@ export class SharepointChoiceUtils {
       collect(window.sessionStorage);
     } catch (e) {
       // no cleanup here needed
-      console.log("SharepointChoiceUtils.getMsalInteractionKeys sessionStorage access error", e);
+      console.error("SharepointChoiceUtils.getMsalInteractionKeys sessionStorage access error", e);
     }
     try {
       collect(window.localStorage);
     } catch (e) {
       // no cleanup here needed
-      console.log("SharepointChoiceUtils.getMsalInteractionKeys localStorage access error", e);
+      console.error("SharepointChoiceUtils.getMsalInteractionKeys localStorage access error", e);
     }
 
     return keys.filter((k, i, a) => a.indexOf(k) === i);
@@ -635,13 +944,13 @@ export class SharepointChoiceUtils {
       clear(window.sessionStorage);
     } catch (e) {
       // no cleanup here needed
-      console.log("SharepointChoiceUtils.clearMsalInteractionState sessionStorage access error", e);
+      console.error("SharepointChoiceUtils.clearMsalInteractionState sessionStorage access error", e);
     }
     try {
       clear(window.localStorage);
     } catch (e) {
       // no cleanup here needed
-      console.log("SharepointChoiceUtils.clearMsalInteractionState localStorage access error", e);
+      console.error("SharepointChoiceUtils.clearMsalInteractionState localStorage access error", e);
     }
   }
 
@@ -762,7 +1071,7 @@ export class SharepointChoiceUtils {
         await this.sp.web.lists.getByTitle(listTitle).items.getById(id).update(save);
       }
     } catch (e) {
-      alert("Error saving item:\n\n" + e);
+      alert(MapErrors(e, "Error saving item:"));
       throw e;
     }
 
@@ -790,36 +1099,38 @@ export class SharepointChoiceUtils {
             .attachmentFiles.getByName(deletes[i]!)
             .delete();
         } catch (e) {
-          errors.push(`Error deleting attachment ${deletes[i]} for item ${id} in list ${listTitle} with error ${e}`);
+          errors.push(
+            `Error deleting attachment ${deletes[i]} for item ${id} in list ${listTitle} with error ${MapErrors(e)}`,
+          );
         }
 
-      var adds = formDataIncIdToUpdate.Attachments.results
-        .filter((a: SharepointChoiceAttachment) => {
-          return !a.Deleted && !a.ServerRelativeUrl;
-        })
-        .map((a: SharepointChoiceAttachment) => {
-          return {
-            name: a.FileName,
-            content: a.Data,
-          };
-        });
+      var adds = formDataIncIdToUpdate.Attachments.results.filter((a: SharepointChoiceAttachment) => {
+        return !a.Deleted && !a.ServerRelativeUrl && !a.Uploaded;
+      });
 
       for (let a = 0; a < adds.length; a++) {
-        if (adds[a]!.content == undefined) continue;
+        let attachment = adds[a]!;
+        if (attachment.Data == undefined) continue;
         try {
-          await this.sp.web.lists
+          let added = await this.sp.web.lists
             .getByTitle(listTitle)
             .items.getById(id)
-            .attachmentFiles.add(adds[a]!.name, adds[a]!.content ?? "");
+            .attachmentFiles.add(attachment.FileName, attachment.Data);
+          attachment.Uploaded = true;
+          delete attachment.Data;
+          attachment.ServerRelativeUrl = (await added.file()).ServerRelativeUrl;
         } catch (e) {
-          errors.push(`Error adding attachment ${adds[a]!.name} for item ${id} in list ${listTitle} with error ${e}`);
+          errors.push(
+            `Error adding attachment ${attachment.FileName} for item ${id} in list ${listTitle} with error ${MapErrors(e)}`,
+          );
         }
       }
     }
 
     if (errors.length > 0) {
-      alert("Error saving attachments:\n\n" + errors.join("\n"));
-      throw errors.join("\n");
+      let messages = errors.join("\n");
+      alert(`Error saving attachments:\n\n${messages}`);
+      throw messages;
     }
 
     return id;
@@ -873,16 +1184,31 @@ export class SharepointChoiceUtils {
         }
 
         formDataIncIdToUpdate["Id"] = itemId;
-        if (!formDataIncIdToUpdate["Id"]) throw new Error(`Unable to determine created item id for list ${listTitle}`);
+      } catch (e: any) {
+        if (!(e instanceof Error ? e.message : String(e)).includes("already exists") || !additionalProps?.leafName) {
+          alert(MapErrors(e, "Error saving folder:"));
+          throw e;
+        }
 
-        // purposly blank the unedited here so all fields are rewritten in case of any dropped above or data type issues etc
-        uneditedDataToBuildPatch = {};
-      } catch (e) {
-        alert("Error saving folder item:\n\n" + e);
-        throw e;
+        let existingPath = `${folderPath}/${additionalProps.leafName}`;
+        let existing = await this.sp.web.lists
+          .getByTitle(listTitle)
+          .items.filter(`FileRef eq '${existingPath.replace(/'/g, "''")}'`)
+          .select("Id")
+          .top(1)();
+
+        formDataIncIdToUpdate["Id"] = existing[0]?.Id;
       }
+
+      // purposly blank the unedited here so all fields are rewritten later
+      uneditedDataToBuildPatch = {};
     }
 
+    if (!formDataIncIdToUpdate["Id"]) {
+      let error = new Error(`Unable to determine folder item id for list ${listTitle}`);
+      console.error("SharepointChoiceUtils.saveFolderListItem missing item id", error);
+      throw error;
+    }
     let id = await this.save(formDataIncIdToUpdate, uneditedDataToBuildPatch, listTitle);
     let item = await this.sp.web.lists.getByTitle(listTitle).items.getById(id).select("FileRef")();
 
@@ -914,6 +1240,7 @@ export class SharepointChoiceUtils {
           .getFolderByServerRelativePath(path.split("/").slice(0, start).join("/"))
           .addSubFolderUsingPath(path.split("/").slice(start)[0]!);
     } catch (e) {
+      console.warn("SharepointChoiceUtils.ensurePath folder lookup failed; attempting to create it", e);
       await this.sp.web
         .getFolderByServerRelativePath(path.split("/").slice(0, start).join("/"))
         .addSubFolderUsingPath(path.split("/").slice(start)[0]!);
@@ -981,7 +1308,7 @@ export class SharepointChoiceUtils {
   ): Promise<void> {
     path = this.normalizePath(path);
 
-    // common metadata for folder and each file, unless overridden at a file level
+    // Common metadata is intentionally applied after per-file values and overrides matching fields.
     var commonmeta = metadata ? JSON.parse(JSON.stringify(metadata)) : {};
     if (url && url.Url) {
       if (!url.Description) url.Description = url.Url;
@@ -1003,7 +1330,7 @@ export class SharepointChoiceUtils {
         await folder.update(commonmeta);
       }
     } catch (e) {
-      errors.push("Error saving folder metadata " + e);
+      errors.push("Error saving folder metadata " + MapErrors(e));
     }
 
     // process saves and deletes
@@ -1026,7 +1353,7 @@ export class SharepointChoiceUtils {
 
         if (file.Deleted) {
           // file to delete
-          await this.sp.web.getFolderByServerRelativePath(path + "/" + file.FileName).recycle();
+          await this.sp.web.getFileByServerRelativePath(file.ServerRelativeUrl || path + "/" + file.FileName).recycle();
         } else if (file.Data) {
           // file to upload
           var uploaded = await this.sp.web
@@ -1034,27 +1361,30 @@ export class SharepointChoiceUtils {
             .files.addUsingPath(file.FileName, file.Data, {
               EnsureUniqueFileName: true,
             });
+          // Record upload success before metadata updates so a retry never uploads the file again.
+          file.TimeCreated = new Date();
+          file.ServerRelativeUrl = uploaded.ServerRelativeUrl;
+          delete file.Data;
           if (this.hasData(file.ListItemAllFields)) {
             let i = await this.sp.web.getFileByServerRelativePath(uploaded.ServerRelativeUrl).getItem();
             await i.update(file.ListItemAllFields);
           }
-          // mock the data back in so submit again doesnt fail
-          file.TimeCreated = new Date();
-          file.ServerRelativeUrl = uploaded.ServerRelativeUrl;
-          delete file.Data;
         } else if (this.hasData(file.ListItemAllFields)) {
           // get current item and check for changes
-          let i = await this.sp.web.getFileByServerRelativePath(path + "/" + file.FileName).getItem();
+          let i = await this.sp.web
+            .getFileByServerRelativePath(file.ServerRelativeUrl || path + "/" + file.FileName)
+            .getItem();
           await i.update(file.ListItemAllFields);
         }
       } catch (e) {
-        errors.push(`Error saving file ${file.FileName} in folder ${path} with error ${e}`);
+        errors.push(`Error saving file ${file.FileName} in folder ${path} with error ${MapErrors(e)}`);
       }
     }
 
     if (errors.length > 0) {
-      alert("Error saving:\n\n" + errors.join("\n"));
-      throw errors.join("\n");
+      let messages = errors.join("\n");
+      alert(`Error saving file:\n\n${messages}`);
+      throw messages;
     }
   }
 }

@@ -8,6 +8,7 @@ import {
   ChangeDetectionStrategy,
   OnInit,
   OnDestroy,
+  isDevMode,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
@@ -25,6 +26,7 @@ import {
   ExcelIcon,
 } from "./sharepoint-choice.models";
 import { SharepointChoiceComponent } from "./sharepoint-choice.component";
+import { SharepointChoiceLogging } from "./sharepoint-choice.logging";
 import { SharepointChoiceRender, SharepointChoiceRenderContent } from "./sharepoint-choice.render";
 import { Workbook } from "devextreme-exceljs-fork";
 
@@ -54,6 +56,47 @@ interface SharepointChoiceOrder {
   [tabName: string]: string[];
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isSharepointChoiceColumn(value: unknown): value is SharepointChoiceColumn {
+  if (!isRecord(value)) return false;
+
+  if (
+    (value["field"] !== undefined && typeof value["field"] !== "string") ||
+    (value["headerName"] !== undefined && typeof value["headerName"] !== "string") ||
+    (value["headerTooltip"] !== undefined && typeof value["headerTooltip"] !== "string") ||
+    (value["width"] !== undefined && (typeof value["width"] !== "number" || !Number.isFinite(value["width"]))) ||
+    (value["nowrap"] !== undefined && typeof value["nowrap"] !== "boolean") ||
+    (value["center"] !== undefined && typeof value["center"] !== "boolean") ||
+    (value["sortable"] !== undefined && typeof value["sortable"] !== "boolean") ||
+    (value["_filtervisible"] !== undefined && typeof value["_filtervisible"] !== "boolean") ||
+    (value["hide"] !== undefined && typeof value["hide"] !== "boolean" && typeof value["hide"] !== "function") ||
+    (value["cellClicked"] !== undefined && typeof value["cellClicked"] !== "function") ||
+    (value["cellRenderer"] !== undefined && typeof value["cellRenderer"] !== "function") ||
+    (value["spec"] !== undefined && !isRecord(value["spec"]))
+  ) {
+    return false;
+  }
+
+  const filter = value["filter"];
+  if (
+    filter !== undefined &&
+    filter !== "text" &&
+    filter !== "number" &&
+    filter !== "date" &&
+    filter !== "select" &&
+    filter !== "split" &&
+    filter !== "none"
+  ) {
+    return false;
+  }
+
+  const children = value["children"];
+  return children === undefined || (Array.isArray(children) && children.every(isSharepointChoiceColumn));
+}
+
 @Component({
   selector: "app-table",
   templateUrl: "./sharepoint-choice.table.html",
@@ -64,14 +107,16 @@ interface SharepointChoiceOrder {
   providers: [
     {
       provide: ErrorHandler,
+      useClass: SharepointChoiceLogging,
     },
   ],
 })
 export class SharepointChoiceTable implements OnInit, OnDestroy {
   // all data passed in keyed by tab name (not via signals which reduce performance on large data sets)
   @Input() set allData(value: SharepointChoiceTabs) {
-    this._allDataIn = value;
+    this._allDataIn = this.normalizeAllData(value);
     this._allData = {};
+    this._distinctCache.clear();
 
     this._dataLoadCycles++;
     this._refreshCycle++;
@@ -111,9 +156,10 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   // all columns
   @Input() set allCols(value: SharepointChoiceColumn[]) {
-    this._allCols = value;
+    this._allCols = this.normalizeColumns(value);
     // Clear cache when columns change
     this._colsCache.clear();
+    this._nodeCache.clear();
     this.chRef.markForCheck();
   }
   get allCols(): SharepointChoiceColumn[] {
@@ -124,8 +170,11 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   // all tabs or derive from all data
   @Input() set allTabs(value: string[]) {
     const previousTab = this.selectedTab;
-    this._allTabs = value;
-    if (this.selectedTab !== previousTab) this.pageNumber = 1;
+    this._allTabs = this.normalizeTabs(value);
+    if (this.selectedTab !== previousTab) {
+      this.pageNumber = 1;
+      this._nodeCache.clear();
+    }
     this.chRef.markForCheck();
   }
   get allTabs(): string[] {
@@ -135,10 +184,17 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   // selected tab else use stored value or first tab
   @Input() set selectedTab(value: string | undefined) {
+    if (value != null && typeof value !== "string") {
+      this.reportInvalidInput("selectedTab", "a string or undefined", value);
+      value = undefined;
+    }
+
+    const previousTab = this.selectedTab;
     this._selectedTab = value;
     this.setStorage(`Tab`, this._selectedTab);
     // Revert to page 1 on every tab change
     this.pageNumber = 1;
+    if (this.selectedTab !== previousTab) this._nodeCache.clear();
     this.chRef.markForCheck();
   }
   get selectedTab(): string | undefined {
@@ -149,20 +205,220 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   private _selectedTab?: string;
 
   // page size via getter/setter to allow storage
-  @Input() set pageSize(value: number) {
-    this._pageSize = value;
-    this.setStorage(`Size`, this.pageSize);
+  @Input() set pageSize(value: number | string) {
+    this._pageSize = this.normalizePageSize(value);
+    this.setStorage(`Size`, this._pageSize);
     this.pageNumber = 1;
     this.chRef.markForCheck();
   }
   get pageSize(): number {
-    return this._pageSize || 100;
+    return this._pageSize ?? 100;
   }
   private _pageSize?: number;
 
+  private normalizePageSize(value: unknown): number {
+    const parsed =
+      typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : Number.NaN;
+    if (Number.isFinite(parsed) && parsed >= 1) return Math.floor(parsed);
+    if (value !== undefined && value !== null && value !== "") {
+      this.reportInvalidInput("pageSize", "a finite number greater than or equal to 1", value);
+    }
+    return 100;
+  }
+
+  private reportInvalidInput(path: string, expected: string, value: unknown): void {
+    if (!isDevMode()) return;
+    const actual = value === null ? "null" : Array.isArray(value) ? "array" : typeof value;
+    console.error(`[SharepointChoiceTable] Invalid ${path}: expected ${expected}; received ${actual}.`);
+  }
+
+  private reportRuntimeError(context: string, error: unknown): void {
+    if (isDevMode()) console.error(`[SharepointChoiceTable] ${context} failed.`, error);
+  }
+
+  private normalizeAllData(value: unknown): SharepointChoiceTabs {
+    if (!isRecord(value)) {
+      this.reportInvalidInput("allData", "an object of tab names to row arrays", value);
+      return {};
+    }
+
+    const result: SharepointChoiceTabs = {};
+    for (const [tab, rows] of Object.entries(value)) {
+      if (!Array.isArray(rows)) {
+        this.reportInvalidInput(`allData["${tab}"]`, "an array of row objects", rows);
+        continue;
+      }
+
+      const validRows: SharepointChoiceRow[] = [];
+      rows.forEach((row, index) => {
+        if (!isRecord(row)) {
+          this.reportInvalidInput(`allData["${tab}"][${index}]`, "a row object", row);
+          return;
+        }
+        validRows.push(row as SharepointChoiceRow);
+      });
+      result[tab] = validRows;
+    }
+    return result;
+  }
+
+  private normalizeColumns(value: unknown): SharepointChoiceColumn[] {
+    if (!Array.isArray(value)) {
+      this.reportInvalidInput("allCols", "an array of column definitions", value);
+      return [];
+    }
+
+    return value.filter((column, index): column is SharepointChoiceColumn => {
+      if (isSharepointChoiceColumn(column)) return true;
+      this.reportInvalidInput(`allCols[${index}]`, "a valid column definition", column);
+      return false;
+    });
+  }
+
+  private normalizeTabs(value: unknown): string[] | undefined {
+    if (value == null) return undefined;
+    if (!Array.isArray(value)) {
+      this.reportInvalidInput("allTabs", "an array of strings or undefined", value);
+      return undefined;
+    }
+
+    return value.filter((tab, index): tab is string => {
+      if (typeof tab === "string") return true;
+      this.reportInvalidInput(`allTabs[${index}]`, "a string", tab);
+      return false;
+    });
+  }
+
+  private normalizeStringArrayMap(value: unknown, setting: string): Record<string, string[]> {
+    if (value == null) return {};
+    if (!isRecord(value)) {
+      this.reportInvalidInput(setting, "an object of string arrays", value);
+      return {};
+    }
+
+    const result: Record<string, string[]> = {};
+    for (const [tab, values] of Object.entries(value)) {
+      if (!Array.isArray(values)) {
+        this.reportInvalidInput(`${setting}["${tab}"]`, "an array of strings", values);
+        continue;
+      }
+      result[tab] = values.filter((item, index): item is string => {
+        if (typeof item === "string") return true;
+        this.reportInvalidInput(`${setting}["${tab}"][${index}]`, "a string", item);
+        return false;
+      });
+    }
+    return result;
+  }
+
+  private normalizeSort(value: unknown): SharepointChoiceSort {
+    if (value == null) return {};
+    if (!isRecord(value)) {
+      this.reportInvalidInput("sort", "an object of sort arrays", value);
+      return {};
+    }
+
+    const result: SharepointChoiceSort = {};
+    for (const [tab, entries] of Object.entries(value)) {
+      if (!Array.isArray(entries)) {
+        this.reportInvalidInput(`sort["${tab}"]`, "an array of sort definitions", entries);
+        continue;
+      }
+
+      result[tab] = entries.filter((entry, index): entry is SharepointChoiceSort[string][number] => {
+        if (
+          isRecord(entry) &&
+          typeof entry["field"] === "string" &&
+          (entry["direction"] === "asc" || entry["direction"] === "desc")
+        ) {
+          return true;
+        }
+        this.reportInvalidInput(`sort["${tab}"][${index}]`, "a field name and asc/desc direction", entry);
+        return false;
+      });
+    }
+    return result;
+  }
+
+  private normalizeFilter(value: unknown): SharepointChoiceFilter {
+    if (value == null) return {};
+    if (!isRecord(value)) {
+      this.reportInvalidInput("filter", "an object of tab filters", value);
+      return {};
+    }
+
+    const result: SharepointChoiceFilter = {};
+    for (const [tab, fields] of Object.entries(value)) {
+      if (!isRecord(fields)) {
+        this.reportInvalidInput(`filter["${tab}"]`, "an object of field filters", fields);
+        continue;
+      }
+
+      const validFields: SharepointChoiceFilter[string] = {};
+      for (const [field, operations] of Object.entries(fields)) {
+        if (!isRecord(operations)) {
+          this.reportInvalidInput(`filter["${tab}"]["${field}"]`, "an object of filter operations", operations);
+          continue;
+        }
+
+        const validOperations: SharepointChoiceFilter[string][string] = {};
+        for (const [operation, filterValue] of Object.entries(operations)) {
+          const path = `filter["${tab}"]["${field}"]["${operation}"]`;
+          if (filterValue === undefined) continue;
+
+          if (operation === "equals") {
+            if (
+              filterValue === null ||
+              typeof filterValue === "string" ||
+              typeof filterValue === "boolean" ||
+              (typeof filterValue === "number" && Number.isFinite(filterValue)) ||
+              (filterValue instanceof Date && Number.isFinite(filterValue.getTime()))
+            ) {
+              validOperations.equals = filterValue;
+            } else if (Array.isArray(filterValue)) {
+              const strings = filterValue.filter((item): item is string => typeof item === "string");
+              if (strings.length === filterValue.length) validOperations.equals = strings;
+              else this.reportInvalidInput(path, "a scalar or array of strings", filterValue);
+            } else {
+              this.reportInvalidInput(path, "a scalar or array of strings", filterValue);
+            }
+          } else if (operation === "contains") {
+            if (filterValue === null || typeof filterValue === "string") validOperations.contains = filterValue;
+            else this.reportInvalidInput(path, "a string or null", filterValue);
+          } else if (operation === "greater" || operation === "less") {
+            const rangeValue = this.normalizeRangeFilter(filterValue, path);
+            if (rangeValue !== undefined) validOperations[operation] = rangeValue;
+          } else {
+            this.reportInvalidInput(path, "equals, contains, greater, or less", filterValue);
+          }
+        }
+
+        if (Object.keys(validOperations).length > 0) validFields[field] = validOperations;
+      }
+      result[tab] = validFields;
+    }
+    return result;
+  }
+
+  private normalizeRangeFilter(value: unknown, path: string): number | Date | null | undefined {
+    if (value === null) return null;
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (value instanceof Date && Number.isFinite(value.getTime())) return value;
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(value)) {
+      const date = new Date(value);
+      if (Number.isFinite(date.getTime())) return date;
+    }
+
+    this.reportInvalidInput(path, "a finite number, valid date, or ISO date string", value);
+    return undefined;
+  }
+
   // should show loading state and disable clicks etc
   @Input() set loading(value: boolean) {
-    this._loading = value;
+    if (typeof value !== "boolean" && value != null) {
+      this.reportInvalidInput("loading", "a boolean", value);
+    }
+    this._loading = value === true;
     this.invalidateRows();
     this.chRef.markForCheck();
   }
@@ -172,6 +428,10 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   private _loading: boolean = false;
 
   @Input() set search(value: SharepointChoiceRowChild | undefined) {
+    if (value != null && !isRecord(value)) {
+      this.reportInvalidInput("search", "an object or undefined", value);
+      value = undefined;
+    }
     this._search = value;
 
     this.sort = this.getStorage(`Sort`);
@@ -192,11 +452,13 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   }
   private _search?: SharepointChoiceRowChild;
 
+  // Change this input after mutating row data in place so OnPush checks and caches are refreshed.
   @Input() set refreshKey(value: unknown) {
     this._refreshKey = value;
     this._refreshCycle++;
     this.invalidateRows(true);
     this._nodeCache.clear();
+    this._distinctCache.clear();
     this.chRef.markForCheck();
   }
   get refreshKey(): unknown {
@@ -221,6 +483,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   // outbound events or pseudo callbacks for await support on click, in order of trigger
   // cellClicked triggers ahead of all of these if present
+  // Keep the legacy callback inputs loosely typed for consumer compatibility; use explicit signatures for new APIs.
   @Input() rowClicked?: Function; // [rowClicked]="rowClicked" rowClicked = async (rowData: any, target: HTMLElement | EventTarget | undefined) => { ... } to ensure this. is from the app and not from app-table
   @Output() clicked = new EventEmitter<{
     row: SharepointChoiceRow;
@@ -246,7 +509,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   // stored sort/filter/hidden columns via getter/setter with storage and recall
   set sort(value: SharepointChoiceSort) {
-    this._sort = value;
+    this._sort = this.normalizeSort(value);
     this.setStorage(`Sort`, this.sort);
     this.debounceAndMark();
   }
@@ -256,7 +519,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   private _sort?: SharepointChoiceSort;
 
   set filter(value: SharepointChoiceFilter) {
-    this._filter = value;
+    this._filter = this.normalizeFilter(value);
     this.setStorage(`Filter`, this.filter);
     this.pageNumber = 1;
     this.debounceAndMark();
@@ -267,7 +530,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   private _filter?: SharepointChoiceFilter;
 
   set columnOrder(value: SharepointChoiceOrder) {
-    this._columnOrder = value;
+    this._columnOrder = this.normalizeStringArrayMap(value, "columnOrder");
     this.setStorage(`Order`, this.columnOrder);
     this._colsCache.clear();
     this.chRef.markForCheck();
@@ -278,7 +541,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   private _columnOrder?: SharepointChoiceOrder;
 
   set hiddenColumns(value: SharepointChoiceHide) {
-    this._hiddenColumns = value;
+    this._hiddenColumns = this.normalizeStringArrayMap(value, "hiddenColumns");
     this.setStorage(`Hide`, this.hiddenColumns);
     // rebuild all on change as the ticks can be any
     this._colsCache.clear();
@@ -293,54 +556,42 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   private _dataLoadCycles: number = 0;
   private _refreshCycle: number = 0;
   private _debounceFilterSort?: ReturnType<typeof setTimeout>;
+  private _resizeCleanup?: () => void;
 
   // Memoization cache for columns filtered/sorted rows
   private _colsCache: Map<string, SharepointChoiceColumn[]> = new Map();
   private _rowsCache: Map<string, SharepointChoiceRow[]> = new Map();
+  private _distinctCache: Map<string, any[]> = new Map();
   private _pageCache: SharepointChoiceRow[] = [];
   private _fieldMapCache: Map<string, Array<string>> = new Map();
-  private _nodeCache: Map<string, any> = new Map();
+  private _nodeCache: Map<string, string | Node | null | undefined> = new Map();
   private _isObserved: boolean = false;
   private _dragColumn?: SharepointChoiceColumn;
   private _dragParent?: SharepointChoiceColumn;
   private _suppressHeaderClick: boolean = false;
 
-  constructor(private chRef: ChangeDetectorRef) {}
+  constructor(
+    private chRef: ChangeDetectorRef,
+    private errorHandler: ErrorHandler,
+  ) {}
 
   ngOnInit(): void {
-    if (!this._sort)
-      try {
-        this._sort = this.getStorage(`Sort`);
-      } catch (error) {
-        console.log("SharepointChoiceTable.ngOnInit storage load error: Sort", error);
-      }
-    if (!this._filter)
-      try {
-        this._filter = this.getStorage(`Filter`);
-      } catch (error) {
-        console.log("SharepointChoiceTable.ngOnInit storage load error: Filter", error);
-      }
-    if (!this._columnOrder)
-      try {
-        this._columnOrder = this.getStorage(`Order`);
-      } catch (error) {
-        console.log("SharepointChoiceTable.ngOnInit storage load error: Order", error);
-      }
+    if (!this._sort) this._sort = this.normalizeSort(this.getStorage(`Sort`));
+    if (!this._filter) this._filter = this.normalizeFilter(this.getStorage(`Filter`));
+    if (!this._columnOrder) this._columnOrder = this.normalizeStringArrayMap(this.getStorage(`Order`), "columnOrder");
     if (!this._hiddenColumns)
-      try {
-        this._hiddenColumns = this.getStorage(`Hide`);
-      } catch (error) {
-        console.log("SharepointChoiceTable.ngOnInit storage load error: Hide", error);
+      this._hiddenColumns = this.normalizeStringArrayMap(this.getStorage(`Hide`), "hiddenColumns");
+    if (!this._selectedTab) {
+      const tab: unknown = this.getStorage(`Tab`);
+      if (tab == null || typeof tab === "string") this._selectedTab = tab ?? undefined;
+      else {
+        this.reportInvalidInput("selectedTab", "a string or undefined", tab);
+        this._selectedTab = undefined;
       }
-    if (!this._selectedTab)
-      try {
-        this._selectedTab = this.getStorage(`Tab`);
-      } catch (error) {
-        console.log("SharepointChoiceTable.ngOnInit storage load error: Tab", error);
-      }
+    }
     if (!this._pageSize)
       try {
-        this._pageSize = this.getStorage(`Size`);
+        this.pageSize = this.getStorage(`Size`);
       } catch (error) {
         console.log("SharepointChoiceTable.ngOnInit storage load error: Size", error);
       }
@@ -348,6 +599,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     clearTimeout(this._debounceFilterSort);
+    this._resizeCleanup?.();
   }
 
   private matches(row: SharepointChoiceRow, search: SharepointChoiceRowChild): boolean {
@@ -390,6 +642,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     // use debounce to avoid multiple rapid changes clearing cache too often across multiple columns and filter/sort types etc so simpler than rxjs
     this.invalidateRows(resetPage);
     clearTimeout(this._debounceFilterSort);
+    // Let nested controls and related filter/sort changes settle before emitting selection.
     this._debounceFilterSort = setTimeout(() => {
       if (!this.selectedTab) return;
       // drop cache to recalc rows
@@ -405,21 +658,29 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
   private storageObject(): Record<string, any> {
     const key = this.storageKey();
+    let raw: string | null;
 
     try {
-      const raw = localStorage.getItem(key);
-      if (!raw) return {};
-
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+      raw = localStorage.getItem(key);
     } catch (error) {
-      console.log("SharepointChoiceTable.storageObject read error", error);
+      this.reportRuntimeError(`Reading table preferences "${key}"`, error);
+      return {};
+    }
+
+    if (!raw) return {};
+
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (isRecord(parsed)) return parsed;
+      this.reportInvalidInput(`localStorage["${key}"]`, "a JSON object", parsed);
+    } catch (error) {
+      this.reportRuntimeError(`Parsing table preferences "${key}"`, error);
     }
 
     try {
       localStorage.setItem(key, "{}");
     } catch (error) {
-      console.log("SharepointChoiceTable.storageObject reset error", error);
+      this.reportRuntimeError(`Resetting table preferences "${key}"`, error);
     }
 
     return {};
@@ -430,9 +691,13 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   }
 
   setStorage(key: string, value: any) {
-    var s = this.storageObject();
-    s[key] = value;
-    localStorage.setItem(this.storageKey(), JSON.stringify(s));
+    try {
+      const state = this.storageObject();
+      state[key] = value;
+      localStorage.setItem(this.storageKey(), JSON.stringify(state));
+    } catch (error) {
+      this.reportRuntimeError(`Saving table preference "${key}"`, error);
+    }
   }
 
   // tab change resets page number and emits empty selection
@@ -458,7 +723,8 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     queueMicrotask(() => {
       try {
         this.chRef.detectChanges();
-      } catch {
+      } catch (error) {
+        this.reportRuntimeError("emitSelection change detection", error);
         this.chRef.markForCheck();
       }
     });
@@ -513,11 +779,15 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
 
     // ensure object type is correct or replace the object
     let current: string[] = [];
-    try {
-      if (!this.selectedTab || !col.field) return;
-      current = (this.filter[this.selectedTab]?.[col.field]?.["equals"] as string[]) ?? [];
-    } catch (e) {
-      // lazy drop out
+    const selectedTab = this.selectedTab;
+    if (!selectedTab || !col.field) return;
+    const selectedValues = this.filter[selectedTab]?.[col.field]?.equals;
+    if (selectedValues === undefined || selectedValues === null) {
+      current = [];
+    } else if (Array.isArray(selectedValues) && selectedValues.every((value) => typeof value === "string")) {
+      current = [...selectedValues];
+    } else {
+      this.reportInvalidInput(`filter["${selectedTab}"]["${col.field}"].equals`, "an array of strings", selectedValues);
     }
 
     // if there are selected results set the field to add/remove the most recent click
@@ -548,11 +818,33 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       value = value.trim();
       // ensure any strings are correctly converted
       if (col.filter == "date" && value) {
-        value = new Date(value);
+        const date = new Date(value);
+        if (!Number.isFinite(date.getTime())) {
+          this.reportInvalidInput(`filterChange("${col.field}")`, "a valid date", value);
+          return;
+        }
+        value = date;
       }
       if (col.filter == "number" && value) {
-        value = Number(value);
+        const number = Number(value);
+        if (!Number.isFinite(number)) {
+          this.reportInvalidInput(`filterChange("${col.field}")`, "a finite number", value);
+          return;
+        }
+        value = number;
       }
+    }
+    if (col.filter === "date" && value instanceof Date && !Number.isFinite(value.getTime())) {
+      this.reportInvalidInput(`filterChange("${col.field}")`, "a valid date", value);
+      return;
+    }
+    if (col.filter === "number" && typeof value === "number" && !Number.isFinite(value)) {
+      this.reportInvalidInput(`filterChange("${col.field}")`, "a finite number", value);
+      return;
+    }
+    if (Array.isArray(value) && !value.every((item) => typeof item === "string")) {
+      this.reportInvalidInput(`filterChange("${col.field}")`, "an array of strings", value);
+      value = value.filter((item): item is string => typeof item === "string");
     }
 
     // Get current filter state
@@ -630,12 +922,21 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     return this.hasActiveValue(this.search) || this.hasActiveValue(this.sort) || this.hasActiveValue(this.filter);
   }
 
+  // Search is controlled by the parent and column layout is intentionally retained.
   clearTable(event?: Event): void {
     this.resetFilters(false);
     this.cleared.emit();
   }
 
   async exportTable(currentRows: SharepointChoiceRow[]): Promise<void> {
+    try {
+      await this.exportTableCore(currentRows);
+    } catch (error) {
+      this.errorHandler.handleError(error);
+    }
+  }
+
+  private async exportTableCore(currentRows: SharepointChoiceRow[]): Promise<void> {
     if (!this.export || !this.selectedTab) return;
 
     let cols: SharepointChoiceColumn[] = [];
@@ -696,13 +997,13 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     );
     let title = typeof this.export.title === "function" ? this.export.title(context) : this.export.title;
 
+    worksheet.columns = columns;
     if (title) {
       let titleValues = Array.isArray(title) ? title : [title];
-      let titleRow = worksheet.addRow(titleValues);
+      let titleRow = worksheet.insertRow(1, titleValues);
       titleRow.font = { bold: true };
     }
 
-    worksheet.columns = columns;
     rows.forEach((row) => worksheet.addRow(row));
 
     if (this.export.autoWidth !== false)
@@ -728,7 +1029,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       (typeof this.export.fileName === "function" ? this.export.fileName(context) : this.export.fileName) ||
       `${context.tab}.xlsx`;
     link.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   columnToggle(col: SharepointChoiceColumn, tab: string): void {
@@ -826,28 +1127,40 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   startResize(event: MouseEvent, col: SharepointChoiceColumn): void {
     event.preventDefault();
     event.stopPropagation();
+    this._resizeCleanup?.();
     const startX = event.pageX;
     var target = event.target as HTMLElement;
     const startWidth = target.parentNode ? (target.parentNode as HTMLElement).offsetWidth : col.width || 100;
     const min = parseInt(target.getAttribute("start-width") || "0");
+    // The first rendered width is intentionally retained as this column's minimum width.
     if (!min) target.setAttribute("start-width", startWidth.toString());
     target.style.border = "1px solid #000";
 
+    let onMouseUp: (e: MouseEvent) => void;
+    let onWindowBlur: () => void;
     const onMouseMove = (e: MouseEvent) => {
       target.style.right = startX - e.pageX + "px";
     };
-    const onMouseUp = (e: MouseEvent) => {
+    const cleanup = () => {
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("blur", onWindowBlur);
       target.style.border = "none";
+      target.style.right = "0px";
+      if (this._resizeCleanup === cleanup) this._resizeCleanup = undefined;
+    };
+    onMouseUp = (e: MouseEvent) => {
+      cleanup();
       let newWidth = startWidth + (e.pageX - startX);
       if (newWidth < min) newWidth = min;
       col.width = newWidth;
-      target.style.right = "0px";
       this.chRef.markForCheck();
     };
+    onWindowBlur = () => cleanup();
+    this._resizeCleanup = cleanup;
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("blur", onWindowBlur);
   }
 
   // handle cell click or row click, return true or false to current cell editing, done via then to avoid await in template as it doesnt impact outcome
@@ -865,6 +1178,7 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
       // failed to find TD then end
       if (!target) return;
       // await render, init, all internals of app-choice then focus to edit
+      // The fixed delay is intentional: nested choice controls may need time to load and initialize their options.
       setTimeout(() => {
         var el = target.getElementsByTagName("select");
         if (el.length == 0) el = target.getElementsByTagName("textarea");
@@ -896,8 +1210,8 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
             this.invalidateRows(true);
             this.chRef.detectChanges();
           }
-        }).catch((error: any) => {
-          console.log("SharepointChoiceTable.handleCellClick async error", error);
+        }).catch((error: unknown) => {
+          this.errorHandler.handleError(error);
         });
       }
     }
@@ -1144,7 +1458,11 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
   filterDistinct(field?: string, split: boolean = false): any[] {
     if (!field || !this.allData || !this.selectedTab) return [];
 
-    const tabData = this.allData[this.selectedTab];
+    const tab = this.selectedTab;
+    const cacheKey = JSON.stringify([tab, field, split]);
+    if (this._distinctCache.has(cacheKey)) return this._distinctCache.get(cacheKey)!;
+
+    const tabData = this.allData[tab];
     if (!tabData) return [];
 
     let values: any[] = [];
@@ -1164,13 +1482,15 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
         }
       }
     });
-    return values.sort((a, b) => {
+    const sorted = values.sort((a, b) => {
       if (a === "(blanks)") return -1;
       if (b === "(blanks)") return 1;
       if (a < b) return -1;
       if (a > b) return 1;
       return 0;
     });
+    this._distinctCache.set(cacheKey, sorted);
+    return sorted;
   }
 
   currentPageRows(rows: SharepointChoiceRow[]): SharepointChoiceRow[] {
@@ -1183,11 +1503,14 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     return result;
   }
 
+  trackRow(index: number, row: SharepointChoiceRow): string | number {
+    return row._tracking ?? index;
+  }
+
   // get rows based on tab, sort and filter
   rows(tab: string): SharepointChoiceRow[] {
     // Return cached result if available (cache cleared on filter/sort changes)
-    const cached = this._rowsCache.get(tab);
-    if (cached && cached.length > 0) return cached;
+    if (this._rowsCache.has(tab)) return this._rowsCache.get(tab)!;
 
     this._pageCache = [];
     this._isObserved = !!this.rowClicked || this.clicked.observed;
@@ -1258,10 +1581,10 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
                 )
               )
                 return false;
-            } else if (op == "greater") {
-              if (!(c >= value)) return false;
-            } else if (op == "less") {
-              if (!(c === null || c <= value)) return false;
+            } else if (op == "greater" || op == "less") {
+              if (c === null || c === undefined || c === "") return false;
+              if (op == "greater" && !(c >= value)) return false;
+              if (op == "less" && !(c <= value)) return false;
             }
           }
         }
@@ -1305,10 +1628,14 @@ export class SharepointChoiceTable implements OnInit, OnDestroy {
     if (!col.cellRenderer) return null;
 
     // could return issues if cols hidden and many aren't named at all
-    const key = `${row["_tracking"] ?? rowIndex}::${col.field ?? col.headerName ?? (1000 * colIndex + (childIndex ?? 0)).toString()}`;
+    const key = JSON.stringify([
+      this.selectedTab ?? "",
+      row["_tracking"] ?? rowIndex,
+      col.field ?? col.headerName ?? (1000 * colIndex + (childIndex ?? 0)).toString(),
+    ]);
 
     let content = this._nodeCache.get(key);
-    if (!content) {
+    if (!this._nodeCache.has(key)) {
       content = col.cellRenderer(value, row, rowIndex);
       this._nodeCache.set(key, content);
     }

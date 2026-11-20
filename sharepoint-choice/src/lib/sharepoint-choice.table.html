@@ -30,7 +30,7 @@ currentPage = currentPageRows(currentRows); @let maxpage = ceil(currentRows.leng
     <button
       (click)="clearTable($event)"
       [disabled]="loading"
-      title="Clear search, sorting, filters and column order"
+      title="Clear sorting and filters; external search and column layout are retained"
       class="Clear"
     >
       &#9776;&#8693; Clear
@@ -406,7 +406,7 @@ currentPage = currentPageRows(currentRows); @let maxpage = ceil(currentRows.leng
           Loading...
         </td>
       </tr>
-      } @else { @for (row of currentPage; track $index; let rowIndex = $index) { @let hlRow = hyperlink(row);
+      } @else { @for (row of currentPage; track trackRow($index, row); let rowIndex = $index) { @let hlRow = hyperlink(row);
       <tr
         [ngClass]="{'selected': row._selected, 'loading': loading }"
         role="row"

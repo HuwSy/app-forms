@@ -145,6 +145,7 @@ export class SharepointChoiceRender implements OnChanges, OnDestroy {
 
     const navigate = () => {
       const anchor = this.renderer.createElement("a") as HTMLAnchorElement;
+      // This callback URL intentionally bypasses Angular's template URL sanitizer to preserve existing consumer behavior.
       anchor.href = hyperlink;
       anchor.target = hyperlinkTarget || "_self";
       if (anchor.target === "_blank") anchor.rel = "noopener";

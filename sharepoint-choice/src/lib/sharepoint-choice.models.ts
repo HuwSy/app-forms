@@ -47,6 +47,7 @@ export interface SharepointChoiceForm {
 export interface SharepointChoiceAttachment {
   FileName: string;
   ServerRelativeUrl?: string;
+  Uploaded?: boolean; // in-memory success marker for retry-safe attachment saves
   Data?: ArrayBuffer;
   Length?: number;
   Checked?: boolean;
@@ -66,6 +67,7 @@ export interface SharepointChoiceField {
     | "Note"
     | "DateTime"
     | "Number"
+    | "Currency"
     | "Integer"
     | "Boolean"
     | "Choice"
@@ -75,7 +77,8 @@ export interface SharepointChoiceField {
     | "URL"
     | "Attachments"
     | "Lookup"
-    | "LookupMulti";
+    | "LookupMulti"
+    | "Geolocation";
   InternalName?: string;
   Scope?: string;
   Title?: string;
