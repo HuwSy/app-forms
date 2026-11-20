@@ -1,10 +1,11 @@
 {
   "name": "sharepoint-choice",
-  "version": "22.2.11",
+  "version": "22.2.17",
   "description": "SharePoint driven multi choice and form fields",
   "scripts": {
     "ng": "ng",
-    "build": "ng build sharepoint-choice"
+    "build": "ng build sharepoint-choice",
+    "test": "ng test sharepoint-choice --watch=false"
   },
   "private": false,
   "sideEffects": false,
@@ -27,14 +28,15 @@
     "@turbowarp/jszip": "^3",
     "buffer": "^6",
     "devextreme-exceljs-fork": "^4",
-    "postal-mime": "^4",
-    "stacktrace-js": "^2"
+    "postal-mime": "^4"
   },
   "devDependencies": {
     "@angular/build": "^22",
     "@angular/cli": "^22",
     "@types/office-js": "^1",
+    "happy-dom": "^21",
     "ng-packagr": "^22",
-    "typescript": "^6"
+    "typescript": "^6",
+    "vitest": "^5"
   }
 }
