@@ -1,4 +1,5 @@
 import { ChangeDetectorRef, ElementRef, ErrorHandler } from "@angular/core";
+import { TestBed } from "@angular/core/testing";
 import { Workbook } from "devextreme-exceljs-fork";
 import JSZip from "@turbowarp/jszip";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,6 +13,13 @@ import type { SharepointChoiceComponent as SharepointChoiceComponentType } from 
 import type { SharepointChoiceTable as SharepointChoiceTableType } from "./sharepoint-choice.table";
 import type { SharepointChoiceUtils as SharepointChoiceUtilsType } from "./sharepoint-choice.utils";
 import { SharepointChoiceRefresh } from "./sharepoint-choice.refresh";
+
+const { mockWeb } = vi.hoisted(() => ({ mockWeb: vi.fn() }));
+
+vi.mock("@pnp/sp/webs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pnp/sp/webs")>();
+  return { ...actual, Web: mockWeb };
+});
 
 class TestChangeDetectorRef extends ChangeDetectorRef {
   override detach(): void {}
@@ -45,6 +53,13 @@ function createComponent(): SharepointChoiceComponentType {
   return component;
 }
 
+async function createComponentFixture() {
+  await TestBed.configureTestingModule({
+    imports: [SharepointChoiceComponentCtor],
+  }).compileComponents();
+  return TestBed.createComponent(SharepointChoiceComponentCtor);
+}
+
 beforeAll(async () => {
   storage.clear();
   vi.stubGlobal(
@@ -67,6 +82,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   storage.clear();
+  mockWeb.mockReset();
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => ({
@@ -112,6 +128,143 @@ describe("SharepointChoiceLogging", () => {
 });
 
 describe("SharepointChoiceTable", () => {
+  it("provides columns and current-page rows for the grid to display", () => {
+    const table = createTable();
+    table.allData = {
+      Records: [
+        { Id: 1, Name: "Alpha", Score: 2 },
+        { Id: 2, Name: "Beta", Score: 1 },
+      ],
+    };
+    table.allCols = [{ field: "Name" }, { field: "Score" }];
+    table.selectedTab = "Records";
+
+    expect(table.fields("Records").map((column) => column.field)).toEqual(["Name", "Score"]);
+    expect(
+      table.currentPageRows(table.rows("Records")).map((row) => [row["Name"], row["Score"]]),
+    ).toEqual([
+      ["Alpha", 2],
+      ["Beta", 1],
+    ]);
+  });
+
+  it("filters displayed rows through the column filter handler", () => {
+    const table = createTable();
+    table.allData = {
+      Records: [
+        { Id: 1, Name: "Alpha", Score: 1 },
+        { Id: 2, Name: "Beta", Score: 2 },
+        { Id: 3, Name: "beta-block", Score: 4 },
+      ],
+    };
+    table.selectedTab = "Records";
+
+    table.filterChange({ field: "Name", filter: "text" }, "contains", "BETA");
+
+    expect(table.rows("Records").map((row) => row["Name"])).toEqual(["Beta", "beta-block"]);
+
+    table.filterChange({ field: "Score", filter: "number" }, "greater", "1");
+    table.filterChange({ field: "Score", filter: "number" }, "less", "3");
+
+    expect(table.currentPageRows(table.rows("Records")).map((row) => row["Name"])).toEqual(["Beta"]);
+  });
+
+  it("sorts displayed rows in both directions from header clicks without mutating source data", () => {
+    const table = createTable();
+    table.allData = {
+      Records: [
+        { Id: 1, Score: 3 },
+        { Id: 2, Score: 1 },
+        { Id: 3, Score: 2 },
+      ],
+    };
+    table.selectedTab = "Records";
+    const scoreColumn = { field: "Score" };
+    const originalScores = table.allData["Records"]!.map((row) => row["Score"]);
+
+    table.headerClick(scoreColumn);
+    expect(table.rows("Records").map((row) => row["Score"])).toEqual([1, 2, 3]);
+
+    table.headerClick(scoreColumn);
+    expect(table.rows("Records").map((row) => row["Score"])).toEqual([3, 2, 1]);
+
+    table.headerClick(scoreColumn);
+    expect(table.rows("Records").map((row) => row["Score"])).toEqual(originalScores);
+    expect(table.allData["Records"]!.map((row) => row["Score"])).toEqual(originalScores);
+  });
+
+  it("shows the requested page and returns to the first page when page size changes", () => {
+    const table = createTable();
+    table.allData = {
+      Records: [
+        { Value: "one" },
+        { Value: "two" },
+        { Value: "three" },
+        { Value: "four" },
+        { Value: "five" },
+      ],
+    };
+    table.selectedTab = "Records";
+    table.pageSize = 2;
+
+    expect(table.currentPageRows(table.rows("Records")).map((row) => row["Value"])).toEqual(["one", "two"]);
+
+    table.pageNumber = 2;
+    expect(table.currentPageRows(table.rows("Records")).map((row) => row["Value"])).toEqual(["three", "four"]);
+
+    table.pageNumber = 3;
+    expect(table.currentPageRows(table.rows("Records")).map((row) => row["Value"])).toEqual(["five"]);
+
+    table.pageSize = 3;
+    expect(table.pageNumber).toBe(1);
+    expect(table.currentPageRows(table.rows("Records")).map((row) => row["Value"])).toEqual(["one", "two", "three"]);
+  });
+
+  it("keeps column order and visibility scoped to each tab", () => {
+    const table = createTable();
+    table.allData = { Records: [], Archive: [] };
+    table.allCols = [{ field: "Name" }, { field: "Status" }];
+    table.columnOrder = { Records: ["Status", "Name"] };
+
+    expect(table.fields("Records").map((column) => column.field)).toEqual(["Status", "Name"]);
+    expect(table.fields("Archive").map((column) => column.field)).toEqual(["Name", "Status"]);
+
+    table.columnToggle({ field: "Status" }, "Records");
+
+    expect(table.fields("Records").map((column) => column.field)).toEqual(["Name"]);
+    expect(table.fields("Archive").map((column) => column.field)).toEqual(["Name", "Status"]);
+  });
+
+  it("clears sorting and filters while retaining search and column layout", () => {
+    const table = createTable();
+    table.search = { Name: "match" };
+    table.allData = {
+      Records: [
+        { Name: "match row", Status: "open" },
+        { Name: "other row", Status: "closed" },
+      ],
+    };
+    table.allCols = [{ field: "Name" }, { field: "Status" }];
+    table.selectedTab = "Records";
+    table.sort = { Records: [{ field: "Name", direction: "desc" }] };
+    table.filter = { Records: { Status: { equals: "open" } } };
+    table.columnOrder = { Records: ["Status", "Name"] };
+    table.hiddenColumns = { Records: ["Status"] };
+    const cleared = vi.fn();
+    table.cleared.subscribe(cleared);
+
+    table.clearTable();
+
+    expect(table.sort).toEqual({});
+    expect(table.filter).toEqual({});
+    expect(table.rows("Records").map((row) => row["Name"])).toEqual(["match row"]);
+    expect(table.search).toEqual({ Name: "match" });
+    expect(table.columnOrder).toEqual({ Records: ["Status", "Name"] });
+    expect(table.hiddenColumns).toEqual({ Records: ["Status"] });
+    expect(table.fields("Records").map((column) => column.field)).toEqual(["Name"]);
+    expect(cleared).toHaveBeenCalledOnce();
+  });
+
   it("excludes null, undefined, and empty values from upper-bound filters", () => {
     const table = createTable();
     table.allData = {
@@ -444,6 +597,162 @@ describe("SharepointChoiceComponent", () => {
       results: ["Blue"],
     });
     expect(component.choices()).toEqual(["Blue"]);
+  });
+
+  it("renders a field when its form data is loaded after the initial render", async () => {
+    const fixture = await createComponentFixture();
+    try {
+      const component = fixture.componentInstance;
+      component.field = "Title";
+      component.spec = { Title: { TypeAsString: "Text", Title: "Title" } };
+      component.form = { Title: "" };
+      fixture.detectChanges();
+
+      const input = fixture.nativeElement.querySelector(".Text input") as HTMLInputElement | null;
+      expect(input?.value).toBe("");
+
+      component.form = { Title: "Loaded from SharePoint" };
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(input?.value).toBe("Loaded from SharePoint");
+    } finally {
+      fixture.destroy();
+    }
+  });
+
+  it("debounces text search as the user types, renders matches, and applies a selection", async () => {
+    const fixture = await createComponentFixture();
+    try {
+      const component = fixture.componentInstance;
+      const form: SharepointChoiceForm = { Contact: "" };
+      const match: SharepointChoiceForm = { Contact: "Ada Lovelace" };
+      const parent = { source: "directory" };
+      const search = vi.fn(async () => [match]);
+      const select = vi.fn();
+
+      component.field = "Contact";
+      component.spec = { Contact: { TypeAsString: "Text", Title: "Contact" } };
+      component.form = form;
+      component.text = { search, select, parent };
+      fixture.detectChanges();
+      vi.useFakeTimers();
+
+      const input = fixture.nativeElement.querySelector(".Text input") as HTMLInputElement;
+      input.value = "Ada";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent("keyup", { key: "a", bubbles: true }));
+      fixture.detectChanges();
+
+      expect(search).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(250);
+      fixture.detectChanges();
+
+      expect(search).toHaveBeenCalledOnce();
+      expect(search).toHaveBeenCalledWith("Ada", parent);
+      const suggestion = fixture.nativeElement.querySelector(".AutoComplete li") as HTMLLIElement | null;
+      expect(suggestion?.textContent?.trim()).toBe("Ada Lovelace");
+
+      await component.selectedText(match);
+
+      expect(form["Contact"]).toBe("Ada Lovelace");
+      expect(select).toHaveBeenCalledWith(match, parent);
+    } finally {
+      fixture.destroy();
+    }
+  });
+
+  it("starts user searches only after three characters and renders returned suggestions", async () => {
+    const fixture = await createComponentFixture();
+    try {
+      const component = fixture.componentInstance;
+      const user = { Id: 7, Title: "Ada Lovelace", LoginName: "ada@example.test" };
+      component.field = "Owner";
+      component.spec = { Owner: { TypeAsString: "User", Title: "Owner" } };
+      component.form = { OwnerId: null };
+      fixture.detectChanges();
+      const search = vi.spyOn(component, "onUpUserSearch").mockImplementation(async () => {
+        component.users = [user];
+        component["chRef"].markForCheck();
+      });
+      const input = fixture.nativeElement.querySelector(".User > input:not([style])") as HTMLInputElement;
+      vi.useFakeTimers();
+
+      input.value = "ad";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent("keyup", { key: "d", bubbles: true }));
+      fixture.detectChanges();
+      await vi.advanceTimersByTimeAsync(300);
+      expect(search).not.toHaveBeenCalled();
+
+      input.value = "ada";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent("keyup", { key: "a", bubbles: true }));
+      fixture.detectChanges();
+      await vi.advanceTimersByTimeAsync(249);
+      expect(search).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      fixture.detectChanges();
+
+      expect(search).toHaveBeenCalledOnce();
+      expect(search).toHaveBeenCalledWith("ada");
+      expect(component.users).toEqual([user]);
+      const suggestion = fixture.nativeElement.querySelector(".AutoComplete li") as HTMLLIElement | null;
+      expect(suggestion?.textContent?.trim()).toBe("Ada Lovelace");
+    } finally {
+      fixture.destroy();
+    }
+  });
+
+  it("stores ensured single and multi-user selections without adding duplicates", async () => {
+    const component = createComponent();
+    const contextWindow = window as typeof window & {
+      _spPageContextInfo?: { webAbsoluteUrl: string; userLoginName?: string };
+    };
+    const previousContext = contextWindow._spPageContextInfo;
+    contextWindow._spPageContextInfo = {
+      webAbsoluteUrl: "https://example.test/sites/test",
+      userLoginName: "test-user",
+    };
+    component.field = "Owner";
+    component.form = { OwnerId: null, ReviewersId: [] };
+    component.spec = {
+      Owner: { TypeAsString: "User", Scope: "/sites/people" },
+      Reviewers: { TypeAsString: "UserMulti", Scope: "/sites/people" },
+    };
+    const ensureUser = vi.fn(async (loginName: string) => ({
+      Id: loginName === "ada@example.test" ? 7 : 8,
+    }));
+    mockWeb.mockReturnValue({ ensureUser });
+
+    try {
+      await component.selectedUser({
+        Id: 0,
+        Title: "Ada Lovelace",
+        LoginName: "ada@example.test",
+      });
+
+      expect(component.form["OwnerId"]).toBe(7);
+
+      component.field = "Reviewers";
+      await component.selectedUser({
+        Id: 0,
+        Title: "Grace Hopper",
+        LoginName: "grace@example.test",
+      });
+      await component.selectedUser({
+        Id: 0,
+        Title: "Grace Hopper",
+        LoginName: "grace@example.test",
+      });
+
+      expect(component.form["ReviewersId"].results).toEqual([8]);
+      expect(ensureUser).toHaveBeenCalledTimes(2);
+      expect(mockWeb).toHaveBeenCalledWith([expect.anything(), "/sites/people"]);
+    } finally {
+      if (previousContext) contextWindow._spPageContextInfo = previousContext;
+      else delete contextWindow._spPageContextInfo;
+    }
   });
 
   it("maps Outlook errors before aggregating them for display", async () => {
