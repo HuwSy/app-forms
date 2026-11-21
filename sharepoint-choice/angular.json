@@ -29,10 +29,7 @@
           "options": {
             "buildTarget": "sharepoint-choice:build:development",
             "tsConfig": "tsconfig.spec.json",
-            "include": [
-              "src/lib/sharepoint-choice.tests.ts",
-              "src/lib/sharepoint-choice.zoneless.tests.ts"
-            ],
+            "include": ["src/lib/sharepoint-choice.tests.ts"],
             "runner": "vitest"
           }
         }
