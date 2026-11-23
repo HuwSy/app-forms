@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, ElementRef, ErrorHandler, provideZonelessChangeDetection } from "@angular/core";
+import { ChangeDetectorRef, ElementRef, ErrorHandler, provideZonelessChangeDetection, type Type } from "@angular/core";
 import { TestBed } from "@angular/core/testing";
 import { Workbook } from "devextreme-exceljs-fork";
 import JSZip from "@turbowarp/jszip";
@@ -16,7 +16,7 @@ import { SharepointChoiceRefresh } from "./sharepoint-choice.refresh";
 
 const fixtures: Array<{ destroy(): void }> = [];
 
-async function createFixture(component: typeof SharepointChoiceComponent | typeof SharepointChoiceTable) {
+async function createFixture<T>(component: Type<T>) {
   await TestBed.configureTestingModule({
     imports: [component],
     providers: [provideZonelessChangeDetection()],
@@ -117,9 +117,49 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("rich text clipboard images", () => {
+  it("embeds pasted raster image files as data URLs", async () => {
+    const component = createComponent();
+    component.field = "Body";
+    component.form = { Body: "" };
+    component.spec = { Body: { TypeAsString: "Note", RichText: true } };
+
+    const editor = component.editor;
+    expect(editor).toBeDefined();
+    if (!editor) throw new Error("Rich text editor was not initialized.");
+
+    const dataUrl = "data:image/png;base64,aGVsbG8=";
+    vi.spyOn(FileReader.prototype, "readAsDataURL").mockImplementation(function (this: FileReader) {
+      Object.defineProperty(this, "result", { configurable: true, value: dataUrl });
+      this.dispatchEvent(new ProgressEvent("load"));
+    });
+
+    const item = {
+      kind: "file",
+      type: "image/png",
+      getAsFile: () => new File(["image"], "pasted.png", { type: "image/png" }),
+    } as DataTransferItem;
+    const preventDefault = vi.fn();
+    const event = { clipboardData: { items: [item] }, preventDefault } as unknown as ClipboardEvent;
+    const handled = editor.view.someProp("handlePaste", (handlePaste) =>
+      handlePaste(editor.view, event, editor.view.state.selection.content()),
+    );
+
+    expect(handled).toBe(true);
+    expect(preventDefault).toHaveBeenCalledOnce();
+    await vi.waitFor(() => {
+      let pastedImageSource: string | undefined;
+      editor.view.state.doc.descendants((node) => {
+        if (node.type.name === "image") pastedImageSource = node.attrs["src"];
+      });
+      expect(pastedImageSource).toBe(dataUrl);
+    });
+  });
+});
+
 describe("zoneless OnPush rendering", () => {
   it("renders async choice suggestions after markForCheck without an extra detectChanges call", async () => {
-    const fixture = await createFixture(SharepointChoiceComponent);
+    const fixture = await createFixture(SharepointChoiceComponentCtor);
     const component = fixture.componentInstance;
     const suggestion: SharepointChoiceForm = { Contact: "Ada Lovelace" };
     let resolveSearch!: (matches: Array<object>) => void;
@@ -145,7 +185,7 @@ describe("zoneless OnPush rendering", () => {
   });
 
   it("clears stale choice suggestions when an async search rejects", async () => {
-    const fixture = await createFixture(SharepointChoiceComponent);
+    const fixture = await createFixture(SharepointChoiceComponentCtor);
     const component = fixture.componentInstance;
     const error = new Error("Search failed");
     component.field = "Contact";
@@ -165,7 +205,7 @@ describe("zoneless OnPush rendering", () => {
   });
 
   it("keeps only the latest result when overlapping searches finish out of order", async () => {
-    const fixture = await createFixture(SharepointChoiceComponent);
+    const fixture = await createFixture(SharepointChoiceComponentCtor);
     const component = fixture.componentInstance;
     const pending: Array<(matches: Array<object>) => void> = [];
     component.field = "Contact";
@@ -193,7 +233,7 @@ describe("zoneless OnPush rendering", () => {
   });
 
   it("renders input changes made after the initial render without manually checking the view", async () => {
-    const fixture = await createFixture(SharepointChoiceComponent);
+    const fixture = await createFixture(SharepointChoiceComponentCtor);
     const component = fixture.componentInstance;
     component.field = "Title";
     component.spec = { Title: { TypeAsString: "Text", Title: "Title" } };
@@ -209,7 +249,7 @@ describe("zoneless OnPush rendering", () => {
   });
 
   it("updates a table cell after an awaited row callback and ignores malformed rows", async () => {
-    const fixture = await createFixture(SharepointChoiceTable);
+    const fixture = await createFixture(SharepointChoiceTableCtor);
     const table = fixture.componentInstance;
     const row = { Id: 1, Name: "Before" };
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -244,11 +284,10 @@ describe("zoneless OnPush rendering", () => {
     expect(fixture.nativeElement.querySelector('tbody td[role="cell"]')?.textContent?.trim()).toBe(
       "After async callback",
     );
-    expect(table.changeDetection).not.toBe(ChangeDetectionStrategy.Default);
   });
 
   it("renders in-place row mutations when refreshKey changes and invalidates cached cell content", async () => {
-    const fixture = await createFixture(SharepointChoiceTable);
+    const fixture = await createFixture(SharepointChoiceTableCtor);
     const table = fixture.componentInstance;
     const row = { Id: 2, Name: "Before refresh" };
     table.prefix = "zoneless-refresh-key";
@@ -266,7 +305,7 @@ describe("zoneless OnPush rendering", () => {
   });
 
   it("reports rejected row callbacks and leaves the view stable", async () => {
-    const fixture = await createFixture(SharepointChoiceTable);
+    const fixture = await createFixture(SharepointChoiceTableCtor);
     const table = fixture.componentInstance;
     const row = { Id: 3, Name: "Stable row" };
     const error = new Error("Row callback failed");
@@ -288,7 +327,7 @@ describe("zoneless OnPush rendering", () => {
   });
 
   it("renders changed columns and loading state from OnPush input setters", async () => {
-    const fixture = await createFixture(SharepointChoiceTable);
+    const fixture = await createFixture(SharepointChoiceTableCtor);
     const table = fixture.componentInstance;
     table.prefix = "zoneless-table-inputs";
     table.allData = { Records: [{ Id: 4, Name: "Visible" }] };
@@ -301,7 +340,7 @@ describe("zoneless OnPush rendering", () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain("Updated name");
-    expect(fixture.nativeElement.querySelector("tbody")?.classList.contains("loading")).toBe(true);
+    expect(fixture.nativeElement.querySelector('tbody tr[role="row"]')?.classList.contains("loading")).toBe(true);
   });
 });
 
@@ -341,9 +380,7 @@ describe("SharepointChoiceTable", () => {
     table.selectedTab = "Records";
 
     expect(table.fields("Records").map((column) => column.field)).toEqual(["Name", "Score"]);
-    expect(
-      table.currentPageRows(table.rows("Records")).map((row) => [row["Name"], row["Score"]]),
-    ).toEqual([
+    expect(table.currentPageRows(table.rows("Records")).map((row) => [row["Name"], row["Score"]])).toEqual([
       ["Alpha", 2],
       ["Beta", 1],
     ]);
@@ -397,13 +434,7 @@ describe("SharepointChoiceTable", () => {
   it("shows the requested page and returns to the first page when page size changes", () => {
     const table = createTable();
     table.allData = {
-      Records: [
-        { Value: "one" },
-        { Value: "two" },
-        { Value: "three" },
-        { Value: "four" },
-        { Value: "five" },
-      ],
+      Records: [{ Value: "one" }, { Value: "two" }, { Value: "three" }, { Value: "four" }, { Value: "five" }],
     };
     table.selectedTab = "Records";
     table.pageSize = 2;

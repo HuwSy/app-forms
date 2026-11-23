@@ -14,6 +14,7 @@ import "@pnp/sp/webs";
 import { Web } from "@pnp/sp/webs";
 import { IPeoplePickerEntity } from "@pnp/sp/profiles";
 import { Editor, NgxEditorModule, Toolbar } from "@bobbyquantum/ngx-editor";
+import { Plugin } from "prosemirror-state";
 import MsgReader from "@kenjiuno/msgreader";
 import PostalMime, { type Attachment as PostalMimeAttachment } from "postal-mime";
 import { loadAsync } from "@turbowarp/jszip";
@@ -385,7 +386,8 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this.initializedType = type;
     }
 
-    if (type === "Note" && this.get("RichText") && !this.editor) this.editor = new Editor();
+    if (type === "Note" && this.get("RichText") && !this.editor)
+      this.editor = new Editor({ plugins: [this.createClipboardImagePlugin()] });
 
     if ((type === "Lookup" || type === "LookupMulti" || (type === "Text" && this.text?.search)) && !this.textKey) {
       this.textKey = new Subject<string>();
@@ -395,6 +397,64 @@ export class SharepointChoiceComponent implements OnInit, OnDestroy {
       this.userKey = new Subject<string>();
       this.userKey.pipe(debounceTime(250)).subscribe((key) => this.onUpUserSearch(key));
     }
+  }
+
+  private fileToDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") resolve(reader.result);
+        else reject(new Error("Pasted image did not produce a data URL."));
+      };
+      reader.onerror = () => reject(reader.error ?? new Error("Unable to read pasted image."));
+      reader.onabort = () => reject(new Error("Reading pasted image was aborted."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private createClipboardImagePlugin(): Plugin {
+    return new Plugin({
+      props: {
+        handlePaste: (view, event, slice) => {
+          const items = event.clipboardData?.items;
+          if (!items) return false;
+
+          const files = Array.from(items)
+            .filter(
+              (item) =>
+                item.kind === "file" &&
+                item.type.toLowerCase().startsWith("image/") &&
+                item.type.toLowerCase() !== "image/svg+xml",
+            )
+            .map((item) => item.getAsFile())
+            .filter((file): file is File => file !== null);
+          if (!files.length) return false;
+
+          let hasImageSource = false;
+          slice.content.descendants((node) => {
+            if (node.type.name === "image" && typeof node.attrs["src"] === "string" && node.attrs["src"].trim())
+              hasImageSource = true;
+          });
+          if (hasImageSource) return false;
+
+          event.preventDefault();
+          void Promise.all(files.map((file) => this.fileToDataUrl(file)))
+            .then((sources) => {
+              if (this.destroyed || this.editor?.view !== view) return;
+
+              const imageType = view.state.schema.nodes["image"];
+              if (!imageType) throw new Error("The editor schema does not support images.");
+
+              let transaction = view.state.tr;
+              for (const src of sources) transaction = transaction.replaceSelectionWith(imageType.create({ src }), false);
+              view.dispatch(transaction.scrollIntoView());
+            })
+            .catch((error: unknown) => this.errorHandler.handleError(error));
+
+          return true;
+        },
+      },
+    });
   }
 
   private invalidateAttachmentCache(): void {
