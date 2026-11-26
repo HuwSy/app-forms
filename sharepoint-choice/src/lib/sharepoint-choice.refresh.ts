@@ -11,19 +11,19 @@ export interface SharepointChoiceEvent {
 
 @Injectable({ providedIn: "root" })
 export class SharepointChoiceRefresh {
-  private readonly subject = new Subject<SharepointChoiceEvent>();
+  private readonly refreshSubject = new Subject<SharepointChoiceEvent>();
 
-  readonly changes$ = this.subject.asObservable();
+  public readonly changes$ = this.refreshSubject.asObservable();
 
-  emit(event: SharepointChoiceEvent): void {
-    this.subject.next(event);
+  public emit(event: SharepointChoiceEvent): void {
+    this.refreshSubject.next(event);
   }
 
   /**
    * Triggers a refresh for any SharepointChoiceComponent instances bound to the same form reference.
    * Use this after mutating the form object outside of SharepointChoiceComponent.
    */
-  refreshForm(form: SharepointChoiceForm, field?: string): void {
+  public refreshForm(form: SharepointChoiceForm, field?: string): void {
     this.emit({ sourceId: 0, form, field });
   }
 
@@ -31,14 +31,14 @@ export class SharepointChoiceRefresh {
    * Triggers a refresh for any SharepointChoiceComponent instances bound to the same spec reference.
    * Use this after mutating the spec object outside of SharepointChoiceComponent.
    */
-  refreshSpec(spec: SharepointChoiceList, field?: string): void {
+  public refreshSpec(spec: SharepointChoiceList, field?: string): void {
     this.emit({ sourceId: 0, spec, field });
   }
 
   /**
    * Convenience method to refresh by form and/or spec reference.
    */
-  refresh(options: { form?: SharepointChoiceForm; spec?: SharepointChoiceList; field?: string }): void {
+  public refresh(options: { form?: SharepointChoiceForm; spec?: SharepointChoiceList; field?: string }): void {
     this.emit({ sourceId: 0, ...options });
   }
 }

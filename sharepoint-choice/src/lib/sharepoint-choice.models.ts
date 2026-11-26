@@ -5,9 +5,12 @@ export interface SharepointChoiceTextOptions {
   width?: number; // min-width of text area in px
 
   // should move from call backs that depend on parent being passed in to @Output keys sent @Input search results @Output selected but it would place these for all field types
-  search?: Function; // search via api for drop down options
-  select?: Function; // upon selection in drop down call back function
-  parent?: any; // parent object that the control belongs to for call backs or specific search functions
+  search?: (
+    searchText: string,
+    parent?: unknown,
+  ) => SharepointChoiceSearchResult[] | Promise<SharepointChoiceSearchResult[]>; // search via api for drop down options
+  select?: (result: SharepointChoiceSearchResult, parent?: unknown) => void | Promise<void>; // upon selection in drop down call back function
+  parent?: unknown; // parent object that the control belongs to for call backs or specific search functions
 }
 
 export interface SharepointChoiceSelectOptions {
@@ -15,7 +18,7 @@ export interface SharepointChoiceSelectOptions {
   none?: string; // none option text instead of null
   other?: string; // Other fill-in option text, will override to allow other
 
-  filter?: Function; // filter choices by a function
+  filter?: (choice: string, index: number, choices: string[], context: { form: SharepointChoiceForm }) => boolean; // filter choices by a function
 }
 
 export interface SharepointChoiceFileOptions {
@@ -38,11 +41,29 @@ export interface SharepointChoiceFileOptions {
 }
 
 export interface SharepointChoiceForm {
-  [key: string]: any;
+  // SharePoint field names and payload shapes vary by list, so consumers must narrow values using the field spec.
+  [key: string]: unknown;
   Attachments?: {
     results: SharepointChoiceAttachment[];
   };
 }
+
+export interface SharepointChoiceSearchResult {
+  // Lookup columns vary by list; only the common ID is guaranteed by the control.
+  [key: string]: unknown;
+  Id?: number;
+  hide?: boolean;
+}
+
+export interface SharepointChoiceChangeEvent {
+  field: string;
+  // The field's SharePoint type determines its runtime value shape.
+  value: unknown;
+  target: HTMLElement;
+}
+
+export const MAX_PASTED_IMAGE_SIZE_MB = 25;
+export const MAX_PASTED_IMAGE_SIZE_BYTES = MAX_PASTED_IMAGE_SIZE_MB * 1024 * 1024;
 
 export interface SharepointChoiceAttachment {
   FileName: string;
@@ -90,11 +111,14 @@ export interface SharepointChoiceField {
   Min?: number;
   Max?: number;
   DisplayFormat?: number; // 0 = date only, 1 = date and time
+  LCID?: number;
   Choices?: string[];
   SelectionGroup?: number;
   RichText?: boolean;
   Format?: string;
   FillInChoice?: string;
+  LookupList?: string;
+  LookupField?: string;
   AppendOnly?: boolean;
 }
 
@@ -223,11 +247,11 @@ export interface SharepointChoiceRow {
   _tracking?: string; // unique key for tracking row changes
   _selected?: boolean; // row is selected
   _editing?: string; // fieldname being edited currently in app-choice
-  [key: string]: string | number | boolean | Date | SharepointChoiceRowChild | null | undefined;
+  [key: string]: SharepointChoiceRowValue;
 }
 
 export interface SharepointChoiceRowChild {
-  [key: string]: string | number | boolean | Date | SharepointChoiceRowChild | null | undefined;
+  [key: string]: SharepointChoiceRowValue;
 }
 
 export interface SharepointChoiceExportColumn {
@@ -261,10 +285,21 @@ export interface SharepointChoiceExportOptions {
         context: SharepointChoiceExportContext,
       ) => SharepointChoiceExportColumn[] | Promise<SharepointChoiceExportColumn[]>);
   rows?:
-    | Array<Record<string, any>>
-    | ((context: SharepointChoiceExportContext) => Array<Record<string, any>> | Promise<Array<Record<string, any>>>);
+    | Array<Record<string, unknown>>
+    | ((
+        context: SharepointChoiceExportContext,
+      ) => Array<Record<string, unknown>> | Promise<Array<Record<string, unknown>>>);
   autoWidth?: boolean;
 }
+
+export type SharepointChoiceRowValue = string | number | boolean | Date | SharepointChoiceRowChild | null | undefined;
+
+export type SharepointChoiceRowClickHandler = (
+  row: SharepointChoiceRow,
+  target: HTMLElement | EventTarget | undefined,
+) => unknown;
+
+export type SharepointChoiceHyperlinkRowHandler = (row: SharepointChoiceRow) => string | undefined;
 
 export interface SharepointChoiceColumn {
   headerName?: string; // display name of the column
@@ -335,7 +370,7 @@ export interface SharepointChoiceColumn {
       }
     }
   */
-  cellRenderer?: (val: any, row: SharepointChoiceRow, index: number) => string | Node; // string is sanitized HTML; Node allows HTMLElement w/ inner elements and listeners
+  cellRenderer?: (value: SharepointChoiceRowValue, row: SharepointChoiceRow, index: number) => string | Node; // string is sanitized HTML; Node allows HTMLElement w/ inner elements and listeners
   /*
     return `
       ${

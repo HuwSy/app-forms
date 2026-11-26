@@ -226,6 +226,17 @@ a.fc-event {
       }
     }
 
+    div.Preview {
+      max-height: 500px;
+      overflow: auto;
+      position: relative;
+
+      img {
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+    }
+
     div.Boolean {
       padding: 0px;
       float: left;

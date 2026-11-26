@@ -20,63 +20,47 @@ export class SharepointChoiceRender implements OnChanges, OnDestroy {
   private removeClickListener?: () => void;
   private removeKeydownListener?: () => void;
 
-  constructor(
+  public constructor(
     private host: ElementRef<HTMLElement>,
     private renderer: Renderer2,
     private sanitizer: DomSanitizer,
   ) {}
 
-  ngOnDestroy(): void {
+  public ngOnDestroy(): void {
     this.clearFallbackLink();
   }
 
-  ngOnChanges(): void {
-    const el = this.host.nativeElement;
-    const payload = this.asPayload(this.content);
+  public ngOnChanges(): void {
+    const hostElement = this.host.nativeElement;
+    const content = this.content;
+    const renderPayload: SharepointChoiceRenderPayload =
+      content && typeof content === "object" && !(content instanceof Node) && "content" in content
+        ? content
+        : { content };
 
     this.clearFallbackLink();
     this.clearRenderClickListener();
-    this.renderer.removeStyle(el, "cursor");
-    this.renderer.removeAttribute(el, "role");
-    this.renderer.removeAttribute(el, "tabindex");
+    this.renderer.removeStyle(hostElement, "cursor");
+    this.renderer.removeAttribute(hostElement, "role");
+    this.renderer.removeAttribute(hostElement, "tabindex");
 
-    while (el.firstChild) {
-      el.removeChild(el.firstChild);
+    while (hostElement.firstChild) {
+      hostElement.removeChild(hostElement.firstChild);
     }
 
-    if (payload.content === null || payload.content === undefined) {
+    if (renderPayload.content === null || renderPayload.content === undefined) {
       return;
     }
 
-    if (typeof payload.content === "string") {
+    if (typeof renderPayload.content === "string") {
       // Match Angular's default [innerHTML] sanitization behavior.
-      el.innerHTML = this.sanitizer.sanitize(SecurityContext.HTML, payload.content) ?? "";
+      hostElement.innerHTML = this.sanitizer.sanitize(SecurityContext.HTML, renderPayload.content) ?? "";
     } else {
       // Append the actual DOM node so any event listeners/etc remain intact.
       // Note: a Node can only exist in one place in the DOM at a time.
-      this.renderer.appendChild(el, payload.content);
+      this.renderer.appendChild(hostElement, renderPayload.content);
     }
 
-    const hasInteractiveContent = this.hasInteractiveContent(el);
-
-    if (hasInteractiveContent) {
-      this.captureRenderedClicks(el);
-    }
-
-    if (payload.hyperlink && !hasInteractiveContent) {
-      this.applyFallbackLink(el, payload.hyperlink, payload.hyperlinkTarget);
-    }
-  }
-
-  private asPayload(content: SharepointChoiceRenderContent): SharepointChoiceRenderPayload {
-    if (content && typeof content === "object" && !(content instanceof Node) && "content" in content) {
-      return content;
-    }
-
-    return { content };
-  }
-
-  private hasInteractiveContent(root: HTMLElement): boolean {
     const interactiveSelector = [
       "a[href]",
       "button",
@@ -91,51 +75,48 @@ export class SharepointChoiceRender implements OnChanges, OnDestroy {
       "[onclick]",
     ].join(",");
 
-    if (root.querySelector(interactiveSelector)) {
-      return true;
-    }
-
-    for (const node of Array.from(root.querySelectorAll<HTMLElement>("*"))) {
-      if (typeof node.onclick === "function") {
-        return true;
+    let hasInteractiveContent = hostElement.querySelector(interactiveSelector) !== null;
+    if (!hasInteractiveContent) {
+      for (const node of Array.from(hostElement.querySelectorAll<HTMLElement>("*"))) {
+        if (typeof node.onclick === "function") {
+          hasInteractiveContent = true;
+          break;
+        }
       }
     }
 
-    return false;
+    if (hasInteractiveContent) {
+      this.captureRenderedClicks(hostElement);
+    }
+
+    if (renderPayload.hyperlink && !hasInteractiveContent) {
+      this.applyFallbackLink(hostElement, renderPayload.hyperlink, renderPayload.hyperlinkTarget);
+    }
   }
 
   private captureRenderedClicks(el: HTMLElement): void {
     this.removeRenderClickListener = this.renderer.listen(el, "click", (event: MouseEvent) => {
-      if (this.findInteractiveElement(event.target, el)) {
-        event.stopPropagation();
+      for (
+        let currentElement =
+          event.target instanceof HTMLElement
+            ? event.target
+            : event.target instanceof Node
+              ? event.target.parentElement
+              : null;
+        currentElement && currentElement !== el;
+        currentElement = currentElement.parentElement
+      ) {
+        if (
+          currentElement.matches(
+            "a[href],button,input,select,textarea,summary,[role='button'],[role='link'],[contenteditable='true'],[tabindex],[onclick]",
+          ) ||
+          typeof currentElement.onclick === "function"
+        ) {
+          event.stopPropagation();
+          break;
+        }
       }
     });
-  }
-
-  private findInteractiveElement(target: EventTarget | null, boundary: HTMLElement): HTMLElement | null {
-    let element = target instanceof HTMLElement ? target : target instanceof Node ? target.parentElement : null;
-
-    while (element && element !== boundary) {
-      if (this.isInteractiveElement(element)) {
-        return element;
-      }
-
-      element = element.parentElement;
-    }
-
-    return null;
-  }
-
-  private isInteractiveElement(element: HTMLElement): boolean {
-    if (
-      element.matches(
-        "a[href],button,input,select,textarea,summary,[role='button'],[role='link'],[contenteditable='true'],[tabindex],[onclick]",
-      )
-    ) {
-      return true;
-    }
-
-    return typeof element.onclick === "function";
   }
 
   private applyFallbackLink(el: HTMLElement, hyperlink: string, hyperlinkTarget?: string): void {

@@ -10,7 +10,11 @@ import "@pnp/sp/files";
 import "@pnp/sp/folders";
 import "@pnp/sp/profiles";
 import "@pnp/sp/search";
-import { PublicClientApplication, createNestablePublicClientApplication } from "@azure/msal-browser";
+import {
+  PublicClientApplication,
+  createNestablePublicClientApplication,
+  type AuthenticationResult,
+} from "@azure/msal-browser";
 import { PermissionKind } from "@pnp/sp/security";
 import { ISearchQuery, ISort, SearchResults } from "@pnp/sp/search";
 import { App } from "./sharepoint-choice.settings";
@@ -20,9 +24,100 @@ import {
   SharepointChoiceList,
   SharepointChoiceField,
   SharepointChoiceAttachment,
+  MAX_PASTED_IMAGE_SIZE_BYTES,
+  MAX_PASTED_IMAGE_SIZE_MB,
 } from "./sharepoint-choice.models";
 
+interface InlineImageUpload {
+  field: string;
+  fileName: string;
+  data: ArrayBuffer;
+  placeholder: string;
+}
+
+interface InlineImageExtraction {
+  uploads: InlineImageUpload[];
+  htmlByField: Map<string, string>;
+  oversizedCount: number;
+}
+
+interface SharePointPageContextInfo {
+  webAbsoluteUrl?: string;
+  userLoginName?: string;
+  userDisplayName?: string;
+  userEmail?: string;
+  userId?: number;
+  webTitle?: string;
+}
+
+interface SharePointChoiceWindow extends Window {
+  _spPageContextInfo?: SharePointPageContextInfo;
+  Office?: {
+    context?: {
+      requirements?: {
+        isSetSupported?: (requirementSet: string, version: string) => boolean;
+      };
+    };
+  };
+}
+
+interface SharePointSecurable {
+  getCurrentUserEffectivePermissions(): Promise<{ Low: number; High: number }>;
+}
+
+interface SharePointVersionChange {
+  field: string;
+  from: unknown;
+  to: unknown;
+}
+
+interface SharePointItemVersion extends SharepointChoiceForm {
+  Created: string;
+  Modified: string;
+  ChangedFields?: SharePointVersionChange[];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+interface ListItemValidationResult {
+  FieldName?: string;
+  FieldValue?: string;
+  ItemId?: number;
+}
+
+interface ListItemValidationResponse {
+  value?: ListItemValidationResult[];
+}
+
 export function MapErrors(error: unknown, context?: string): string {
+  interface AlertMessageCandidate {
+    message: string;
+    score: number;
+    kind: "extracted" | "guidance";
+    details?: string;
+  }
+
+  const alertMessageKeyScores: Record<string, number> = {
+    usermessage: 110,
+    errordescription: 105,
+    errormessage: 100,
+    message: 95,
+    detail: 90,
+    details: 85,
+    title: 80,
+    reason: 75,
+    description: 70,
+    messages: 70,
+    errors: 65,
+    error: 60,
+    body: 35,
+    responsetext: 35,
+    returned: 20,
+    value: 10,
+  };
+
   function stripStackTrace(details: string): string {
     const lines = details.split(/\r?\n/);
     const stackStart = lines.findIndex((line) => /^\s*(?:at\s+\S+|stack trace\s*:|--- End of stack trace)/i.test(line));
@@ -52,32 +147,6 @@ export function MapErrors(error: unknown, context?: string): string {
       .filter((value): value is string => typeof value === "string")
       .join("\n");
   }
-
-  interface AlertMessageCandidate {
-    message: string;
-    score: number;
-    kind: "extracted" | "guidance";
-    details?: string;
-  }
-
-  const alertMessageKeyScores: Record<string, number> = {
-    usermessage: 110,
-    errordescription: 105,
-    errormessage: 100,
-    message: 95,
-    detail: 90,
-    details: 85,
-    title: 80,
-    reason: 75,
-    description: 70,
-    messages: 70,
-    errors: 65,
-    error: 60,
-    body: 35,
-    responsetext: 35,
-    returned: 20,
-    value: 10,
-  };
 
   function embeddedJsonValues(text: string): unknown[] {
     const values: unknown[] = [];
@@ -312,12 +381,12 @@ export class SharepointChoiceUtils {
   public sp: SPFI;
 
   // attempt to establish correct context url for the site from one of the available sources then setup logging for this class
-  constructor(context?: string) {
-    let w: any = window;
+  public constructor(context?: string) {
+    const pageContextWindow = window as SharePointChoiceWindow;
     // if no mock or null or empty or incomplete context try to get this from the current page url
     this.context =
       context ||
-      (w._spPageContextInfo ? w._spPageContextInfo.webAbsoluteUrl : null) ||
+      pageContextWindow._spPageContextInfo?.webAbsoluteUrl ||
       document.location.href.replace(/(\/SitePages\/|\/Pages\/|\/_layouts\/|\/Lists\/|#|\?).*$/i, "");
 
     // ensure full url
@@ -338,29 +407,32 @@ export class SharepointChoiceUtils {
 
   private watermark() {
     if (App.Release != "LIVE" && document.getElementById("sp-environment-watermark") == null) {
-      let environment = document.createElement("style");
-      environment.id = "sp-environment-watermark";
-      environment.innerHTML = `[ng-version]::before{content: '${Array(11).fill(App.Release).join(" - ")}';}`;
-      document.head.appendChild(environment);
+      const watermarkStyle = document.createElement("style");
+      watermarkStyle.id = "sp-environment-watermark";
+      watermarkStyle.innerHTML = `[ng-version]::before{content: '${Array(11).fill(App.Release).join(" - ")}';}`;
+      document.head.appendChild(watermarkStyle);
     }
   }
 
   private async mockClassicContext(overwrite: boolean = false) {
-    let w: any = window;
+    const pageContextWindow = window as SharePointChoiceWindow;
     // no classic sp context then mock one up, or if a sprecific context passed in then overwrite if different
-    if (!w._spPageContextInfo || (overwrite && w._spPageContextInfo.webAbsoluteUrl != this.context))
-      w._spPageContextInfo = {
+    if (
+      !pageContextWindow._spPageContextInfo ||
+      (overwrite && pageContextWindow._spPageContextInfo.webAbsoluteUrl != this.context)
+    )
+      pageContextWindow._spPageContextInfo = {
         webAbsoluteUrl: this.context,
       };
     // no user in context
-    if (!w._spPageContextInfo.userLoginName) {
-      let web = await this.sp.web();
-      let user = await this.sp.web.currentUser();
-      w._spPageContextInfo = {
-        userLoginName: user.LoginName,
-        userDisplayName: user.Title,
-        userEmail: user.Email,
-        userId: user.Id,
+    if (!pageContextWindow._spPageContextInfo.userLoginName) {
+      const web = await this.sp.web();
+      const currentUser = await this.sp.web.currentUser();
+      pageContextWindow._spPageContextInfo = {
+        userLoginName: currentUser.LoginName,
+        userDisplayName: currentUser.Title,
+        userEmail: currentUser.Email,
+        userId: currentUser.Id,
         webAbsoluteUrl: this.context,
         webTitle: web.Title,
       };
@@ -371,32 +443,33 @@ export class SharepointChoiceUtils {
   // NOTE: this will only detect direct assignments or users added to a mail enabled global security group.
   // Any lookup failure returns an invalid user id and no permissions so consumers fail closed.
   public async permissions(): Promise<SharepointChoicePermission> {
-    let w: any = window;
+    const pageContextWindow = window as SharePointChoiceWindow;
 
-    let permission: SharepointChoicePermission = {
+    const userPermissions: SharepointChoicePermission = {
       userId: 0,
       perms: {},
     };
 
-    let web: string = "";
+    let webTitle: string;
     try {
-      web = (await this.sp.web()).Title;
-      let contextUserId = w._spPageContextInfo?.userId;
-      permission.userId =
+      webTitle = (await this.sp.web()).Title;
+      const contextUserId = pageContextWindow._spPageContextInfo?.userId;
+      userPermissions.userId =
         typeof contextUserId == "number" && contextUserId > 0 ? contextUserId : (await this.sp.web.currentUser()).Id;
     } catch (e) {
       console.error("SharepointChoiceUtils.permissions web/user lookup error", e);
-      return permission;
+      return userPermissions;
     }
-    if (permission.userId <= 0) return permission;
+    if (userPermissions.userId <= 0) return userPermissions;
 
     try {
       // get any directly assigned groups
       // this doesnt work well with ad and aad groups assignments
-      let perm = await this.sp.web.currentUser.groups();
-      perm.forEach((x) => {
-        permission.perms[x.LoginName] = true;
-        if (x.LoginName.startsWith(`${web} `)) permission.perms[x.LoginName.replace(`${web} `, "")] = true;
+      const userGroups = await this.sp.web.currentUser.groups();
+      userGroups.forEach((group) => {
+        userPermissions.perms[group.LoginName] = true;
+        if (group.LoginName.startsWith(`${webTitle} `))
+          userPermissions.perms[group.LoginName.replace(`${webTitle} `, "")] = true;
       });
     } catch (e) {
       console.error("SharepointChoiceUtils.permissions group lookup error", e);
@@ -406,12 +479,13 @@ export class SharepointChoiceUtils {
     // ad and aad groups within sp groups dont always expose groups above
     // this depends on hidden, no crawl list with specific permissions assigned to the same list item title and created by SHAREPOINT\System Account
     try {
-      let sec = await this.sp.web.lists.getByTitle("Security")();
-      if (sec.Hidden && sec.IsApplicationList) {
-        let per = await this.sp.web.lists.getByTitle("Security").items.select("Title").top(5000)();
-        per.forEach((s) => {
-          permission.perms[s.Title] = true;
-          if (s.Title.startsWith(`${web} `)) permission.perms[s.Title.replace(`${web} `, "")] = true;
+      const securityList = await this.sp.web.lists.getByTitle("Security")();
+      if (securityList.Hidden && securityList.IsApplicationList) {
+        const securityEntries = await this.sp.web.lists.getByTitle("Security").items.select("Title").top(5000)();
+        securityEntries.forEach((entry) => {
+          userPermissions.perms[entry.Title] = true;
+          if (entry.Title.startsWith(`${webTitle} `))
+            userPermissions.perms[entry.Title.replace(`${webTitle} `, "")] = true;
         });
       }
     } catch (e) {
@@ -419,15 +493,15 @@ export class SharepointChoiceUtils {
       return { userId: 0, perms: {} };
     }
 
-    return permission;
+    return userPermissions;
   }
 
   // check permission against object
-  public async hasPermission(object: any, permissions: PermissionKind[]): Promise<boolean> {
+  public async hasPermission(securableObject: SharePointSecurable, permissions: PermissionKind[]): Promise<boolean> {
     try {
-      let perm = await object.getCurrentUserEffectivePermissions();
-      for (let permission of permissions) {
-        if (this.sp.web.hasPermissions(perm, permission)) return true;
+      const effectivePermissions = await securableObject.getCurrentUserEffectivePermissions();
+      for (const requiredPermission of permissions) {
+        if (this.sp.web.hasPermissions(effectivePermissions, requiredPermission)) return true;
       }
     } catch (e) {
       // permission request failed so return false below
@@ -463,40 +537,44 @@ export class SharepointChoiceUtils {
 
   // get list fields in the appropriate format for use in <sharepoint-choice spec=""> attributes
   public async fields(listTitle: string): Promise<SharepointChoiceList> {
-    let spec: SharepointChoiceList = {};
+    const fieldDefinitions: SharepointChoiceList = {};
 
     try {
       // even though the main fields are in the selection not all are returned such as Format, so parse the SchemaXml for the rest
-      let selectFields =
+      const selectedFieldNames =
         "Title,InternalName,TypeAsString,Scope,Required,Choices,MaxLength,Description,DisplayFormat,AppendOnly,SelectionGroup,Format,FillInChoice,RichText,ReadOnlyField,DefaultValue,SchemaXml".split(
           ",",
         );
-      let arr = await this.sp.web.lists.getByTitle(listTitle).fields.select(...selectFields)();
-      arr.forEach((x) => {
-        if (x.SchemaXml) {
-          let s = new DOMParser().parseFromString(x.SchemaXml, "text/xml").documentElement.attributes;
-          Array.from(s).reduce((acc, attr) => {
-            if (!x[attr.name]) {
-              x[attr.name] = attr.value;
-              x[attr.name] = x[attr.name] == "TRUE" ? true : x[attr.name] == "FALSE" ? false : x[attr.name];
-              x[attr.name] =
-                x[attr.name] != null && !isNaN(parseFloat(x[attr.name])) && isFinite(x[attr.name])
-                  ? parseFloat(x[attr.name])
-                  : x[attr.name];
+      const listFields = await this.sp.web.lists.getByTitle(listTitle).fields.select(...selectedFieldNames)();
+      listFields.forEach((field) => {
+        if (field.SchemaXml) {
+          const fieldValues = field as typeof field & Record<string, unknown>;
+          const schemaAttributes = new DOMParser().parseFromString(field.SchemaXml, "text/xml").documentElement
+            .attributes;
+          Array.from(schemaAttributes).forEach((attribute) => {
+            if (!fieldValues[attribute.name]) {
+              const value = attribute.value;
+              fieldValues[attribute.name] =
+                value == "TRUE"
+                  ? true
+                  : value == "FALSE"
+                    ? false
+                    : !isNaN(parseFloat(value)) && isFinite(Number(value))
+                      ? parseFloat(value)
+                      : value;
             }
-            return acc;
-          }, {});
+          });
           // prevent reparsing anywhere else
-          x.SchemaXml = "";
+          field.SchemaXml = "";
         }
         // override scope to current context as it will be used for cross site apps
-        x.Scope = this.context;
-        spec[x.InternalName] = x as SharepointChoiceField;
+        field.Scope = this.context;
+        fieldDefinitions[field.InternalName] = field as SharepointChoiceField;
       });
     } catch (e) {
       // This mock fallback is required by consuming-app unit tests without a SharePoint list.
       console.error("SharepointChoiceUtils.fields schema lookup error", e);
-      spec["Title"] = {
+      fieldDefinitions["Title"] = {
         TypeAsString: "Text",
         InternalName: "Title",
         MaxLength: 16,
@@ -505,12 +583,12 @@ export class SharepointChoiceUtils {
       };
     }
 
-    return spec;
+    return fieldDefinitions;
   }
 
-  private async cleanLoadKeys(d: SharepointChoiceForm, listTitle?: string, id?: number) {
+  private async cleanLoadKeys(itemData: SharepointChoiceForm, listTitle?: string, itemId?: number) {
     // exclude these fields from data entirely
-    let excludedFields = [
+    const excludedFields = [
       "IsCurrentVersion",
       "VersionId",
       "File_x005f_x0020_x005f_Type",
@@ -533,108 +611,106 @@ export class SharepointChoiceUtils {
       "SortBehavior",
     ];
 
-    for (var key in d) {
+    for (const fieldName in itemData) {
       // excludedFields
-      if (excludedFields.includes(key)) {
-        delete d[key];
+      if (excludedFields.includes(fieldName)) {
+        delete itemData[fieldName];
         continue;
       }
 
       // people fields return twice
       if (
-        key.endsWith("StringId") &&
-        (d[key.replace(/StringId$/, "Id")] || d[key.replace(/StringId$/, "Id")] === null)
+        fieldName.endsWith("StringId") &&
+        (itemData[fieldName.replace(/StringId$/, "Id")] || itemData[fieldName.replace(/StringId$/, "Id")] === null)
       ) {
-        delete d[key];
+        delete itemData[fieldName];
         continue;
       }
 
       // remove odata. prefixed
-      if (key.startsWith("odata.") || key == "__metadata") {
-        delete d[key];
+      if (fieldName.startsWith("odata.") || fieldName == "__metadata") {
+        delete itemData[fieldName];
         continue;
       }
 
       // if there are attachments start loading
-      if (key == "Attachments" && listTitle && id) {
-        if (d[key])
+      if (fieldName == "Attachments" && listTitle && itemId) {
+        if (itemData[fieldName])
           // this will be a boolean off the sp api so coerce truethiness and get results if true
-          d[key] = {
-            results: await this.sp.web.lists.getByTitle(listTitle).items.getById(id).attachmentFiles(),
+          itemData[fieldName] = {
+            results: await this.sp.web.lists.getByTitle(listTitle).items.getById(itemId).attachmentFiles(),
           };
-        else d[key] = { results: [] };
+        else itemData[fieldName] = { results: [] };
         continue;
       }
 
       // blank is null
-      if (d[key] === "") d[key] = null;
+      if (itemData[fieldName] === "") itemData[fieldName] = null;
 
       // dont process nulls or blanks
-      if (d[key] == null) continue;
+      if (itemData[fieldName] == null) continue;
 
       // return multifields to results, old behaviour for old people fields and to prevent json paring clashing
-      if (typeof d[key] == "object" && !d[key].results && d[key].length > 0) {
-        d[key] = {
-          results: d[key].filter((k) => k && !k.toString().includes("\n")),
+      const fieldValue = itemData[fieldName];
+      if (Array.isArray(fieldValue) && fieldValue.length > 0) {
+        itemData[fieldName] = {
+          results: fieldValue.filter((value) => value && !String(value).includes("\n")),
           __metadata: {
-            type: typeof d[key][0] == "number" ? "Collection(Edm.Int32)" : "Collection(Edm.String)",
+            type: typeof fieldValue[0] == "number" ? "Collection(Edm.Int32)" : "Collection(Edm.String)",
           },
         };
         continue;
       }
 
       // version history objects have name fields as this
-      if (typeof d[key] == "object" && d[key].LookupValue) {
-        d[key] = d[key].LookupValue;
+      if (isRecord(fieldValue) && fieldValue["LookupValue"]) {
+        itemData[fieldName] = fieldValue["LookupValue"];
         continue;
       }
 
       // dates and date times
-      let i = d[key].toString();
+      const dateValue = String(fieldValue);
       if (
         /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9](:[0-6][0-9](\.[0-9]+)?)?(Z|(\+|-)[0-1]?[0-9](:?[0-5][0-9])?)?$/.test(
-          i,
+          dateValue,
         ) ||
-        /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]$/.test(i)
+        /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]$/.test(dateValue)
       ) {
-        d[key] = new Date(d[key]);
+        itemData[fieldName] = new Date(dateValue);
         continue;
       }
 
       // parse objects within text fields for looped data
       try {
-        let f = d[key].toString().trim().substring(0, 1);
+        if (typeof fieldValue !== "string") continue;
+        const firstCharacter = fieldValue.trim().substring(0, 1);
         if (
-          (f == "{" || f == "[") &&
-          d[key]
-            .toString()
-            .trim()
-            .endsWith(f == "{" ? "}" : "]")
+          (firstCharacter == "{" || firstCharacter == "[") &&
+          fieldValue.trim().endsWith(firstCharacter == "{" ? "}" : "]")
         ) {
-          d[key] = JSON.parse(d[key]);
-          d[key] = this.parseLoop(d[key]);
+          itemData[fieldName] = JSON.parse(fieldValue);
+          itemData[fieldName] = this.parseLoop(itemData[fieldName]);
           continue;
         }
       } catch (e) {
         // no further parsable dates
-        console.error("SharepointChoiceUtils.cleanLoadKeys parse fallback", e, key);
+        console.error("SharepointChoiceUtils.cleanLoadKeys parse fallback", e, fieldName);
       }
     }
   }
 
   // load list item data and parse any data types appropriate for use in <sharepoint-choice ngModel=""> attributes
   public async data(id: number, listTitle: string): Promise<SharepointChoiceForm> {
-    let d: SharepointChoiceForm = {};
-
     try {
-      d = await this.sp.web.lists.getByTitle(listTitle).items.getById(id)();
-      await this.cleanLoadKeys(d, listTitle, id);
+      const response: unknown = await this.sp.web.lists.getByTitle(listTitle).items.getById(id)();
+      if (!isRecord(response)) throw new TypeError(`SharePoint returned an invalid item for list ${listTitle}.`);
+      const itemData: SharepointChoiceForm = response;
+      await this.cleanLoadKeys(itemData, listTitle, id);
+      return itemData;
     } catch (e) {
       alert(MapErrors(e, "Error loading:"));
       throw e;
     }
-
-    return d;
   }
 
   public async version(
@@ -643,10 +719,20 @@ export class SharepointChoiceUtils {
     spec: SharepointChoiceList | null = null,
   ): Promise<SharepointChoiceForm[]> {
     // SharePoint returns versions in reverse order; this endpoint request is capped at 5,000.
-    let d = await this.sp.web.lists.getByTitle(listTitle).items.getById(id).versions.top(5000)();
+    const response: unknown = await this.sp.web.lists.getByTitle(listTitle).items.getById(id).versions.top(5000)();
+    if (
+      !Array.isArray(response) ||
+      !response.every(
+        (version: unknown): version is SharePointItemVersion =>
+          isRecord(version) && typeof version["Created"] === "string" && typeof version["Modified"] === "string",
+      )
+    ) {
+      throw new TypeError(`SharePoint returned invalid version data for list ${listTitle}, item ${id}.`);
+    }
+    const itemVersions: SharePointItemVersion[] = response;
 
     // exclude these fields
-    let excludedFields = [
+    const excludedFields = [
       "ID",
       "Created",
       "Author",
@@ -664,81 +750,86 @@ export class SharepointChoiceUtils {
       "UniqueId",
     ];
 
-    let normalize = (v: any): any => {
-      if (v instanceof Date) return v.toJSON();
-      if (Array.isArray(v)) return v.map(normalize);
-      if (v && typeof v == "object") {
-        return Object.keys(v)
+    const normalize = (value: unknown): unknown => {
+      if (value instanceof Date) return value.toJSON();
+      if (Array.isArray(value)) return value.map(normalize);
+      if (value !== null && typeof value == "object") {
+        const record = value as Record<string, unknown>;
+        return Object.keys(record)
           .sort()
-          .reduce(
-            (normalized, key) => {
-              normalized[key] = normalize(v[key]);
-              return normalized;
-            },
-            {} as Record<string, any>,
-          );
+          .reduce<Record<string, unknown>>((normalized, key) => {
+            normalized[key] = normalize(record[key]);
+            return normalized;
+          }, {});
       }
-      return v;
+      return value;
     };
 
-    let format = (v: any) => {
-      if (!v || typeof v != "object") return v;
-      if (v instanceof Date) return v.toLocaleString();
-      if (Array.isArray(v.results))
-        return v.results
+    const format = (value: unknown): unknown => {
+      if (value === null || typeof value != "object") return value;
+      if (value instanceof Date) return value.toLocaleString();
+      const results = (value as Record<string, unknown>)["results"];
+      if (Array.isArray(results))
+        return results
           .map(format)
           .sort((a, b) => String(a).localeCompare(String(b)))
           .join(", ");
-      return JSON.stringify(normalize(v));
+      return JSON.stringify(normalize(value));
     };
 
     // versions return reverse order, so process from oldest to newest
-    let i = d.length - 1;
-    let lastVersion: any = null;
+    let versionIndex = itemVersions.length - 1;
+    let previousVersion: SharePointItemVersion | null = null;
     // SharePoint includes the current item as a version, so the returned collection is non-empty.
     do {
+      const currentVersion = itemVersions[versionIndex]!;
       // these dates are always utc when they lack z or +
-      d[i].Created += d[i].Created.includes("Z") || d[i].Created.includes("+") ? "" : "Z";
-      d[i].Modified += d[i].Modified.includes("Z") || d[i].Modified.includes("+") ? "" : "Z";
+      currentVersion.Created += currentVersion.Created.includes("Z") || currentVersion.Created.includes("+") ? "" : "Z";
+      currentVersion.Modified +=
+        currentVersion.Modified.includes("Z") || currentVersion.Modified.includes("+") ? "" : "Z";
 
-      await this.cleanLoadKeys(d[i]);
-      d[i].ChangedFields = [];
+      await this.cleanLoadKeys(currentVersion);
+      currentVersion.ChangedFields = [];
 
-      for (const k of Object.keys(d[i])) {
-        if ((spec && !spec[k]) || excludedFields.includes(k)) continue;
+      for (const fieldName of Object.keys(currentVersion)) {
+        if ((spec && !spec[fieldName]) || excludedFields.includes(fieldName)) continue;
 
-        let c = format(d[i][k]);
-        let f = lastVersion ? format(lastVersion[k]) : null;
+        const currentValue = format(currentVersion[fieldName]);
+        const previousValue = previousVersion ? format(previousVersion[fieldName]) : null;
 
-        if (c == f) continue;
+        if (fieldName == "ChangedFields") continue;
+        if (currentValue == previousValue) continue;
 
-        d[i].ChangedFields.push({
-          field: spec ? spec[k]?.Title || k : k,
-          from: f,
-          to: c,
+        currentVersion.ChangedFields.push({
+          field: spec ? spec[fieldName]?.Title || fieldName : fieldName,
+          from: previousValue,
+          to: currentValue,
         });
       }
 
-      lastVersion = d[i];
-      i--;
-    } while (i >= 0);
+      previousVersion = currentVersion;
+      versionIndex--;
+    } while (versionIndex >= 0);
 
     // output history with exisiting version info plus the changes for each version for use in history tabs
-    return d;
+    return itemVersions;
   }
 
-  private parseLoop(i: any): any {
+  private parseLoop(value: unknown): unknown {
     try {
-      if (typeof i == "string") {
+      if (typeof value == "string") {
         if (
-          /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9]:*[0-9]*\.*[0-9]*Z*$/.test(i) ||
-          /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]$/.test(i)
+          /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9][ T][0-2][0-9]:[0-5][0-9]:*[0-9]*\.*[0-9]*Z*$/.test(value) ||
+          /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]$/.test(value)
         ) {
-          return new Date(i);
+          return new Date(value);
         }
-      } else if (typeof i == "object") {
+      } else if (value !== null && typeof value == "object") {
         try {
-          for (let a of Object.keys(i)) i[a] = this.parseLoop(i[a]);
+          const record = value as Record<string, unknown>;
+          for (const propertyName of Object.keys(record)) {
+            record[propertyName] = this.parseLoop(record[propertyName]);
+          }
         } catch (e) {
           console.error("SharepointChoiceUtils.parseLoop nested value error", e);
         }
@@ -746,51 +837,109 @@ export class SharepointChoiceUtils {
     } catch (e) {
       // silently continue
     }
-    return i;
+    return value;
   }
 
   // use mappings to determine the api to call, then call it with the correct parameters, with the ability to override to localhost api
-  public async msalApi(
+  public async msalApi<TResponse = unknown>(
     serverRelativeEndPoint: string,
     tokenRole: string,
     httpMethod: string = "GET",
-    jsonPostData: any = null,
+    jsonPostData: unknown = null,
     dataType: string = "json",
     environment: string = App.Release,
-  ): Promise<any> {
+  ): Promise<TResponse | null> {
     // use mappings to determine the api to call
-    var endPoint = serverRelativeEndPoint.replace(/^\//, "");
-    var api = (App.ApiMap || {})[endPoint.split("/")[0]!.toLowerCase()];
+    const endpoint = serverRelativeEndPoint.replace(/^\//, "");
+    const api = (App.ApiMap || {})[endpoint.split("/")[0]!.toLowerCase()];
+    const apiServer = api?.server;
+    const configuredClientId = api?.[environment];
+    const fallbackClientId = api?.["DEV"];
+    const clientId =
+      typeof configuredClientId === "string" && configuredClientId
+        ? configuredClientId
+        : typeof fallbackClientId === "string" && fallbackClientId
+          ? fallbackClientId
+          : undefined;
+    const apiToken = apiServer
+      ? (App.ApiToken[apiServer]?.[environment] ?? App.ApiToken[apiServer]?.["DEV"] ?? "")
+      : "";
+    const apiBaseUrl = apiServer ? App.ApiServers[apiServer]?.[environment] : undefined;
 
-    return this.callApi(
+    return (await this.callApi(
       App.Tenancy,
-      api?.[environment] || api?.["DEV"],
-      `${App.ApiToken?.[api?.server]?.[environment] ?? App.ApiToken?.[api?.server]?.["DEV"] ?? ""}${api?.name}/${tokenRole}`,
-      endPoint.split("/").length == 1
+      clientId,
+      `${apiToken}${api?.name}/${tokenRole}`,
+      endpoint.split("/").length == 1
         ? undefined
-        : environment == "LOCAL" || !App.ApiServers?.[api?.server]?.[environment]
-          ? `https://localhost:${api?.port || 44301}/${endPoint}`
-          : `${App.ApiServers[api?.server][environment]}/${endPoint}`,
+        : environment == "LOCAL" || !apiBaseUrl
+          ? `https://localhost:${api?.port || 44301}/${endpoint}`
+          : `${apiBaseUrl}/${endpoint}`,
       httpMethod,
       jsonPostData,
       dataType,
-    );
+    )) as TResponse | null;
   }
 
   // calls an api more generically, or graph api if no parameters passed
+  public callApi(
+    tenancyOnMicrosoft?: string,
+    clientId?: string,
+    permissionScope?: string,
+    apiUrl?: string,
+    httpMethod?: string,
+    jsonPostData?: unknown,
+    dataType?: "json",
+  ): Promise<unknown | null>;
+  public callApi(
+    tenancyOnMicrosoft: string | undefined,
+    clientId: string | undefined,
+    permissionScope: string | undefined,
+    apiUrl: string | undefined,
+    httpMethod: string | undefined,
+    jsonPostData: unknown,
+    dataType: "text",
+  ): Promise<string | null>;
+  public callApi(
+    tenancyOnMicrosoft: string | undefined,
+    clientId: string | undefined,
+    permissionScope: string | undefined,
+    apiUrl: string | undefined,
+    httpMethod: string | undefined,
+    jsonPostData: unknown,
+    dataType: "buffer",
+  ): Promise<ArrayBuffer | null>;
+  public callApi(
+    tenancyOnMicrosoft: string | undefined,
+    clientId: string | undefined,
+    permissionScope: string | undefined,
+    apiUrl: string | undefined,
+    httpMethod: string | undefined,
+    jsonPostData: unknown,
+    dataType: "none",
+  ): Promise<Response | null>;
+  public callApi(
+    tenancyOnMicrosoft: string | undefined,
+    clientId: string | undefined,
+    permissionScope: string | undefined,
+    apiUrl: string | undefined,
+    httpMethod: string | undefined,
+    jsonPostData: unknown,
+    dataType: string,
+  ): Promise<unknown>;
   public async callApi(
     tenancyOnMicrosoft?: string,
     clientId?: string,
     permissionScope?: string,
     apiUrl?: string,
     httpMethod?: string,
-    jsonPostData?: any,
+    jsonPostData?: unknown,
     dataType: string = "json",
-  ): Promise<any> {
-    let office = (window as any).Office;
-    let nested = !!office?.context?.requirements?.isSetSupported?.("NestedAppAuth", "1.1");
+  ): Promise<unknown> {
+    const office = (window as SharePointChoiceWindow).Office;
+    const isNestedAppAuthSupported = !!office?.context?.requirements?.isSetSupported?.("NestedAppAuth", "1.1");
 
-    var msalOpts = {
+    const msalOptions = {
       auth: {
         clientId: clientId || App.GraphClient,
         authority: `https://login.microsoftonline.com/${tenancyOnMicrosoft || App.Tenancy}.onmicrosoft.com`,
@@ -809,15 +958,17 @@ export class SharepointChoiceUtils {
     };
 
     // init client
-    var msal = nested ? await createNestablePublicClientApplication(msalOpts) : new PublicClientApplication(msalOpts);
+    const msalApplication = isNestedAppAuthSupported
+      ? await createNestablePublicClientApplication(msalOptions)
+      : new PublicClientApplication(msalOptions);
 
-    var login;
+    let tokenResponse: AuthenticationResult;
 
-    if (!nested) {
-      await msal.initialize();
+    if (!isNestedAppAuthSupported) {
+      await msalApplication.initialize();
       // Completing any pending redirect flow clears stale temporary auth state.
       try {
-        await msal.handleRedirectPromise();
+        await msalApplication.handleRedirectPromise();
       } catch (e) {
         // await may have nothing to do
         console.error("SharepointChoiceUtils.callApi handleRedirectPromise error", e);
@@ -825,28 +976,30 @@ export class SharepointChoiceUtils {
     }
 
     // permission settings
-    var params = {
+    const tokenRequest = {
       scopes: permissionScope
         ? [permissionScope]
         : apiUrl?.includes("/messages/") || apiUrl?.includes("/attachments/") || apiUrl?.includes("/mailfolders/")
           ? ["Mail.Read", "Mail.Read.Shared"]
           : ["User.Read"],
-      account: msal.getAllAccounts()[0],
+      account: msalApplication.getAllAccounts()[0],
     };
 
     // attempt to get token or login and get token
     try {
-      login = await msal.acquireTokenSilent(params);
+      tokenResponse = await msalApplication.acquireTokenSilent(tokenRequest);
     } catch (e) {
       try {
-        if (nested) {
-          login = await msal.acquireTokenPopup({ scopes: params.scopes });
-          params.account = login.account || msal.getAllAccounts()[0];
-          if (!login.accessToken && params.account) login = await msal.acquireTokenSilent(params);
+        if (isNestedAppAuthSupported) {
+          tokenResponse = await msalApplication.acquireTokenPopup({ scopes: tokenRequest.scopes });
+          tokenRequest.account = tokenResponse.account || msalApplication.getAllAccounts()[0];
+          if (!tokenResponse.accessToken && tokenRequest.account) {
+            tokenResponse = await msalApplication.acquireTokenSilent(tokenRequest);
+          }
         } else {
-          let loginResult = await msal.loginPopup(params);
-          params.account = loginResult.account || msal.getAllAccounts()[0];
-          login = await msal.acquireTokenSilent(params);
+          const loginResult = await msalApplication.loginPopup(tokenRequest);
+          tokenRequest.account = loginResult.account || msalApplication.getAllAccounts()[0];
+          tokenResponse = await msalApplication.acquireTokenSilent(tokenRequest);
         }
       } catch (inner) {
         if (this.isMsalInteractionInProgress(inner)) {
@@ -866,36 +1019,40 @@ export class SharepointChoiceUtils {
     if (!apiUrl) return null;
 
     // query api
-    var r;
+    let response: Response | undefined;
     try {
-      r = await fetch(apiUrl, {
+      response = await fetch(apiUrl, {
         method: httpMethod || "GET",
         headers: {
-          Authorization: `Bearer ${login.accessToken}`,
+          Authorization: `Bearer ${tokenResponse.accessToken}`,
           "Content-Type": dataType == "json" ? "application/json" : "",
         },
-        body: jsonPostData ? JSON.stringify(jsonPostData) : null,
+        body: jsonPostData ? (JSON.stringify(jsonPostData) ?? null) : null,
       });
 
       // return formatted data for 2xx, 4xx and 5xx will not return
-      if (r.status == 204) return null;
-      if (r.status < 200 || r.status > 299) throw "Exception";
+      if (response.status == 204) return null;
+      if (response.status < 200 || response.status > 299) throw "Exception";
 
-      if (dataType == "json") return await r.json();
-      if (dataType == "text") return await r.text();
-      if (dataType == "buffer") return await r.arrayBuffer();
-      if (dataType && dataType != "none") return new Blob([await r.arrayBuffer()], { type: dataType });
+      if (dataType == "json") {
+        // Endpoint response schemas vary; keep JSON unknown until the consuming feature validates it.
+        const responseData: unknown = await response.json();
+        return responseData;
+      }
+      if (dataType == "text") return await response.text();
+      if (dataType == "buffer") return await response.arrayBuffer();
+      if (dataType && dataType != "none") return new Blob([await response.arrayBuffer()], { type: dataType });
 
-      return r;
+      return response;
     } catch (e) {
-      throw `Exception getting API data with status ${r?.status ?? "no response"} response ${e} and body ${r && typeof r.text === "function" ? await r.text().catch(() => "<unreadable body>") : (r?.body ?? "")}`;
+      throw `Exception getting API data with status ${response?.status ?? "no response"} response ${e} and body ${response && typeof response.text === "function" ? await response.text().catch(() => "<unreadable body>") : (response?.body ?? "")}`;
     }
   }
 
   private isMsalInteractionInProgress(error: unknown): boolean {
-    const raw = error as any;
-    const code = `${raw?.errorCode || raw?.code || ""}`.toLowerCase();
-    const message = `${raw?.errorMessage || raw?.message || raw || ""}`.toLowerCase();
+    const errorRecord = typeof error === "object" && error !== null ? (error as Record<string, unknown>) : undefined;
+    const code = String(errorRecord?.["errorCode"] || errorRecord?.["code"] || "").toLowerCase();
+    const message = String(errorRecord?.["errorMessage"] || errorRecord?.["message"] || error || "").toLowerCase();
     return code.includes("interaction_in_progress") || message.includes("interaction_in_progress");
   }
 
@@ -903,8 +1060,8 @@ export class SharepointChoiceUtils {
     const keys: string[] = [];
     const collect = (storage?: Storage) => {
       if (!storage) return;
-      for (let i = 0; i < storage.length; i++) {
-        const key = storage.key(i);
+      for (let storageIndex = 0; storageIndex < storage.length; storageIndex++) {
+        const key = storage.key(storageIndex);
         if (!key) continue;
         if (/^msal\./i.test(key) && /interaction|request|urlhash|state|nonce/i.test(key)) keys.push(key);
       }
@@ -931,8 +1088,8 @@ export class SharepointChoiceUtils {
       if (!storage) return;
 
       const remove: string[] = [];
-      for (let i = 0; i < storage.length; i++) {
-        const key = storage.key(i);
+      for (let storageIndex = 0; storageIndex < storage.length; storageIndex++) {
+        const key = storage.key(storageIndex);
         if (!key) continue;
         if (/^msal\./i.test(key) && /interaction|request|urlhash|state|nonce/i.test(key)) remove.push(key);
       }
@@ -954,101 +1111,179 @@ export class SharepointChoiceUtils {
     }
   }
 
-  private cleanSaveKeys(save: SharepointChoiceForm, uned?: SharepointChoiceForm): void {
-    if (!uned) uned = {};
+  private cleanSaveKeys(saveData: SharepointChoiceForm, unchangedData?: SharepointChoiceForm): void {
+    const originalData = unchangedData ?? {};
 
     // mutate the save object directly
-    delete save["$$hashKey"];
-    delete save["Id"];
-    delete save["ID"];
-    delete save["Attachments"];
+    delete saveData["$$hashKey"];
+    delete saveData["Id"];
+    delete saveData["ID"];
+    delete saveData["Attachments"];
 
-    for (let key of Object.keys(save)) {
-      if (save[key] === "") save[key] = null;
+    for (const fieldName of Object.keys(saveData)) {
+      if (saveData[fieldName] === "") saveData[fieldName] = null;
 
       // keep fields becoming blank
-      if (save[key] === null && uned[key] !== null) continue;
+      if (saveData[fieldName] === null && originalData[fieldName] !== null) continue;
 
       // remove and unedited, including internal fields
-      if (uned[key] !== undefined && JSON.stringify(uned[key]) == JSON.stringify(save[key])) {
-        delete save[key];
+      if (
+        originalData[fieldName] !== undefined &&
+        JSON.stringify(originalData[fieldName]) == JSON.stringify(saveData[fieldName])
+      ) {
+        delete saveData[fieldName];
         continue;
       }
 
-      // prevent errors on nulls or non objects
-      if (save[key] === null || save[key] === undefined || typeof save[key] != "object") continue;
+      const fieldValue = saveData[fieldName];
+      if (fieldValue === null || fieldValue === undefined) continue;
 
       // convert dates
-      if (save[key].toJSON) {
-        save[key] = save[key].toJSON();
-        if (save[key] == "Invalid Date") save[key] = null;
+      if (fieldValue instanceof Date) {
+        saveData[fieldName] = fieldValue.toJSON();
+        if (saveData[fieldName] == "Invalid Date") saveData[fieldName] = null;
 
-        if (save[key] == null && !uned[key]) delete save[key];
+        if (saveData[fieldName] == null && !originalData[fieldName]) delete saveData[fieldName];
         continue;
       }
+
+      if (Array.isArray(fieldValue)) {
+        saveData[fieldName] = JSON.stringify(fieldValue);
+        continue;
+      }
+
+      if (!isRecord(fieldValue)) continue;
 
       // if Url
       if (
-        Object.prototype.hasOwnProperty.call(save[key], "Url") ||
-        Object.prototype.hasOwnProperty.call(save[key], "Description")
+        Object.prototype.hasOwnProperty.call(fieldValue, "Url") ||
+        Object.prototype.hasOwnProperty.call(fieldValue, "Description")
       ) {
-        if (!save[key].Description) save[key].Description = save[key].Url;
-        if (!save[key].Url) save[key] = null;
+        if (!fieldValue["Description"]) fieldValue["Description"] = fieldValue["Url"];
+        if (!fieldValue["Url"]) saveData[fieldName] = null;
 
-        if (save[key] == null && !uned[key]) delete save[key];
+        if (saveData[fieldName] == null && !originalData[fieldName]) delete saveData[fieldName];
         continue;
       }
 
       // if Geolocation
       if (
-        Object.prototype.hasOwnProperty.call(save[key], "Latitude") ||
-        Object.prototype.hasOwnProperty.call(save[key], "Longitude")
+        Object.prototype.hasOwnProperty.call(fieldValue, "Latitude") ||
+        Object.prototype.hasOwnProperty.call(fieldValue, "Longitude")
       ) {
-        let latitude = save[key].Latitude;
-        let longitude = save[key].Longitude;
+        const parseCoordinate = (coordinate: unknown): number | null => {
+          if (coordinate === "" || coordinate === undefined || coordinate === null) return null;
+          const parsed = typeof coordinate === "number" ? coordinate : Number.parseFloat(String(coordinate));
+          return Number.isFinite(parsed) ? parsed : null;
+        };
+        const latitude = parseCoordinate(fieldValue["Latitude"]);
+        const longitude = parseCoordinate(fieldValue["Longitude"]);
 
-        if (latitude === "" || latitude === undefined) latitude = null;
-        else if (typeof latitude == "string") latitude = parseFloat(latitude);
+        if (latitude === null || longitude === null) saveData[fieldName] = null;
+        else saveData[fieldName] = { Latitude: latitude, Longitude: longitude };
 
-        if (longitude === "" || longitude === undefined) longitude = null;
-        else if (typeof longitude == "string") longitude = parseFloat(longitude);
-
-        if (latitude == null || longitude == null || isNaN(latitude) || isNaN(longitude)) save[key] = null;
-        else save[key] = { Latitude: latitude, Longitude: longitude };
-
-        if (save[key] == null && !uned[key]) delete save[key];
+        if (saveData[fieldName] == null && !originalData[fieldName]) delete saveData[fieldName];
         continue;
       }
 
       // convert back to direct array and ensure no nulls selected, should never occur but does on some browsers? and deduplicate data
-      if (Object.prototype.hasOwnProperty.call(save[key], "results")) {
-        save[key] =
-          save[key].results
-            ?.filter((i: string | number) => i)
-            .filter((item: string | number, pos: number, arr: (string | number)[]) => arr.indexOf(item) == pos) ?? [];
-        if (save[key].length == 0) save[key] = null;
+      if (Object.prototype.hasOwnProperty.call(fieldValue, "results")) {
+        const results = Array.isArray(fieldValue["results"]) ? fieldValue["results"] : [];
+        const selectedValues = results.filter(
+          (selectedValue): selectedValue is string | number =>
+            !!selectedValue && (typeof selectedValue === "string" || typeof selectedValue === "number"),
+        );
+        const uniqueValues = [...new Set(selectedValues)];
+        saveData[fieldName] = uniqueValues.length > 0 ? uniqueValues : null;
 
-        if (save[key] == null && !uned[key]) delete save[key];
+        if (saveData[fieldName] == null && !originalData[fieldName]) delete saveData[fieldName];
         continue;
       }
 
       // convert JSON
-      save[key] = JSON.stringify(save[key]);
+      saveData[fieldName] = JSON.stringify(saveData[fieldName]);
       continue;
     }
   }
 
-  private hasData(save: SharepointChoiceForm): boolean {
-    for (var key in save) if (key != "Id") return true;
+  private hasData(itemData: SharepointChoiceForm): boolean {
+    for (const fieldName in itemData) if (fieldName != "Id") return true;
 
     return false;
   }
 
   private normalizePath(path: string): string {
     if (!path) return "";
-    let s = path.indexOf("://");
-    if (s >= 0) path = path.substring(path.indexOf("/", s + 4));
+    const protocolSeparatorIndex = path.indexOf("://");
+    if (protocolSeparatorIndex >= 0) path = path.substring(path.indexOf("/", protocolSeparatorIndex + 4));
     return decodeURIComponent(path).replace(/\/$/, "");
+  }
+
+  private extractInlineImages(save: SharepointChoiceForm): InlineImageExtraction {
+    const uploads: InlineImageUpload[] = [];
+    const htmlByField = new Map<string, string>();
+    let oversizedCount = 0;
+
+    for (const [field, value] of Object.entries(save)) {
+      if (typeof value !== "string" || !/<img\b/i.test(value)) continue;
+
+      const fieldUploadCount = uploads.length;
+      const html = value.replace(/<img\b[^>]*>/gi, (imageTag) => {
+        const source = /\bsrc\s*=\s*(["'])(data:image\/[^"']+)\1/i.exec(imageTag);
+        if (!source) return imageTag;
+
+        const data = /^data:(image\/[a-z0-9.+-]+);base64,([a-z0-9+/]*={0,2})$/i.exec(source[2]!);
+        if (!data || data[1]!.toLowerCase() === "image/svg+xml") return imageTag;
+
+        const mimeType = data[1]!.toLowerCase();
+        const base64 = data[2]!;
+        const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+        const byteLength = Math.floor((base64.length * 3) / 4) - padding;
+        if (byteLength > MAX_PASTED_IMAGE_SIZE_BYTES) {
+          oversizedCount++;
+          return "";
+        }
+
+        let binary: string;
+        try {
+          binary = atob(base64);
+        } catch {
+          throw new Error(`Unable to decode pasted image data in field ${field}.`);
+        }
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+
+        const extension =
+          mimeType === "image/jpeg"
+            ? "jpg"
+            : mimeType
+                .substring("image/".length)
+                .split("+")[0]!
+                .replace(/[^a-z0-9]/g, "") || "img";
+        const placeholder = `sharepoint-choice-inline-image-${crypto.randomUUID()}`;
+        uploads.push({
+          field,
+          fileName: `pasted-image-${crypto.randomUUID()}.${extension}`,
+          data: bytes.buffer,
+          placeholder,
+        });
+
+        return imageTag.replace(source[0], `src="${placeholder}"`);
+      });
+
+      if (uploads.length > fieldUploadCount) {
+        htmlByField.set(field, html);
+        delete save[field];
+      } else if (html !== value) {
+        save[field] = html;
+      }
+    }
+
+    return { uploads, htmlByField, oversizedCount };
+  }
+
+  private escapeHtmlAttribute(value: string): string {
+    return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
   // patch save list item data and parse any data types appropriate for use in <sharepoint-choice ngModel=""> attributes
@@ -1057,83 +1292,130 @@ export class SharepointChoiceUtils {
     uneditedDataToBuildPatch: SharepointChoiceForm,
     listTitle: string,
   ): Promise<number> {
-    var save = JSON.parse(JSON.stringify(formDataIncIdToUpdate));
-    let id = save.Id;
+    const saveData = JSON.parse(JSON.stringify(formDataIncIdToUpdate)) as SharepointChoiceForm;
+    const initialItemId = saveData["Id"];
+    let itemId: number | undefined = undefined;
+    if (typeof initialItemId === "number") itemId = initialItemId;
+    else if (typeof initialItemId === "string" && initialItemId.trim()) {
+      const parsedItemId = Number(initialItemId);
+      if (Number.isFinite(parsedItemId)) itemId = parsedItemId;
+    }
+    let inlineImages: InlineImageExtraction;
 
     try {
-      this.cleanSaveKeys(save, uneditedDataToBuildPatch);
+      inlineImages = this.extractInlineImages(saveData);
+      if (inlineImages.oversizedCount) {
+        alert(
+          `${inlineImages.oversizedCount === 1 ? "A pasted image was" : `${inlineImages.oversizedCount} pasted images were`} skipped because each image must be ${MAX_PASTED_IMAGE_SIZE_MB} MB or smaller.`,
+        );
+      }
+
+      this.cleanSaveKeys(saveData, uneditedDataToBuildPatch);
 
       // save/update the item
-      if (!id) {
-        var saving = await this.sp.web.lists.getByTitle(listTitle).items.add(save);
-        id = saving.Id;
-      } else if (this.hasData(save)) {
-        await this.sp.web.lists.getByTitle(listTitle).items.getById(id).update(save);
+      if (!itemId) {
+        const createdItem = await this.sp.web.lists.getByTitle(listTitle).items.add(saveData);
+        itemId = createdItem.Id;
+      } else if (this.hasData(saveData)) {
+        await this.sp.web.lists.getByTitle(listTitle).items.getById(itemId).update(saveData);
       }
     } catch (e) {
       alert(MapErrors(e, "Error saving item:"));
       throw e;
     }
 
-    var errors: Array<string> = [];
+    const errors: string[] = [];
     // process attachments as deletes then uploads
     if (
-      id &&
+      itemId &&
       formDataIncIdToUpdate.Attachments &&
       formDataIncIdToUpdate.Attachments.results &&
       formDataIncIdToUpdate.Attachments.results.length > 0
     ) {
-      var deletes = formDataIncIdToUpdate.Attachments.results
-        .filter((a: SharepointChoiceAttachment) => {
-          return a.Deleted;
-        })
-        .map((a: SharepointChoiceAttachment) => {
-          return a.FileName;
-        });
+      const attachmentNamesToDelete = formDataIncIdToUpdate.Attachments.results
+        .filter((attachment: SharepointChoiceAttachment) => attachment.Deleted)
+        .map((attachment: SharepointChoiceAttachment) => attachment.FileName);
 
-      for (let i = 0; i < deletes.length; i++)
+      for (const attachmentName of attachmentNamesToDelete)
         try {
           await this.sp.web.lists
             .getByTitle(listTitle)
-            .items.getById(id)
-            .attachmentFiles.getByName(deletes[i]!)
+            .items.getById(itemId)
+            .attachmentFiles.getByName(attachmentName)
             .delete();
         } catch (e) {
           errors.push(
-            `Error deleting attachment ${deletes[i]} for item ${id} in list ${listTitle} with error ${MapErrors(e)}`,
+            `Error deleting attachment ${attachmentName} for item ${itemId} in list ${listTitle} with error ${MapErrors(e)}`,
           );
         }
 
-      var adds = formDataIncIdToUpdate.Attachments.results.filter((a: SharepointChoiceAttachment) => {
-        return !a.Deleted && !a.ServerRelativeUrl && !a.Uploaded;
-      });
+      const attachmentsToAdd = formDataIncIdToUpdate.Attachments.results.filter(
+        (attachment: SharepointChoiceAttachment) =>
+          !attachment.Deleted && !attachment.ServerRelativeUrl && !attachment.Uploaded,
+      );
 
-      for (let a = 0; a < adds.length; a++) {
-        let attachment = adds[a]!;
+      for (const attachment of attachmentsToAdd) {
         if (attachment.Data == undefined) continue;
         try {
-          let added = await this.sp.web.lists
+          const addedAttachment = await this.sp.web.lists
             .getByTitle(listTitle)
-            .items.getById(id)
+            .items.getById(itemId)
             .attachmentFiles.add(attachment.FileName, attachment.Data);
           attachment.Uploaded = true;
           delete attachment.Data;
-          attachment.ServerRelativeUrl = (await added.file()).ServerRelativeUrl;
+          attachment.ServerRelativeUrl = (await addedAttachment.file()).ServerRelativeUrl;
         } catch (e) {
           errors.push(
-            `Error adding attachment ${attachment.FileName} for item ${id} in list ${listTitle} with error ${MapErrors(e)}`,
+            `Error adding attachment ${attachment.FileName} for item ${itemId} in list ${listTitle} with error ${MapErrors(e)}`,
           );
         }
       }
     }
 
-    if (errors.length > 0) {
-      let messages = errors.join("\n");
-      alert(`Error saving attachments:\n\n${messages}`);
-      throw messages;
+    const imageErrors: string[] = [];
+    const imageHtmlByField = new Map(inlineImages.htmlByField);
+    for (const image of inlineImages.uploads) {
+      try {
+        if (!itemId) throw new Error("Cannot upload pasted images without a saved list item.");
+
+        const added = await this.sp.web.lists
+          .getByTitle(listTitle)
+          .items.getById(itemId)
+          .attachmentFiles.add(image.fileName, image.data);
+        const serverRelativeUrl = (await added.file()).ServerRelativeUrl;
+        if (!serverRelativeUrl) throw new Error(`SharePoint did not return a URL for ${image.fileName}.`);
+
+        const html = imageHtmlByField.get(image.field);
+        if (html === undefined) throw new Error(`Unable to locate the rich-text content for ${image.field}.`);
+        imageHtmlByField.set(image.field, html.replace(image.placeholder, this.escapeHtmlAttribute(serverRelativeUrl)));
+      } catch (e) {
+        imageErrors.push(
+          `Error adding pasted image ${image.fileName} for item ${itemId} in list ${listTitle} with error ${MapErrors(e)}`,
+        );
+      }
     }
 
-    return id;
+    if (inlineImages.uploads.length > 0 && imageErrors.length === 0) {
+      const imageFieldValues: SharepointChoiceForm = {};
+      for (const [field, html] of imageHtmlByField) imageFieldValues[field] = html;
+      try {
+        if (itemId === undefined) throw new Error("Cannot save pasted image links without a saved list item.");
+        await this.sp.web.lists.getByTitle(listTitle).items.getById(itemId).update(imageFieldValues);
+      } catch (e) {
+        alert(MapErrors(e, "Error saving pasted image links:"));
+        throw e;
+      }
+    }
+    errors.push(...imageErrors);
+
+    if (errors.length > 0) {
+      const errorMessages = errors.join("\n");
+      alert(`Error saving attachments:\n\n${errorMessages}`);
+      throw errorMessages;
+    }
+
+    if (itemId === undefined) throw new Error(`Unable to determine item id for list ${listTitle}`);
+    return itemId;
   }
 
   public async saveFolderListItem(
@@ -1146,58 +1428,64 @@ export class SharepointChoiceUtils {
     folderPath = this.normalizePath(folderPath);
 
     if (!formDataIncIdToUpdate["Id"]) {
-      let save = JSON.parse(JSON.stringify(formDataIncIdToUpdate));
+      const folderItemData = JSON.parse(JSON.stringify(formDataIncIdToUpdate)) as SharepointChoiceForm;
 
       try {
-        this.cleanSaveKeys(save, undefined);
+        this.cleanSaveKeys(folderItemData);
 
         // return the data in the format required for folder/child items
-        let simpleSave = Object.keys(save)
-          .map((key) => {
-            let value = save[key];
+        const simpleFieldUpdates = Object.keys(folderItemData)
+          .map((fieldName) => {
+            let fieldValue = folderItemData[fieldName];
             // exclude complex objects for 2nd update to catch
-            if (typeof value == "object") return null;
-            else if (typeof value == "string" && /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]/.test(value)) return null;
-            else if (key.endsWith("Id")) return null;
+            if (typeof fieldValue == "object") return null;
+            else if (typeof fieldValue == "string" && /^[1920]{2}[0-9]{2}\-[01][0-9]\-[0-3][0-9]/.test(fieldValue))
+              return null;
+            else if (fieldName.endsWith("Id")) return null;
             // define values as string required for the api
-            else if (value === null) value = "";
-            else if (typeof value == "boolean") value = value ? "1" : "0";
-            else if (typeof value == "number") value = value.toString();
-            else if (typeof value == "string") value = value.trim();
+            else if (fieldValue === null) fieldValue = "";
+            else if (typeof fieldValue == "boolean") fieldValue = fieldValue ? "1" : "0";
+            else if (typeof fieldValue == "number") fieldValue = fieldValue.toString();
+            else if (typeof fieldValue == "string") fieldValue = fieldValue.trim();
+            if (typeof fieldValue !== "string") return null;
             return {
-              FieldName: key,
-              FieldValue: value,
+              FieldName: fieldName,
+              FieldValue: fieldValue,
             };
           })
           .filter((item) => item !== undefined && item !== null);
 
-        let results = await this.sp.web.lists
+        const validationResults = (await this.sp.web.lists
           .getByTitle(listTitle)
-          .addValidateUpdateItemUsingPath(simpleSave, folderPath, false, undefined, additionalProps);
+          .addValidateUpdateItemUsingPath(simpleFieldUpdates, folderPath, false, undefined, additionalProps)) as
+          | ListItemValidationResult[]
+          | ListItemValidationResponse;
 
-        let updateResults = Array.isArray(results) ? results : (results as { value?: any[] })?.value || [];
-        let itemId = updateResults.find((result) => result.ItemId)?.ItemId;
+        const fieldUpdateResults = Array.isArray(validationResults)
+          ? validationResults
+          : (validationResults as ListItemValidationResponse).value || [];
+        let itemId = fieldUpdateResults.find((result) => result.ItemId)?.ItemId;
 
         if (!itemId) {
-          let idField = updateResults.find((result) => result.FieldName == "Id")?.FieldValue;
-          if (idField !== undefined && idField !== null && idField !== "") itemId = parseInt(idField, 10);
+          const idFieldValue = fieldUpdateResults.find((result) => result.FieldName == "Id")?.FieldValue;
+          if (idFieldValue !== undefined && idFieldValue !== "") itemId = parseInt(idFieldValue, 10);
         }
 
         formDataIncIdToUpdate["Id"] = itemId;
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!(e instanceof Error ? e.message : String(e)).includes("already exists") || !additionalProps?.leafName) {
           alert(MapErrors(e, "Error saving folder:"));
           throw e;
         }
 
-        let existingPath = `${folderPath}/${additionalProps.leafName}`;
-        let existing = await this.sp.web.lists
+        const existingItemPath = `${folderPath}/${additionalProps.leafName}`;
+        const existingItems = await this.sp.web.lists
           .getByTitle(listTitle)
-          .items.filter(`FileRef eq '${existingPath.replace(/'/g, "''")}'`)
+          .items.filter(`FileRef eq '${existingItemPath.replace(/'/g, "''")}'`)
           .select("Id")
           .top(1)();
 
-        formDataIncIdToUpdate["Id"] = existing[0]?.Id;
+        formDataIncIdToUpdate["Id"] = existingItems[0]?.Id;
       }
 
       // purposly blank the unedited here so all fields are rewritten later
@@ -1205,37 +1493,37 @@ export class SharepointChoiceUtils {
     }
 
     if (!formDataIncIdToUpdate["Id"]) {
-      let error = new Error(`Unable to determine folder item id for list ${listTitle}`);
+      const error = new Error(`Unable to determine folder item id for list ${listTitle}`);
       console.error("SharepointChoiceUtils.saveFolderListItem missing item id", error);
       throw error;
     }
-    let id = await this.save(formDataIncIdToUpdate, uneditedDataToBuildPatch, listTitle);
-    let item = await this.sp.web.lists.getByTitle(listTitle).items.getById(id).select("FileRef")();
+    const itemId = await this.save(formDataIncIdToUpdate, uneditedDataToBuildPatch, listTitle);
+    const savedItem = await this.sp.web.lists.getByTitle(listTitle).items.getById(itemId).select("FileRef")();
 
     return {
-      id,
-      folderPath: this.normalizePath(item?.FileRef),
+      id: itemId,
+      folderPath: this.normalizePath(savedItem?.FileRef),
     };
   }
 
   // get query parameters, not strictly sharepoint but reused a lot
   public param(parameterToReturn: string): string | undefined {
-    var rx = new RegExp(`[?&]${parameterToReturn}=([^&]+).*$`);
-    var returnVal = document.location.search.match(rx);
-    return !returnVal ? undefined : decodeURIComponent(returnVal[1]!).replace(/\+/g, " ");
+    const parameterPattern = new RegExp(`[?&]${parameterToReturn}=([^&]+).*$`);
+    const matchedParameter = document.location.search.match(parameterPattern);
+    return !matchedParameter ? undefined : decodeURIComponent(matchedParameter[1]!).replace(/\+/g, " ");
   }
 
   public async ensurePath(path: string, start: number): Promise<void> {
     path = this.normalizePath(path);
 
-    var p = path
+    const currentFolderPath = path
       .split("/")
       .slice(0, start + 1)
       .join("/");
-    var folder = this.sp.web.getFolderByServerRelativePath(p);
+    const folderQuery = this.sp.web.getFolderByServerRelativePath(currentFolderPath);
     try {
-      var f = await folder();
-      if (!f.Exists)
+      const folderInfo = await folderQuery();
+      if (!folderInfo.Exists)
         await this.sp.web
           .getFolderByServerRelativePath(path.split("/").slice(0, start).join("/"))
           .addSubFolderUsingPath(path.split("/").slice(start)[0]!);
@@ -1245,32 +1533,34 @@ export class SharepointChoiceUtils {
         .getFolderByServerRelativePath(path.split("/").slice(0, start).join("/"))
         .addSubFolderUsingPath(path.split("/").slice(start)[0]!);
     }
-    if (p != path) await this.ensurePath(path, start + 1);
+    if (currentFolderPath != path) await this.ensurePath(path, start + 1);
   }
 
-  public async getRoot(list: string): Promise<string> {
-    let root = await this.sp.web.lists.getByTitle(list).rootFolder();
-    return root.ServerRelativeUrl;
+  public async getRoot(listTitle: string): Promise<string> {
+    const rootFolder = await this.sp.web.lists.getByTitle(listTitle).rootFolder();
+    return rootFolder.ServerRelativeUrl;
   }
 
-  public async getFiles(path: string, additional: string | undefined): Promise<SharepointChoiceAttachment[]> {
+  public async getFiles(path: string, additionalPath: string | undefined): Promise<SharepointChoiceAttachment[]> {
     path = this.normalizePath(path);
 
-    var files = await this.sp.web
-      .getFolderByServerRelativePath(path + (additional ? "/" + additional : ""))
+    const folderFiles = await this.sp.web
+      .getFolderByServerRelativePath(path + (additionalPath ? "/" + additionalPath : ""))
       .files.orderBy("TimeCreated")
       .expand("ListItemAllFields")();
 
     return await Promise.all(
-      files.map(async (file) => {
-        await this.cleanLoadKeys(file["ListItemAllFields"]);
+      folderFiles.map(async (file) => {
+        const expandedFile = file as typeof file & { ListItemAllFields: SharepointChoiceForm };
+        const listItemAllFields = expandedFile.ListItemAllFields;
+        await this.cleanLoadKeys(listItemAllFields);
 
         return {
           FileName: file.Name,
           TimeCreated: new Date(file.TimeCreated),
           ServerRelativeUrl: file.ServerRelativeUrl,
-          ListItemAllFields: file["ListItemAllFields"],
-          OldListItemAllFields: JSON.parse(JSON.stringify(file["ListItemAllFields"])),
+          ListItemAllFields: listItemAllFields,
+          OldListItemAllFields: JSON.parse(JSON.stringify(listItemAllFields)),
         };
       }),
     );
@@ -1278,70 +1568,70 @@ export class SharepointChoiceUtils {
 
   public async relocateFolder(source: string, destination: string): Promise<string | null> {
     // ensure these are server relative paths
-    var dst = this.normalizePath(destination);
-    var src = this.normalizePath(source);
+    const destinationPath = this.normalizePath(destination);
+    const sourcePath = this.normalizePath(source);
 
     // if the destination folder is the same as the current then return null
-    if (src.toLowerCase().replace(/\/$/, "") == dst.toLowerCase().replace(/\/$/, "")) return null;
+    if (sourcePath.toLowerCase().replace(/\/$/, "") == destinationPath.toLowerCase().replace(/\/$/, "")) return null;
 
     // move the files to the new folder by making the parent then moving the folder directly
-    var parent = dst.substring(0, dst.lastIndexOf("/"));
-    await this.ensurePath(parent, !this.context || this.context.length < 2 ? 2 : 4);
+    const parentPath = destinationPath.substring(0, destinationPath.lastIndexOf("/"));
+    await this.ensurePath(parentPath, !this.context || this.context.length < 2 ? 2 : 4);
 
     // move files, keep both may result in a renamed folder if the destination already exists
-    var folder = await this.sp.web.getFolderByServerRelativePath(src).moveByPath(dst, {
+    const movedFolder = await this.sp.web.getFolderByServerRelativePath(sourcePath).moveByPath(destinationPath, {
       KeepBoth: true,
       RetainEditorAndModifiedOnMove: true,
       ShouldBypassSharedLocks: true,
     });
 
     // return where its been moved
-    return decodeURIComponent((await folder()).ServerRelativeUrl || destination);
+    return decodeURIComponent((await movedFolder()).ServerRelativeUrl || destination);
   }
 
   public async saveFiles(
     path: string,
-    additional: string | undefined,
-    url: { Url: string; Description: string } | undefined,
-    files: { results: SharepointChoiceAttachment[] },
+    additionalPath: string | undefined,
+    requestUrl: { Url: string; Description: string } | undefined,
+    attachments: { results: SharepointChoiceAttachment[] },
     metadata: SharepointChoiceForm | undefined,
   ): Promise<void> {
     path = this.normalizePath(path);
 
     // Common metadata is intentionally applied after per-file values and overrides matching fields.
-    var commonmeta = metadata ? JSON.parse(JSON.stringify(metadata)) : {};
-    if (url && url.Url) {
-      if (!url.Description) url.Description = url.Url;
-      commonmeta["Request"] = url;
+    const commonMetadata: SharepointChoiceForm = metadata
+      ? (JSON.parse(JSON.stringify(metadata)) as SharepointChoiceForm)
+      : {};
+    if (requestUrl && requestUrl.Url) {
+      if (!requestUrl.Description) requestUrl.Description = requestUrl.Url;
+      commonMetadata["Request"] = requestUrl;
     }
 
-    var errors: Array<string> = [];
+    const errors: string[] = [];
     try {
-      var folder;
-      if (metadata || url) {
-        folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
-        await folder.update(commonmeta);
+      if (metadata || requestUrl) {
+        const folderItem = await this.sp.web.getFolderByServerRelativePath(path).getItem();
+        await folderItem.update(commonMetadata);
       }
 
       // subfolders for these
-      if (additional) {
-        path += "/" + additional;
-        folder = await this.sp.web.getFolderByServerRelativePath(path).getItem();
-        await folder.update(commonmeta);
+      if (additionalPath) {
+        path += "/" + additionalPath;
+        const additionalFolderItem = await this.sp.web.getFolderByServerRelativePath(path).getItem();
+        await additionalFolderItem.update(commonMetadata);
       }
     } catch (e) {
       errors.push("Error saving folder metadata " + MapErrors(e));
     }
 
     // process saves and deletes
-    for (let i = 0; i < files.results.length; i++) {
-      let file = files.results[i]!;
+    for (const file of attachments.results) {
       try {
         if (!file.ListItemAllFields) file.ListItemAllFields = {};
 
         // clone common metadata for files
-        for (let m of Object.keys(commonmeta)) {
-          file.ListItemAllFields[m] = commonmeta[m];
+        for (const fieldName of Object.keys(commonMetadata)) {
+          file.ListItemAllFields[fieldName] = commonMetadata[fieldName];
         }
 
         // basic list item fields cleanup
@@ -1356,25 +1646,27 @@ export class SharepointChoiceUtils {
           await this.sp.web.getFileByServerRelativePath(file.ServerRelativeUrl || path + "/" + file.FileName).recycle();
         } else if (file.Data) {
           // file to upload
-          var uploaded = await this.sp.web
+          const uploadedFile = await this.sp.web
             .getFolderByServerRelativePath(path)
             .files.addUsingPath(file.FileName, file.Data, {
               EnsureUniqueFileName: true,
             });
           // Record upload success before metadata updates so a retry never uploads the file again.
           file.TimeCreated = new Date();
-          file.ServerRelativeUrl = uploaded.ServerRelativeUrl;
+          file.ServerRelativeUrl = uploadedFile.ServerRelativeUrl;
           delete file.Data;
           if (this.hasData(file.ListItemAllFields)) {
-            let i = await this.sp.web.getFileByServerRelativePath(uploaded.ServerRelativeUrl).getItem();
-            await i.update(file.ListItemAllFields);
+            const uploadedFileItem = await this.sp.web
+              .getFileByServerRelativePath(uploadedFile.ServerRelativeUrl)
+              .getItem();
+            await uploadedFileItem.update(file.ListItemAllFields);
           }
         } else if (this.hasData(file.ListItemAllFields)) {
           // get current item and check for changes
-          let i = await this.sp.web
+          const existingFileItem = await this.sp.web
             .getFileByServerRelativePath(file.ServerRelativeUrl || path + "/" + file.FileName)
             .getItem();
-          await i.update(file.ListItemAllFields);
+          await existingFileItem.update(file.ListItemAllFields);
         }
       } catch (e) {
         errors.push(`Error saving file ${file.FileName} in folder ${path} with error ${MapErrors(e)}`);
@@ -1382,9 +1674,9 @@ export class SharepointChoiceUtils {
     }
 
     if (errors.length > 0) {
-      let messages = errors.join("\n");
-      alert(`Error saving file:\n\n${messages}`);
-      throw messages;
+      const errorMessages = errors.join("\n");
+      alert(`Error saving file:\n\n${errorMessages}`);
+      throw errorMessages;
     }
   }
 }

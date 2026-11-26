@@ -1,20 +1,42 @@
-import { ChangeDetectorRef, ElementRef, ErrorHandler, provideZonelessChangeDetection, type Type } from "@angular/core";
+import {
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  ErrorHandler,
+  provideZonelessChangeDetection,
+  type Type,
+} from "@angular/core";
 import { TestBed } from "@angular/core/testing";
 import { Workbook } from "devextreme-exceljs-fork";
 import JSZip from "@turbowarp/jszip";
+import { PermissionKind } from "@pnp/sp/security";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   SharepointChoiceColumn,
   SharepointChoiceForm,
+  SharepointChoiceSearchResult,
   SharepointChoiceRow,
   SharepointChoiceTabs,
+  SharepointChoiceList,
+  SharepointChoiceAttachment,
+  MAX_PASTED_IMAGE_SIZE_BYTES,
 } from "./sharepoint-choice.models";
 import type { SharepointChoiceComponent as SharepointChoiceComponentType } from "./sharepoint-choice.component";
 import type { SharepointChoiceTable as SharepointChoiceTableType } from "./sharepoint-choice.table";
 import type { SharepointChoiceUtils as SharepointChoiceUtilsType } from "./sharepoint-choice.utils";
-import { SharepointChoiceRefresh } from "./sharepoint-choice.refresh";
+import { SharepointChoiceRefresh, type SharepointChoiceEvent } from "./sharepoint-choice.refresh";
+import { SharepointChoiceRender, type SharepointChoiceRenderContent } from "./sharepoint-choice.render";
 
 const fixtures: Array<{ destroy(): void }> = [];
+
+@Component({
+  standalone: true,
+  imports: [SharepointChoiceRender],
+  template: '<div [spcRenderNode]="content"></div>',
+})
+class SharepointChoiceRenderTestHost {
+  content: SharepointChoiceRenderContent = "<strong>Safe content</strong><script>unsafe()</script>";
+}
 
 async function createFixture<T>(component: Type<T>) {
   await TestBed.configureTestingModule({
@@ -48,13 +70,59 @@ let SharepointChoiceComponentCtor: typeof SharepointChoiceComponentType;
 let SharepointChoiceUtilsCtor: typeof SharepointChoiceUtilsType;
 let MapErrors: typeof import("./sharepoint-choice.utils").MapErrors;
 
-function createTable(): SharepointChoiceTableType {
+type SharepointChoiceTableTestSubject = Omit<SharepointChoiceTableType, never> & {
+  fields(tab: string): SharepointChoiceColumn[];
+  rows(tab: string): SharepointChoiceRow[];
+  currentPageRows(rows: SharepointChoiceRow[]): SharepointChoiceRow[];
+  filterChange(column: SharepointChoiceColumn, operation: string, value: string): void;
+  headerClick(column: SharepointChoiceColumn): void;
+  columnToggle(column: SharepointChoiceColumn, tab: string): void;
+  clearTable(event?: Event): void;
+  filterDistinct(field?: string, split?: boolean): unknown[];
+  trackRow(index: number, row: SharepointChoiceRow): string | number;
+  renderNode(
+    column: SharepointChoiceColumn,
+    value: unknown,
+    row: SharepointChoiceRow,
+    rowIndex: number,
+    columnIndex: number,
+  ): string;
+  startResize(event: MouseEvent, column: SharepointChoiceColumn): void;
+  exportTable(rows: SharepointChoiceRow[]): Promise<void>;
+  fieldValue(row: SharepointChoiceRow, field?: string): unknown;
+};
+
+type SharepointChoiceComponentTestSubject = Omit<SharepointChoiceComponentType, never> & {
+  errorHandler: ErrorHandler;
+  onUpTextSearch(searchText: string): Promise<void>;
+  onUpUserSearch(searchText: string): Promise<void>;
+  changed(): void;
+  appendFile(
+    fileName: string | null | undefined,
+    data: ArrayBuffer,
+    results: SharepointChoiceAttachment[],
+    description?: string,
+    depth?: number,
+  ): Promise<void>;
+  emls(data: ArrayBuffer, results: SharepointChoiceAttachment[], sourceFile: string, depth?: number): Promise<void>;
+  zips(data: ArrayBuffer, results: SharepointChoiceAttachment[], sourceFile: string, depth?: number): Promise<void>;
+  choices(): string[];
+  selectedText(selectedResult: SharepointChoiceSearchResult | null): Promise<void>;
+  selectedUser(selectedUser: { Id: number; Title: string; LoginName: string } | null): Promise<void>;
+  outlook(transfer: DataTransfer): Promise<void>;
+};
+
+function createTable(): SharepointChoiceTableTestSubject {
   const table = new SharepointChoiceTableCtor(new TestChangeDetectorRef(), new ErrorHandler());
   tables.push(table);
-  return table;
+  return table as unknown as SharepointChoiceTableTestSubject;
 }
 
-function createComponent(): SharepointChoiceComponentType {
+function tableForTests(table: SharepointChoiceTableType): SharepointChoiceTableTestSubject {
+  return table as unknown as SharepointChoiceTableTestSubject;
+}
+
+function createComponent(): SharepointChoiceComponentTestSubject {
   const component = new SharepointChoiceComponentCtor(
     new ElementRef(document.createElement("app-choice")),
     new TestChangeDetectorRef(),
@@ -62,7 +130,26 @@ function createComponent(): SharepointChoiceComponentType {
     new ErrorHandler(),
   );
   components.push(component);
-  return component;
+  return component as unknown as SharepointChoiceComponentTestSubject;
+}
+
+function componentForTests(component: SharepointChoiceComponentType): SharepointChoiceComponentTestSubject {
+  return component as unknown as SharepointChoiceComponentTestSubject;
+}
+
+function createUtils(): SharepointChoiceUtilsType {
+  const contextWindow = window as typeof window & {
+    _spPageContextInfo?: { webAbsoluteUrl: string; userLoginName?: string };
+  };
+  const previousContext = contextWindow._spPageContextInfo;
+  contextWindow._spPageContextInfo = {
+    webAbsoluteUrl: "https://example.test/sites/test",
+    userLoginName: "test-user",
+  };
+  const utils = new SharepointChoiceUtilsCtor();
+  if (previousContext) contextWindow._spPageContextInfo = previousContext;
+  else delete contextWindow._spPageContextInfo;
+  return utils;
 }
 
 async function createComponentFixture() {
@@ -155,17 +242,52 @@ describe("rich text clipboard images", () => {
       expect(pastedImageSource).toBe(dataUrl);
     });
   });
+
+  it("skips pasted images larger than the attachment size limit", () => {
+    const component = createComponent();
+    component.field = "Body";
+    component.form = { Body: "" };
+    component.spec = { Body: { TypeAsString: "Note", RichText: true } };
+
+    const editor = component.editor;
+    expect(editor).toBeDefined();
+    if (!editor) throw new Error("Rich text editor was not initialized.");
+
+    const alert = vi.fn();
+    vi.stubGlobal("alert", alert);
+    const oversizedFile = { size: MAX_PASTED_IMAGE_SIZE_BYTES + 1 } as File;
+    const item = {
+      kind: "file",
+      type: "image/png",
+      getAsFile: () => oversizedFile,
+    } as DataTransferItem;
+    const preventDefault = vi.fn();
+    const event = { clipboardData: { items: [item] }, preventDefault } as unknown as ClipboardEvent;
+    const handled = editor.view.someProp("handlePaste", (handlePaste) =>
+      handlePaste(editor.view, event, editor.view.state.selection.content()),
+    );
+
+    expect(handled).toBe(true);
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(alert).toHaveBeenCalledOnce();
+    expect(alert).toHaveBeenCalledWith(expect.stringContaining("25 MB"));
+    let hasImage = false;
+    editor.view.state.doc.descendants((node) => {
+      if (node.type.name === "image") hasImage = true;
+    });
+    expect(hasImage).toBe(false);
+  });
 });
 
 describe("zoneless OnPush rendering", () => {
   it("renders async choice suggestions after markForCheck without an extra detectChanges call", async () => {
     const fixture = await createFixture(SharepointChoiceComponentCtor);
-    const component = fixture.componentInstance;
+    const component = componentForTests(fixture.componentInstance);
     const suggestion: SharepointChoiceForm = { Contact: "Ada Lovelace" };
-    let resolveSearch!: (matches: Array<object>) => void;
+    let resolveSearch!: (matches: SharepointChoiceSearchResult[]) => void;
     const search = vi.fn(
       () =>
-        new Promise<Array<object>>((resolve) => {
+        new Promise<SharepointChoiceSearchResult[]>((resolve) => {
           resolveSearch = resolve;
         }),
     );
@@ -186,7 +308,7 @@ describe("zoneless OnPush rendering", () => {
 
   it("clears stale choice suggestions when an async search rejects", async () => {
     const fixture = await createFixture(SharepointChoiceComponentCtor);
-    const component = fixture.componentInstance;
+    const component = componentForTests(fixture.componentInstance);
     const error = new Error("Search failed");
     component.field = "Contact";
     component.spec = { Contact: { TypeAsString: "Text", Title: "Contact" } };
@@ -206,15 +328,15 @@ describe("zoneless OnPush rendering", () => {
 
   it("keeps only the latest result when overlapping searches finish out of order", async () => {
     const fixture = await createFixture(SharepointChoiceComponentCtor);
-    const component = fixture.componentInstance;
-    const pending: Array<(matches: Array<object>) => void> = [];
+    const component = componentForTests(fixture.componentInstance);
+    const pending: Array<(matches: SharepointChoiceSearchResult[]) => void> = [];
     component.field = "Contact";
     component.spec = { Contact: { TypeAsString: "Text", Title: "Contact" } };
     component.form = { Contact: "Ada" };
     component.text = {
       search: vi.fn(
         () =>
-          new Promise<Array<object>>((resolve) => {
+          new Promise<SharepointChoiceSearchResult[]>((resolve) => {
             pending.push(resolve);
           }),
       ),
@@ -234,7 +356,7 @@ describe("zoneless OnPush rendering", () => {
 
   it("renders input changes made after the initial render without manually checking the view", async () => {
     const fixture = await createFixture(SharepointChoiceComponentCtor);
-    const component = fixture.componentInstance;
+    const component = componentForTests(fixture.componentInstance);
     component.field = "Title";
     component.spec = { Title: { TypeAsString: "Text", Title: "Title" } };
     component.form = { Title: "Initial" };
@@ -251,15 +373,15 @@ describe("zoneless OnPush rendering", () => {
   it("updates a table cell after an awaited row callback and ignores malformed rows", async () => {
     const fixture = await createFixture(SharepointChoiceTableCtor);
     const table = fixture.componentInstance;
-    const row = { Id: 1, Name: "Before" };
+    const row: SharepointChoiceRow = { Id: 1, Name: "Before" };
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     let releaseCallback!: () => void;
     const callbackGate = new Promise<void>((resolve) => {
       releaseCallback = resolve;
     });
-    const rowClicked = vi.fn(async (clickedRow: typeof row) => {
+    const rowClicked = vi.fn(async (clickedRow: SharepointChoiceRow) => {
       await callbackGate;
-      clickedRow.Name = "After async callback";
+      clickedRow["Name"] = "After async callback";
       return true;
     });
 
@@ -341,6 +463,40 @@ describe("zoneless OnPush rendering", () => {
 
     expect(fixture.nativeElement.textContent).toContain("Updated name");
     expect(fixture.nativeElement.querySelector('tbody tr[role="row"]')?.classList.contains("loading")).toBe(true);
+  });
+});
+
+describe("SharepointChoiceRefresh", () => {
+  it("publishes direct events and convenience refresh requests", () => {
+    const refresh = new SharepointChoiceRefresh();
+    const events: SharepointChoiceEvent[] = [];
+    const subscription = refresh.changes$.subscribe((event) => events.push(event));
+    const form: SharepointChoiceForm = { Title: "Title" };
+    const spec: SharepointChoiceList = { Title: { TypeAsString: "Text" } };
+
+    refresh.emit({ sourceId: 7, form, field: "Title" });
+    refresh.refreshForm(form, "Title");
+    refresh.refreshSpec(spec, "Title");
+    refresh.refresh({ form, spec, field: "Title" });
+    subscription.unsubscribe();
+
+    expect(events).toEqual([
+      { sourceId: 7, form, field: "Title" },
+      { sourceId: 0, form, field: "Title" },
+      { sourceId: 0, spec, field: "Title" },
+      { sourceId: 0, form, spec, field: "Title" },
+    ]);
+  });
+});
+
+describe("SharepointChoiceRender", () => {
+  it("sanitizes string content provided through the directive input", async () => {
+    const fixture = await createFixture(SharepointChoiceRenderTestHost);
+    fixture.detectChanges();
+
+    const renderedHost = fixture.nativeElement.querySelector("div") as HTMLDivElement;
+    expect(renderedHost.querySelector("strong")?.textContent).toBe("Safe content");
+    expect(renderedHost.querySelector("script")).toBeNull();
   });
 });
 
@@ -590,7 +746,7 @@ describe("SharepointChoiceTable", () => {
     table.pageSize = 12.8;
     expect(table.pageSize).toBe(12);
 
-    table.pageSize = "25";
+    Reflect.set(table, "pageSize", "25");
     expect(table.pageSize).toBe(25);
   });
 
@@ -714,8 +870,9 @@ describe("SharepointChoiceTable", () => {
     const error = new Error("Export source failed");
     const errorHandler = new ErrorHandler();
     const handleError = vi.spyOn(errorHandler, "handleError").mockImplementation(() => {});
-    const table = new SharepointChoiceTableCtor(new TestChangeDetectorRef(), errorHandler);
-    tables.push(table);
+    const tableInstance = new SharepointChoiceTableCtor(new TestChangeDetectorRef(), errorHandler);
+    tables.push(tableInstance);
+    const table = tableForTests(tableInstance);
     table.allData = { Records: [{ Value: "Row" }] };
     table.allCols = [{ field: "Value" }];
     table.selectedTab = "Records";
@@ -808,7 +965,7 @@ describe("SharepointChoiceComponent", () => {
     };
     component.select = {
       filter: (choice: string, _index: number, _choices: string[], context: { form: SharepointChoiceForm }) =>
-        context.form["Enabled"] && choice !== "Beta",
+        context.form["Enabled"] === true && choice !== "Beta",
     };
     component.otherText = "a";
 
@@ -834,7 +991,7 @@ describe("SharepointChoiceComponent", () => {
   it("renders a field when its form data is loaded after the initial render", async () => {
     const fixture = await createComponentFixture();
     try {
-      const component = fixture.componentInstance;
+      const component = componentForTests(fixture.componentInstance);
       component.field = "Title";
       component.spec = { Title: { TypeAsString: "Text", Title: "Title" } };
       component.form = { Title: "" };
@@ -856,7 +1013,7 @@ describe("SharepointChoiceComponent", () => {
   it("debounces text search as the user types, renders matches, and applies a selection", async () => {
     const fixture = await createComponentFixture();
     try {
-      const component = fixture.componentInstance;
+      const component = componentForTests(fixture.componentInstance);
       const form: SharepointChoiceForm = { Contact: "" };
       const match: SharepointChoiceForm = { Contact: "Ada Lovelace" };
       const parent = { source: "directory" };
@@ -978,7 +1135,7 @@ describe("SharepointChoiceComponent", () => {
         LoginName: "grace@example.test",
       });
 
-      expect(component.form["ReviewersId"].results).toEqual([8]);
+      expect(component.form["ReviewersId"]).toMatchObject({ results: [8] });
       expect(ensureUser).toHaveBeenCalledTimes(2);
       expect(mockWeb).toHaveBeenCalledWith([expect.anything(), "/sites/people"]);
     } finally {
@@ -1025,7 +1182,7 @@ describe("SharepointChoiceComponent", () => {
 
     try {
       await expect(component.outlook(transfer)).rejects.toBe(message);
-      expect(showAlert).toHaveBeenCalledWith(`Error retreiving item(s):\n\n${message}`);
+      expect(showAlert).toHaveBeenCalledWith(`Error retrieving item(s):\n\n${message}`);
     } finally {
       contextWindow._spPageContextInfo = previousContext;
     }
@@ -1106,6 +1263,7 @@ describe("SharepointChoiceUtils", () => {
         Tags: ["blue", "skip\nmultiline", null, "green"],
         Owner: { LookupValue: "Ada" },
         Metadata: '{"created":"2024-01-02"}',
+        ArrayMetadata: '[{"created":"2024-01-02"}]',
         VersionId: 7,
         "odata.type": "SP.Data.RequestsListItem",
       };
@@ -1125,9 +1283,90 @@ describe("SharepointChoiceUtils", () => {
         __metadata: { type: "Collection(Edm.String)" },
       });
       expect(form["Owner"]).toBe("Ada");
-      expect(form["Metadata"]["created"]).toBeInstanceOf(Date);
+      expect(form["Metadata"]).toEqual(expect.objectContaining({ created: expect.any(Date) }));
+      expect(form["ArrayMetadata"]).toEqual([expect.objectContaining({ created: expect.any(Date) })]);
       expect(form["VersionId"]).toBeUndefined();
       expect(form["odata.type"]).toBeUndefined();
+    } finally {
+      if (previousContext) contextWindow._spPageContextInfo = previousContext;
+      else delete contextWindow._spPageContextInfo;
+      if (!watermarkWasPresent) document.getElementById("sp-environment-watermark")?.remove();
+    }
+  });
+
+  it("serializes changed JSON array note fields on save", async () => {
+    const utils = createUtils();
+    const update = vi.fn(async (_fields: SharepointChoiceForm) => undefined);
+    const getById = vi.fn(() => ({ update }));
+    const getByTitle = vi.fn(() => ({ items: { getById } }));
+    utils.sp = { web: { lists: { getByTitle } } } as unknown as typeof utils.sp;
+
+    const changedArray = [{ entry: "updated" }];
+    await utils.save({ Id: 42, NoteHistory: changedArray }, { NoteHistory: [{ entry: "original" }] }, "Requests");
+
+    expect(update).toHaveBeenCalledOnce();
+    expect(update.mock.calls[0]![0]["NoteHistory"]).toBe(JSON.stringify(changedArray));
+  });
+
+  it("rejects a non-object SharePoint list item response", async () => {
+    const utils = createUtils();
+    vi.stubGlobal("alert", vi.fn());
+    const loadItem = vi.fn(async () => null);
+    const getById = vi.fn(() => loadItem);
+    const getByTitle = vi.fn(() => ({ items: { getById } }));
+    utils.sp = { web: { lists: { getByTitle } } } as unknown as typeof utils.sp;
+
+    await expect(utils.data(42, "Requests")).rejects.toThrow("invalid item");
+  });
+
+  it("rejects version responses that lack version metadata", async () => {
+    const utils = createUtils();
+    const versionQuery = vi.fn(async () => [{ Title: "Missing timestamps" }]);
+    const top = vi.fn(() => versionQuery);
+    const getById = vi.fn(() => ({ versions: { top } }));
+    const getByTitle = vi.fn(() => ({ items: { getById } }));
+    utils.sp = { web: { lists: { getByTitle } } } as unknown as typeof utils.sp;
+
+    await expect(utils.version(42, "Requests")).rejects.toThrow("invalid version data");
+  });
+
+  it("uploads pasted rich-text images as list attachments and saves their SharePoint URLs", async () => {
+    const contextWindow = window as typeof window & {
+      _spPageContextInfo?: { webAbsoluteUrl: string; userLoginName?: string };
+    };
+    const previousContext = contextWindow._spPageContextInfo;
+    const watermarkWasPresent = document.getElementById("sp-environment-watermark") !== null;
+    contextWindow._spPageContextInfo = {
+      webAbsoluteUrl: "https://example.test/sites/test",
+      userLoginName: "test-user",
+    };
+
+    try {
+      const utils = new SharepointChoiceUtilsCtor();
+      const dataUrl = "data:image/png;base64,aGVsbG8=";
+      const attachmentUrlPrefix = "/sites/test/Lists/Requests/Attachments/42/";
+      const update = vi.fn(async (_fields: SharepointChoiceForm) => undefined);
+      const attachmentAdd = vi.fn(async (fileName: string, _data: ArrayBuffer) => ({
+        file: async () => ({ ServerRelativeUrl: `${attachmentUrlPrefix}${fileName}` }),
+      }));
+      const item = { update, attachmentFiles: { add: attachmentAdd } };
+      const getById = vi.fn(() => item);
+      const add = vi.fn(async (_fields: SharepointChoiceForm) => ({ Id: 42 }));
+      const getByTitle = vi.fn(() => ({ items: { add, getById } }));
+      utils.sp = { web: { lists: { getByTitle } } } as unknown as typeof utils.sp;
+
+      const id = await utils.save({ CommentHistory: `<p><img alt="pasted" src="${dataUrl}" /></p>` }, {}, "Requests");
+
+      expect(id).toBe(42);
+      expect(add).toHaveBeenCalledOnce();
+      expect(add.mock.calls[0]![0]).not.toHaveProperty("CommentHistory");
+      expect(attachmentAdd).toHaveBeenCalledOnce();
+      expect(new Uint8Array(attachmentAdd.mock.calls[0]![1])).toEqual(new Uint8Array([104, 101, 108, 108, 111]));
+      expect(update).toHaveBeenCalledOnce();
+      const savedHtml = update.mock.calls[0]![0]["CommentHistory"] as string;
+      expect(savedHtml).toContain(attachmentUrlPrefix);
+      expect(savedHtml).not.toContain(dataUrl);
+      expect(attachmentAdd.mock.invocationCallOrder[0]).toBeLessThan(update.mock.invocationCallOrder[0]!);
     } finally {
       if (previousContext) contextWindow._spPageContextInfo = previousContext;
       else delete contextWindow._spPageContextInfo;
@@ -1185,5 +1424,265 @@ describe("SharepointChoiceUtils", () => {
       else delete contextWindow._spPageContextInfo;
       if (!watermarkWasPresent) document.getElementById("sp-environment-watermark")?.remove();
     }
+  });
+
+  it("exposes the configured SharePoint context and reads the current user's permissions", async () => {
+    const utils = createUtils();
+    const contextWindow = window as typeof window & {
+      _spPageContextInfo?: { webAbsoluteUrl: string; userLoginName?: string; userId?: number };
+    };
+    const previousContext = contextWindow._spPageContextInfo;
+    contextWindow._spPageContextInfo = {
+      webAbsoluteUrl: utils.context,
+      userLoginName: "test-user",
+      userId: 7,
+    };
+
+    const groups = vi.fn(async () => [{ LoginName: "Contoso Owners" }]);
+    const currentUser = Object.assign(
+      vi.fn(async () => ({ Id: 99 })),
+      { groups },
+    );
+    const securityList = vi.fn(async () => ({ Hidden: false, IsApplicationList: false }));
+    const getByTitle = vi.fn(() => securityList);
+    const web = Object.assign(
+      vi.fn(async () => ({ Title: "Contoso" })),
+      {
+        currentUser,
+        lists: { getByTitle },
+      },
+    );
+    utils.sp = { web } as unknown as typeof utils.sp;
+
+    try {
+      const permissions = await utils.permissions();
+
+      expect(utils.context).toBe("https://example.test/sites/test");
+      expect(utils.sp).toBeDefined();
+      expect(permissions).toEqual({
+        userId: 7,
+        perms: { "Contoso Owners": true, Owners: true },
+      });
+      expect(groups).toHaveBeenCalledOnce();
+      expect(getByTitle).toHaveBeenCalledWith("Security");
+    } finally {
+      if (previousContext) contextWindow._spPageContextInfo = previousContext;
+      else delete contextWindow._spPageContextInfo;
+    }
+  });
+
+  it("checks effective permissions and returns search results using the requested query", async () => {
+    const utils = createUtils();
+    const hasPermissions = vi.fn(
+      (_effective: unknown, permission: PermissionKind) => permission === PermissionKind.ViewListItems,
+    );
+    const web = Object.assign(vi.fn(), { hasPermissions });
+    utils.sp = { web } as unknown as typeof utils.sp;
+    const effectivePermissions = vi.fn(async () => ({}));
+    const securableObject = {
+      getCurrentUserEffectivePermissions: effectivePermissions,
+    } as unknown as Parameters<typeof utils.hasPermission>[0];
+
+    expect(await utils.hasPermission(securableObject, [PermissionKind.ViewListItems])).toBe(true);
+    expect(effectivePermissions).toHaveBeenCalledOnce();
+    expect(hasPermissions).toHaveBeenCalledWith({}, PermissionKind.ViewListItems);
+
+    const searchResults = {} as Awaited<ReturnType<typeof utils.search>>;
+    const search = vi.fn(async () => searchResults);
+    utils.sp = { search } as unknown as typeof utils.sp;
+
+    await expect(utils.search("Title:alpha", 20, 3)).resolves.toBe(searchResults);
+    expect(search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        Querytext: "Title:alpha",
+        RowLimit: 20,
+        StartRow: 40,
+        EnableInterleaving: true,
+        TrimDuplicates: false,
+        SelectProperties: ["Title", "Path", "Author", "Editor", "Created", "LastModifiedTime"],
+        SortList: [{ Property: "LastModifiedTime", Direction: 1 }],
+      }),
+    );
+  });
+
+  it("loads list field metadata and derives missing values from schema XML", async () => {
+    const utils = createUtils();
+    const field = {
+      Title: "Status",
+      InternalName: "Status",
+      TypeAsString: "Choice",
+      SchemaXml: '<Field DisplayFormat="1" AppendOnly="FALSE" SelectionGroup="7" />',
+    };
+    const listFields = vi.fn(async () => [field]);
+    const select = vi.fn(() => listFields);
+    const getByTitle = vi.fn(() => ({ fields: { select } }));
+    utils.sp = { web: { lists: { getByTitle } } } as unknown as typeof utils.sp;
+
+    const fields = await utils.fields("Requests");
+
+    expect(getByTitle).toHaveBeenCalledWith("Requests");
+    expect(fields["Status"]).toMatchObject({
+      InternalName: "Status",
+      TypeAsString: "Choice",
+      DisplayFormat: 1,
+      AppendOnly: false,
+      SelectionGroup: 7,
+      Scope: utils.context,
+      SchemaXml: "",
+    });
+  });
+
+  it("compares SharePoint item versions and labels changed fields", async () => {
+    const utils = createUtils();
+    const version = {
+      Created: "2024-01-01T00:00:00",
+      Modified: "2024-01-01T00:00:00",
+      Title: "Original",
+      VersionLabel: "1.0",
+    };
+    const versionQuery = vi.fn(async () => [version]);
+    const top = vi.fn(() => versionQuery);
+    const getById = vi.fn(() => ({ versions: { top } }));
+    const getByTitle = vi.fn(() => ({ items: { getById } }));
+    utils.sp = { web: { lists: { getByTitle } } } as unknown as typeof utils.sp;
+
+    const versions = await utils.version(42, "Requests");
+
+    expect(top).toHaveBeenCalledWith(5000);
+    expect(getById).toHaveBeenCalledWith(42);
+    expect(versions[0]?.["ChangedFields"]).toEqual([{ field: "Title", from: null, to: "Original" }]);
+  });
+
+  it("routes API mapping requests through callApi and sends authenticated HTTP requests", async () => {
+    const utils = createUtils();
+    const callApi = vi.spyOn(utils, "callApi").mockResolvedValue({ value: "typed response" });
+
+    const response = await utils.msalApi<{ value: string }>("unmapped/items", "Items.Read");
+
+    expect(response?.value).toBe("typed response");
+    expect(callApi).toHaveBeenCalledOnce();
+    expect(callApi.mock.calls[0]?.[2]).toBe("undefined/Items.Read");
+    expect(callApi.mock.calls[0]?.[4]).toBe("GET");
+    callApi.mockRestore();
+
+    const { PublicClientApplication } = await import("@azure/msal-browser");
+    vi.spyOn(PublicClientApplication.prototype, "initialize").mockResolvedValue();
+    vi.spyOn(PublicClientApplication.prototype, "handleRedirectPromise").mockResolvedValue(null);
+    vi.spyOn(PublicClientApplication.prototype, "getAllAccounts").mockReturnValue([]);
+    vi.spyOn(PublicClientApplication.prototype, "acquireTokenSilent").mockResolvedValue({
+      accessToken: "test-access-token",
+    } as never);
+    const request = vi.fn(
+      async (_url: RequestInfo | URL, _options?: RequestInit) =>
+        new Response(JSON.stringify({ value: "response" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", request);
+
+    await expect(
+      utils.callApi("tenant", "client", "api://items.read", "https://api.example.test/items", "POST", { id: 7 }),
+    ).resolves.toEqual({ value: "response" });
+
+    expect(request).toHaveBeenCalledWith(
+      "https://api.example.test/items",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          Authorization: "Bearer test-access-token",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id: 7 }),
+      }),
+    );
+  });
+
+  it("saves folder list items, resolves query parameters, and ensures nested paths", async () => {
+    const utils = createUtils();
+    const selection = vi.fn(async () => ({ FileRef: "/sites/test/Folder/" }));
+    const select = vi.fn(() => selection);
+    const getById = vi.fn(() => ({ select }));
+    const getByTitle = vi.fn(() => ({ items: { getById } }));
+    utils.sp = { web: { lists: { getByTitle } } } as unknown as typeof utils.sp;
+    const save = vi.spyOn(utils, "save").mockResolvedValue(42);
+    const form: SharepointChoiceForm = { Id: 42, Title: "Folder" };
+
+    await expect(utils.saveFolderListItem(form, {}, "Requests", "/sites/test/Folder/")).resolves.toEqual({
+      id: 42,
+      folderPath: "/sites/test/Folder",
+    });
+    expect(save).toHaveBeenCalledWith(form, {}, "Requests");
+
+    const testDocument = Object.create(document) as Document;
+    Object.defineProperty(testDocument, "location", {
+      configurable: true,
+      value: { search: "?name=Alice+Smith" },
+    });
+    vi.stubGlobal("document", testDocument);
+    expect(utils.param("name")).toBe("Alice Smith");
+    expect(utils.param("missing")).toBeUndefined();
+
+    const folderQuery = vi.fn(async () => ({ Exists: true }));
+    const getFolderByServerRelativePath = vi.fn(() => folderQuery);
+    utils.sp = { web: { getFolderByServerRelativePath } } as unknown as typeof utils.sp;
+
+    await utils.ensurePath("/sites/test/Folder/Subfolder", 2);
+
+    expect(getFolderByServerRelativePath).toHaveBeenNthCalledWith(1, "/sites/test");
+    expect(getFolderByServerRelativePath).toHaveBeenNthCalledWith(2, "/sites/test/Folder");
+    expect(getFolderByServerRelativePath).toHaveBeenNthCalledWith(3, "/sites/test/Folder/Subfolder");
+  });
+
+  it("retrieves a list root and ordered folder files", async () => {
+    const utils = createUtils();
+    const rootFolder = vi.fn(async () => ({ ServerRelativeUrl: "/sites/test/Requests" }));
+    const getByTitle = vi.fn(() => ({ rootFolder }));
+    utils.sp = { web: { lists: { getByTitle } } } as unknown as typeof utils.sp;
+
+    await expect(utils.getRoot("Requests")).resolves.toBe("/sites/test/Requests");
+
+    const file = {
+      Name: "report.txt",
+      TimeCreated: "2024-01-02T03:04:05Z",
+      ServerRelativeUrl: "/sites/test/Shared/report.txt",
+      ListItemAllFields: { Title: "Report" },
+    };
+    const expandedFiles = vi.fn(async () => [file]);
+    const expand = vi.fn(() => expandedFiles);
+    const orderBy = vi.fn(() => ({ expand }));
+    const getFolderByServerRelativePath = vi.fn(() => ({ files: { orderBy } }));
+    utils.sp = { web: { getFolderByServerRelativePath } } as unknown as typeof utils.sp;
+
+    const files = await utils.getFiles("/sites/test/Shared", undefined);
+
+    expect(getFolderByServerRelativePath).toHaveBeenCalledWith("/sites/test/Shared");
+    expect(orderBy).toHaveBeenCalledWith("TimeCreated");
+    expect(files).toHaveLength(1);
+    expect(files[0]).toMatchObject({
+      FileName: "report.txt",
+      ServerRelativeUrl: "/sites/test/Shared/report.txt",
+      ListItemAllFields: { Title: "Report" },
+    });
+    expect(files[0]?.OldListItemAllFields).toEqual({ Title: "Report" });
+  });
+
+  it("moves folders after creating their destination parent and skips same-path moves", async () => {
+    const utils = createUtils();
+    const ensurePath = vi.spyOn(utils, "ensurePath").mockResolvedValue();
+    const movedFolder = vi.fn(async () => ({ ServerRelativeUrl: "/sites/test/Archive%20Folder" }));
+    const moveByPath = vi.fn(() => movedFolder);
+    const getFolderByServerRelativePath = vi.fn(() => ({ moveByPath }));
+    utils.sp = { web: { getFolderByServerRelativePath } } as unknown as typeof utils.sp;
+
+    await expect(utils.relocateFolder("/sites/test/Requests", "/sites/test/Archive Folder")).resolves.toBe(
+      "/sites/test/Archive Folder",
+    );
+    expect(ensurePath).toHaveBeenCalledWith("/sites/test", 4);
+    expect(moveByPath).toHaveBeenCalledWith("/sites/test/Archive Folder", {
+      KeepBoth: true,
+      RetainEditorAndModifiedOnMove: true,
+      ShouldBypassSharedLocks: true,
+    });
+
+    await expect(utils.relocateFolder("/sites/test/Archive Folder", "/sites/test/Archive Folder/")).resolves.toBeNull();
+    expect(getFolderByServerRelativePath).toHaveBeenCalledOnce();
   });
 });

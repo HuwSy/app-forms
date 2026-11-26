@@ -63,7 +63,7 @@
           multiple="multiple"
           class="{{ multiLargeorSmall(c) }}"
           [disabled]="disabled"
-          [ngModel]="form[field].results"
+          [ngModel]="templateResults(field)"
           [required]="req"
           name="SharepointChoice{{ prefix }}{{ field }}"
         >
@@ -160,8 +160,8 @@
           [(ngModel)]="form[field]"
           [required]="req"
           name="SharepointChoice{{ prefix }}{{ field }}"
-          [min]="get('Min')"
-          [max]="get('Max')"
+          [min]="get('Min') ?? null"
+          [max]="get('Max') ?? null"
           (change)="changed()"
           placeholder="{{ title || internal }}..."
         />
@@ -175,13 +175,13 @@
           (ngModelChange)="numberSet($event)"
           [required]="req"
           name="SharepointChoice{{ prefix }}{{ field }}"
-          [min]="get('Min')"
-          [max]="get('Max')"
+          [min]="get('Min') ?? null"
+          [max]="get('Max') ?? null"
           placeholder="{{ title || internal }}..."
         />
       }
       @case ("Currency") {
-        @let bcp47 = lcidToBcp47(get("LCID"));
+        @let bcp47 = lcidToBcp47(get("LCID") ?? 1033);
         {{ symbol(bcp47) }}
         <input
           [disabled]="disabled"
@@ -191,8 +191,8 @@
           (ngModelChange)="numberSet($event, bcp47)"
           [required]="req"
           name="SharepointChoice{{ prefix }}{{ field }}"
-          [min]="get('Min')"
-          [max]="get('Max')"
+          [min]="get('Min') ?? null"
+          [max]="get('Max') ?? null"
           placeholder="{{ title || internal }}..."
         />
       }
@@ -201,24 +201,24 @@
           <input
             [disabled]="disabled"
             type="date"
-            [ngModel]="form[field] | date: 'yyyy-MM-dd'"
+            [ngModel]="templateDateValue(field) | date: 'yyyy-MM-dd'"
             (ngModelChange)="dateSet($event)"
             [required]="req"
             name="SharepointChoice{{ prefix }}{{ field }}"
-            [min]="get('Min')"
-            [max]="get('Max')"
+            [min]="get('Min') ?? null"
+            [max]="get('Max') ?? null"
             placeholder="{{ title || internal }}..."
           />
         } @else {
           <input
             [disabled]="disabled"
             type="datetime-local"
-            [ngModel]="form[field] | date: 'yyyy-MM-ddTHH:mm'"
+            [ngModel]="templateDateValue(field) | date: 'yyyy-MM-ddTHH:mm'"
             (ngModelChange)="dateSet($event)"
             [required]="req"
             name="SharepointChoice{{ prefix }}{{ field }}"
-            [min]="get('Min')"
-            [max]="get('Max')"
+            [min]="get('Min') ?? null"
+            [max]="get('Max') ?? null"
             placeholder="{{ title || internal }}..."
           />
         }
@@ -231,7 +231,7 @@
           [(ngModel)]="form[field]"
           [required]="req"
           name="SharepointChoice{{ prefix }}{{ field }}"
-          [maxlength]="get('MaxLength')"
+          [maxlength]="get('MaxLength') ?? null"
           (change)="changed()"
           (keyup)="onUpText($event.key)"
           (click)="onUpText(undefined)"
@@ -269,7 +269,7 @@
         }
       }
       @case ("Lookup") {
-        @let lookup = get("LookupField");
+        @let lookup = get("LookupField") ?? "";
         <input
           [disabled]="disabled"
           type="text"
@@ -309,7 +309,7 @@
         }
       }
       @case ("LookupMulti") {
-        @let lookup = get("LookupField");
+        @let lookup = get("LookupField") ?? "";
         <div class="people">
           @for (item of lookupLabels; track item.id) {
             <span style="padding: 8px"
@@ -319,8 +319,9 @@
                 (click)="removeLookup(item.id)"
                 [disabled]="disabled"
                 aria-label="Remove {{ item.label }}"
-                >X</button
-              ></span
+              >
+                X
+              </button></span
             >
           }
         </div>
@@ -436,21 +437,40 @@
           </div>
         } @else {
           @if (!rich) {
-            <div style="max-height: 500px; overflow: auto">
+            <div class="Preview">
               {{ form[field] }}
             </div>
           } @else {
             <div
-              style="max-height: 500px; overflow: auto"
+              class="Preview"
               [innerHTML]="form[field]"
             ></div>
+          }
+        }
+
+        @if (versions && versions.length > 1) {
+          @for (v of versions; track $index; let i = $index) {
+            @if (i != 0 || (append && !disabled)) {
+              <div [hidden]="!v[field]">
+                <div style="font-weight: bold">
+                  {{ templateVersionEditor(v) }}
+                  {{ templateVersionDate(v) | date: "dd MMM yyyy HH:mm:ss" }}
+                </div>
+                <div
+                  class="Preview"
+                  [innerHTML]="v[field]"
+                ></div>
+                <hr />
+              </div>
+            }
           }
         }
       }
       @case ("Geolocation") {
         <input
           [disabled]="disabled"
-          [(ngModel)]="form[field].Latitude"
+          [ngModel]="templateObjectString(field, 'Latitude')"
+          (ngModelChange)="setTemplateObjectString(field, 'Latitude', $event)"
           [required]="req"
           name="SharepointChoice{{ prefix }}{{ field }}_Latitude"
           placeholder="Latitude"
@@ -460,7 +480,8 @@
         />
         <input
           [disabled]="disabled"
-          [(ngModel)]="form[field].Longitude"
+          [ngModel]="templateObjectString(field, 'Longitude')"
+          (ngModelChange)="setTemplateObjectString(field, 'Longitude', $event)"
           name="SharepointChoice{{ prefix }}{{ field }}_Longitude"
           placeholder="Longitude"
           pattern="^-?\d+(\.\d+)?$"
@@ -486,7 +507,8 @@
       @case ("URL") {
         <input
           [disabled]="disabled"
-          [(ngModel)]="form[field].Url"
+          [ngModel]="templateObjectString(field, 'Url')"
+          (ngModelChange)="setTemplateObjectString(field, 'Url', $event)"
           [required]="req"
           name="SharepointChoice{{ prefix }}{{ field }}_Url"
           placeholder="https://"
@@ -496,7 +518,8 @@
         />
         <input
           [disabled]="disabled"
-          [(ngModel)]="form[field].Description"
+          [ngModel]="templateObjectString(field, 'Description')"
+          (ngModelChange)="setTemplateObjectString(field, 'Description', $event)"
           name="SharepointChoice{{ prefix }}{{ field }}_Desc"
           maxlength="250"
           (change)="changed()"
@@ -610,7 +633,9 @@
                       [disabled]="
                         disabled ||
                         f.Deleted ||
-                        (field != 'Attachments' && file.archive && listItem[file.archive || 'Archive']) ||
+                        (field != 'Attachments' &&
+                          file.archive &&
+                          templateHasValue(listItem, file.archive || 'Archive')) ||
                         fileSizeOver
                       "
                       [(ngModel)]="f.Checked"
@@ -630,7 +655,10 @@
                         [prefix]="field + '_' + i"
                         (change)="changed()"
                         [disabled]="
-                          disabled || f.Deleted || (file.archive && listItem[file.archive || 'Archive']) || fileSizeOver
+                          disabled ||
+                          f.Deleted ||
+                          (file.archive && templateHasValue(listItem, file.archive || 'Archive')) ||
+                          fileSizeOver
                         "
                       >
                       </app-choice>
@@ -650,7 +678,9 @@
                         >+</a
                       >
                     </td>
-                  } @else if (field != "Attachments" && file.archive && listItem[file.archive || "Archive"]) {
+                  } @else if (
+                    field != "Attachments" && file.archive && templateHasValue(listItem, file.archive || "Archive")
+                  ) {
                     <td>
                       <span style="text-decoration: line-through">{{ listItem["Title"] || f.FileName }}</span>
 
@@ -717,7 +747,10 @@
                         [prefix]="field + '_' + i"
                         (change)="changed()"
                         [disabled]="
-                          disabled || f.Deleted || (file.archive && listItem[file.archive || 'Archive']) || fileSizeOver
+                          disabled ||
+                          f.Deleted ||
+                          (file.archive && templateHasValue(listItem, file.archive || 'Archive')) ||
+                          fileSizeOver
                         "
                       >
                       </app-choice>
@@ -735,7 +768,7 @@
                           [disabled]="
                             disabled ||
                             f.Deleted ||
-                            (file.archive && listItem[file.archive || 'Archive']) ||
+                            (file.archive && templateHasValue(listItem, file.archive || 'Archive')) ||
                             fileSizeOver
                           "
                           [text]="{
@@ -790,7 +823,9 @@
                         >+</a
                       >
                     </div>
-                  } @else if (field != "Attachments" && file.archive && listItem[file.archive || "Archive"]) {
+                  } @else if (
+                    field != "Attachments" && file.archive && templateHasValue(listItem, file.archive || "Archive")
+                  ) {
                     <div>
                       <span style="text-decoration: line-through">{{ listItem["Title"] || f.FileName }}</span>
 
@@ -817,7 +852,9 @@
                         [disabled]="
                           disabled ||
                           f.Deleted ||
-                          (field != 'Attachments' && file.archive && listItem[file.archive || 'Archive']) ||
+                          (field != 'Attachments' &&
+                            file.archive &&
+                            templateHasValue(listItem, file.archive || 'Archive')) ||
                           fileSizeOver
                         "
                         [(ngModel)]="f.Checked"
@@ -877,7 +914,7 @@
                           [disabled]="
                             disabled ||
                             f.Deleted ||
-                            (file.archive && listItem[file.archive || 'Archive']) ||
+                            (file.archive && templateHasValue(listItem, file.archive || 'Archive')) ||
                             fileSizeOver
                           "
                         >
@@ -897,7 +934,7 @@
                           [disabled]="
                             disabled ||
                             f.Deleted ||
-                            (file.archive && listItem[file.archive || 'Archive']) ||
+                            (file.archive && templateHasValue(listItem, file.archive || 'Archive')) ||
                             fileSizeOver
                           "
                         >
@@ -917,7 +954,7 @@
                             [disabled]="
                               disabled ||
                               f.Deleted ||
-                              (file.archive && listItem[file.archive || 'Archive']) ||
+                              (file.archive && templateHasValue(listItem, file.archive || 'Archive')) ||
                               fileSizeOver
                             "
                             [text]="{
@@ -1006,7 +1043,7 @@
       }
       @case ("UserMulti") {
         <div class="people">
-          @for (user of form[field + "Id"]?.results; track $index) {
+          @for (user of templateUserIds(field + "Id"); track $index) {
             <span style="padding: 8px"
               >{{ displayUser(user) }}
               <a
@@ -1063,9 +1100,9 @@
       }
       @case ("User") {
         <div class="people">
-          @if (form[field + "Id"]) {
+          @if (templateUserId(field + "Id")) {
             <span style="padding: 8px"
-              >{{ displayUser(form[field + "Id"]) }}
+              >{{ displayUser(templateUserId(field + "Id")) }}
               <a
                 (click)="removeUser(null)"
                 style="color: red"
@@ -1125,13 +1162,13 @@
         <div class="spin"></div>
       }
       @default {
-        {{ form[field] && form[field].results ? form[field].results.join(", ") : form[field] }}
+        {{ templateValue(field) }}
         <div style="opacity: 0.85">Error,{{ req ? " required" : "" }} field type '{{ type }}' not yet editable...</div>
       }
     }
   </div>
 
-  @if (versions && versions.length > 1) {
+  @if (type != "Note" && versions && versions.length > 1) {
     <ul
       class="versions"
       [hidden]="!versionsDisplayed"
@@ -1141,14 +1178,14 @@
         @if (i == 0) {
           <li class="current">
             {{ v[field] ?? "blank" }} -
-            {{ v["Created"] | date: "dd MMM yyyy HH:mm:ss" }}
-            {{ v["Editor"]["LookupValue"] }}
+            {{ templateVersionDate(v) | date: "dd MMM yyyy HH:mm:ss" }}
+            {{ templateVersionEditor(v) }}
           </li>
-        } @else if (v[field] != versions[i - 1]![field] && (v[field] || v[field]?.toString().length > 0)) {
+        } @else if (templateVersionChanged(v, versions[i - 1]!, field)) {
           <li>
             {{ v[field] ?? "blank" }} -
-            {{ v["Created"] | date: "dd MMM yyyy HH:mm:ss" }}
-            {{ v["Editor"]["LookupValue"] }} {{ versionsToggle() }}
+            {{ templateVersionDate(v) | date: "dd MMM yyyy HH:mm:ss" }}
+            {{ templateVersionEditor(v) }} {{ versionsToggle() }}
           </li>
         }
       }

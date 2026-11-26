@@ -406,7 +406,8 @@ currentPage = currentPageRows(currentRows); @let maxpage = ceil(currentRows.leng
           Loading...
         </td>
       </tr>
-      } @else { @for (row of currentPage; track trackRow($index, row); let rowIndex = $index) { @let hlRow = hyperlink(row);
+      } @else { @for (row of currentPage; track trackRow($index, row); let rowIndex = $index) { @let hlRow =
+      hyperlink(row);
       <tr
         [ngClass]="{'selected': row._selected, 'loading': loading }"
         role="row"
@@ -453,15 +454,15 @@ currentPage = currentPageRows(currentRows); @let maxpage = ceil(currentRows.leng
           <a
             [href]="hl"
             [target]="hyperlinkTarget"
-            >{{value | date:'dd MMM yy'}}</a
+            >{{datePipeValue(value) | date:'dd MMM yy'}}</a
           >
-          } @else { {{value | date:'dd MMM yy'}} } } @case ('number') { @if (hl) {
+          } @else { {{datePipeValue(value) | date:'dd MMM yy'}} } } @case ('number') { @if (hl) {
           <a
             [href]="hl"
             [target]="hyperlinkTarget"
-            >{{value | number:'1.0-2'}}</a
+            >{{numberPipeValue(value) | number:'1.0-2'}}</a
           >
-          } @else { {{value | number:'1.0-2'}} } } @case ('boolean') { @if (hl) {
+          } @else { {{numberPipeValue(value) | number:'1.0-2'}} } } @case ('boolean') { @if (hl) {
           <a
             [href]="hl"
             [target]="hyperlinkTarget"
@@ -499,15 +500,15 @@ currentPage = currentPageRows(currentRows); @let maxpage = ceil(currentRows.leng
           <a
             [href]="hl"
             [target]="hyperlinkTarget"
-            >{{value | date:'dd MMM yy'}}</a
+            >{{datePipeValue(value) | date:'dd MMM yy'}}</a
           >
-          } @else { {{value | date:'dd MMM yy'}} } } @case ('number') { @if (hl) {
+          } @else { {{datePipeValue(value) | date:'dd MMM yy'}} } } @case ('number') { @if (hl) {
           <a
             [href]="hl"
             [target]="hyperlinkTarget"
-            >{{value | number:'1.0-2'}}</a
+            >{{numberPipeValue(value) | number:'1.0-2'}}</a
           >
-          } @else { {{value | number:'1.0-2'}} } } @case ('boolean') { @if (hl) {
+          } @else { {{numberPipeValue(value) | number:'1.0-2'}} } } @case ('boolean') { @if (hl) {
           <a
             [href]="hl"
             [target]="hyperlinkTarget"
